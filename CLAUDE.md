@@ -2095,3 +2095,22 @@ A file library on the same publishing model as Video Tutorials.
   college's own admin. The overrides rules are the same as video overrides. Storage restricts size
   and type. **Both `firestore.rules` and `storage.rules` need deploying.**
 - Icon `resources` was added to `Icon.tsx`. Every role's sidebar has a Resources link.
+
+## Mobile number + OTP login
+
+`src/auth/LoginPage.tsx` has two tabs: **Email & password** and **Mobile & OTP** (+91 only).
+Phone provider is enabled in the console, the project is on Blaze, SMS region policy = India,
+test number `+91 99999 00001` / `123456` (no real SMS).
+- Accounts are created by admins with an email, so a phone only works once it's **linked** to
+  that same Auth account. "Set up mobile login" on the Mobile tab: email + password + number →
+  OTP → `linkWithCredential` (or `updatePhoneNumber` if a number was already linked). No admin
+  side — linking another user's phone needs the Admin SDK / Cloud Functions, which this project
+  doesn't have.
+- Signing in with an unlinked number makes Firebase create an empty account;
+  `getAdditionalUserInfo().isNewUser` catches it, the account is deleted at once and the user is
+  told the number isn't registered.
+- `hold` state stops `/login` from redirecting while a multi-step flow is mid-way (the user is
+  signed in during setup). Each send gets a fresh invisible `RecaptchaVerifier` in a new child
+  element (a used verifier can't be reused).
+- The linked Auth phone is separate from `AppUser.phone` (the admin-entered contact number);
+  nothing syncs them.
