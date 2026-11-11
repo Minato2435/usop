@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/styles.css">
+  <script src="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; background: var(--color-bg); }
+    a { color: var(--color-accent-700); }
+    a:hover { color: var(--color-accent-800); }
+    .flat { width:100%; border:none; background:transparent; font-family:var(--font-body); font-size:14px; color:var(--color-text); padding:5px 0; outline:none; border-bottom:1px solid var(--color-neutral-300); }
+    .flat:focus { border-bottom-color:var(--color-accent-700); }
+    .flat::placeholder { color:var(--color-neutral-500); font-style:italic; }
+    .srow:hover { background:var(--color-neutral-100); }
+    .rbtn { cursor:pointer; font-family:var(--font-body); border-radius:var(--radius-sm); }
+    .note { width:100%; border:1px solid var(--color-neutral-300); border-radius:var(--radius-sm); background:#fff; font-family:var(--font-body); font-size:13px; color:var(--color-text); padding:8px 10px; outline:none; resize:vertical; }
+    .note:focus { border-color:var(--color-accent-700); }
+  </style>
+</helmet>
+<div style="min-height:100vh; font-family:var(--font-body); color:var(--color-text); display:flex; justify-content:center; padding:0;">
+  <div style="flex:1; max-width:1240px; display:flex; align-items:flex-start; gap:0;">
+
+    <div style="flex:1; min-width:0; padding:0 0 90px;">
+
+      <header style="padding:30px 40px 22px; border-bottom:1px solid var(--color-divider);">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:24px; flex-wrap:wrap;">
+          <div style="min-width:0;">
+            <div style="font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-accent-700); margin-bottom:7px;">{{ deptLabel }}</div>
+            <h1 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:32px; line-height:1.15; margin:0; max-width:620px; text-wrap:pretty;">{{ skillName }}</h1>
+            <div style="display:flex; flex-wrap:wrap; gap:8px 22px; margin-top:12px; font-size:12.5px; color:var(--color-neutral-700);">
+              <sc-for list="{{ headMeta }}" as="m" hint-placeholder-count="3">
+                <span><span style="letter-spacing:.06em; text-transform:uppercase; font-size:10.5px; color:var(--color-neutral-600);">{{ m.label }}</span> &nbsp;{{ m.value }}</span>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; flex-shrink:0; padding-top:4px;">
+            <span style="font-size:12px; color:var(--color-neutral-600);">{{ savedLabel }}</span>
+            <button class="btn btn-ghost" style="font-size:13px;" onClick="{{ onSaveDraft }}">Save draft</button>
+          </div>
+        </div>
+      </header>
+
+      <section style="padding:24px 40px; border-bottom:1px solid var(--color-divider); background:var(--color-neutral-100);">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px,1fr)); gap:20px 28px;">
+          <sc-for list="{{ headerFields }}" as="f" hint-placeholder-count="6">
+            <div>
+              <label style="display:block; font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--color-neutral-600); margin-bottom:3px;">{{ f.label }}</label>
+              <input class="flat" type="{{ f.type }}" placeholder="{{ f.placeholder }}" value="{{ f.value }}" onChange="{{ f.onChange }}"/>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <sc-for list="{{ sections }}" as="s" hint-placeholder-count="3">
+        <section style="padding:0;">
+          <div style="display:flex; align-items:center; gap:14px; padding:20px 40px 12px;">
+            <span style="width:26px; height:26px; flex-shrink:0; border-radius:50%; background:var(--color-neutral-900); color:#fff; font-family:var(--font-heading); font-size:12.5px; display:flex; align-items:center; justify-content:center;">{{ s.letter }}</span>
+            <h2 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:21px; margin:0;">{{ s.title }}</h2>
+            <div style="flex:1; height:1px; background:var(--color-divider);"></div>
+            <span style="font-size:11.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--color-neutral-600); white-space:nowrap;">{{ s.progress }}</span>
+          </div>
+
+          <sc-for list="{{ s.steps }}" as="st" hint-placeholder-count="4">
+            <div class="srow" style="padding:12px 40px 12px 37px; border-bottom:1px solid var(--color-neutral-200); border-left:3px solid {{ st.rail }}; background:{{ st.rowBg }};">
+              <div style="display:flex; align-items:flex-start; gap:16px;">
+                <span style="width:24px; flex-shrink:0; text-align:right; font-family:var(--font-heading); font-size:15px; font-variant-numeric:tabular-nums; color:var(--color-neutral-600); padding-top:5px;">{{ st.n }}</span>
+                <div style="flex:1; min-width:0;">
+                  <div style="display:flex; align-items:baseline; gap:9px; flex-wrap:wrap;">
+                    <span style="font-size:14.5px; line-height:1.5; text-wrap:pretty; color:{{ st.textColor }};">{{ st.text }}</span>
+                    <sc-if value="{{ st.critical }}" hint-placeholder-val="{{ false }}">
+                      <span style="font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--color-accent-800); border:1px solid var(--color-accent-400); background:var(--color-accent-100); border-radius:999px; padding:2px 8px; white-space:nowrap;">Critical</span>
+                    </sc-if>
+                  </div>
+                  <sc-if value="{{ st.remarkOpen }}" hint-placeholder-val="{{ false }}">
+                    <textarea class="note" style="margin-top:9px;" rows="2" placeholder="Remark on this step&hellip;" value="{{ st.remark }}" onChange="{{ st.onRemark }}"></textarea>
+                  </sc-if>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; flex-shrink:0;">
+                  <div style="display:flex; align-items:stretch; border:1px solid var(--color-neutral-300); border-radius:999px; background:var(--color-neutral-100); overflow:hidden; padding:2px; gap:2px;">
+                    <sc-for list="{{ st.marks }}" as="m" hint-placeholder-count="3">
+                      <button class="rbtn" onClick="{{ m.onClick }}" title="{{ m.title }}" style="border:none; border-radius:999px; padding:0 {{ m.padX }}; height:28px; display:flex; align-items:center; justify-content:center; font-size:11.5px; letter-spacing:.07em; text-transform:uppercase; background:{{ m.bg }}; color:{{ m.color }}; box-shadow:{{ m.shadow }}; transition:background .16s ease, color .16s ease; white-space:nowrap;">{{ m.label }}</button>
+                    </sc-for>
+                  </div>
+                  <button class="rbtn" onClick="{{ st.onToggleRemark }}" title="Add remark" style="border:none; background:transparent; color:{{ st.remarkColor }}; padding:6px; display:flex; align-items:center; justify-content:center;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="{{ st.remarkFill }}" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </section>
+      </sc-for>
+
+      <section style="padding:28px 40px 0;">
+        <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
+          <h2 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:21px; margin:0;">Global ratings</h2>
+          <div style="flex:1; height:1px; background:var(--color-divider);"></div>
+        </div>
+        <sc-for list="{{ ratings }}" as="r" hint-placeholder-count="3">
+          <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; padding:14px 0; border-bottom:1px solid var(--color-neutral-200);">
+            <div style="flex:1 1 200px; min-width:0;">
+              <div style="font-size:14.5px;">{{ r.label }}</div>
+              <div style="font-size:12px; color:var(--color-neutral-600); margin-top:2px;">{{ r.hint }}</div>
+            </div>
+            <div style="display:flex; gap:7px; flex-shrink:0; flex-wrap:wrap;">
+              <sc-for list="{{ r.options }}" as="o" hint-placeholder-count="4">
+                <button class="rbtn" onClick="{{ o.onClick }}" style="min-width:{{ o.minWidth }}; padding:8px 13px; font-size:12.5px; text-align:center; border:1px solid {{ o.border }}; background:{{ o.bg }}; color:{{ o.color }};">{{ o.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </section>
+
+      <section style="padding:28px 40px 0;">
+        <div style="display:flex; align-items:center; gap:14px; margin-bottom:14px;">
+          <h2 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:21px; margin:0;">Feedback &amp; sign-off</h2>
+          <div style="flex:1; height:1px; background:var(--color-divider);"></div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:22px;">
+          <div>
+            <label style="display:block; font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--color-neutral-600); margin-bottom:6px;">What was done well</label>
+            <textarea class="note" rows="4" placeholder="Strengths observed during this attempt&hellip;" value="{{ strengths }}" onChange="{{ onStrengths }}"></textarea>
+          </div>
+          <div>
+            <label style="display:block; font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--color-neutral-600); margin-bottom:6px;">Suggestions for improvement</label>
+            <textarea class="note" rows="4" placeholder="Specific, actionable next steps&hellip;" value="{{ improvements }}" onChange="{{ onImprovements }}"></textarea>
+          </div>
+        </div>
+        <div style="display:flex; align-items:flex-end; gap:26px; flex-wrap:wrap; margin-top:24px; padding-top:20px; border-top:1px solid var(--color-divider);">
+          <div style="flex:1 1 220px;">
+            <label style="display:block; font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--color-neutral-600); margin-bottom:3px;">Assessor signature (type full name)</label>
+            <input class="flat" style="font-family:var(--font-heading); font-size:18px;" type="text" placeholder="Dr. &hellip;" value="{{ assessorSign }}" onChange="{{ onAssessorSign }}"/>
+          </div>
+          <div style="flex:1 1 220px;">
+            <label style="display:block; font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--color-neutral-600); margin-bottom:3px;">Student acknowledgement</label>
+            <input class="flat" style="font-family:var(--font-heading); font-size:18px;" type="text" placeholder="Student types name" value="{{ studentSign }}" onChange="{{ onStudentSign }}"/>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside style="width:322px; flex-shrink:0; border-left:1px solid var(--color-divider); position:sticky; top:0; max-height:100vh; overflow-y:auto; padding:30px 26px 34px; background:var(--color-neutral-100);">
+      <div style="font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-neutral-600); margin-bottom:14px;">Live score</div>
+
+      <div style="border:1px solid var(--color-neutral-300); border-radius:var(--radius-md); background:#fff; padding:20px; text-align:center;">
+        <div style="font-family:var(--font-heading); font-size:52px; line-height:1; font-variant-numeric:tabular-nums; color:{{ scoreColor }};">{{ scorePct }}</div>
+        <div style="font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-600); margin-top:8px;">{{ scoreDetail }}</div>
+        <div style="height:6px; border-radius:999px; background:var(--color-neutral-200); margin:16px 0 0; overflow:hidden; position:relative;">
+          <div style="height:100%; width:{{ scoreBarWidth }}; background:{{ scoreColor }}; border-radius:999px; transition:width .2s ease;"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:10.5px; color:var(--color-neutral-600); margin-top:7px;">
+          <span>0%</span><span>Threshold {{ thresholdLabel }}</span><span>100%</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <sc-for list="{{ tallies }}" as="t" hint-placeholder-count="3">
+          <div style="flex:1; border:1px solid var(--color-neutral-300); border-radius:var(--radius-sm); background:#fff; padding:10px 8px; text-align:center;">
+            <div style="font-family:var(--font-heading); font-size:20px; line-height:1; font-variant-numeric:tabular-nums; color:{{ t.color }};">{{ t.value }}</div>
+            <div style="font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--color-neutral-600); margin-top:5px;">{{ t.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ criticalAlert }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:14px; padding:12px 14px; border:1px solid var(--color-accent-600); background:var(--color-accent-100); border-radius:var(--radius-sm); font-size:12.5px; line-height:1.55; color:var(--color-accent-900);">{{ criticalAlertText }}</div>
+      </sc-if>
+
+      <div style="margin-top:24px; font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-neutral-600); margin-bottom:10px;">Sections</div>
+      <sc-for list="{{ sectionNav }}" as="s" hint-placeholder-count="3">
+        <div style="display:flex; align-items:center; gap:11px; padding:7px 0;">
+          <span style="width:18px; height:18px; flex-shrink:0; border-radius:50%; border:1px solid {{ s.border }}; background:{{ s.bg }}; color:#fff; display:flex; align-items:center; justify-content:center; font-size:10.5px;">{{ s.mark }}</span>
+          <span style="flex:1; font-size:13px; min-width:0;">{{ s.title }}</span>
+          <span style="font-size:11.5px; color:var(--color-neutral-600); font-variant-numeric:tabular-nums; white-space:nowrap;">{{ s.count }}</span>
+        </div>
+      </sc-for>
+
+      <div style="margin-top:24px; padding-top:18px; border-top:1px solid var(--color-neutral-300);">
+        <div style="font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-neutral-600); margin-bottom:9px;">Result</div>
+        <div style="font-family:var(--font-heading); font-size:22px; line-height:1.2; color:{{ verdictColor }};">{{ verdictLabel }}</div>
+        <div style="font-size:12.5px; color:var(--color-neutral-700); margin-top:6px; line-height:1.55;">{{ verdictNote }}</div>
+        <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:16px; background:var(--color-neutral-900); color:#fff; border-color:var(--color-neutral-900);" disabled="{{ submitDisabled }}" onClick="{{ onSubmit }}">{{ submitLabel }}</button>
+        <sc-if value="{{ blockerVisible }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size:12px; color:var(--color-neutral-600); margin-top:9px; line-height:1.5;">{{ blockerText }}</div>
+        </sc-if>
+      </div>
+    </aside>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;threshold&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:90,&quot;min&quot;:50,&quot;max&quot;:100,&quot;step&quot;:5,&quot;unit&quot;:&quot;%&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Scoring&quot;},&quot;allowNotApplicable&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Scoring&quot;},&quot;allowRemarks&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Scoring&quot;}}">
+const FORM = {
+  dept: 'Gynecology', format: 'DOPS',
+  skill: 'Visual Inspection of Cervix with Acetic Acid (VIA)',
+  code: 'GMER 2019, Table 11',
+  level: 'Observed (O)',
+  setting: 'Skills Lab – Cervical Model',
+  threshold: 90,
+  sections: [
+    ['Pre-Procedure Steps', [
+      ['Explains procedure to patient (cervical cancer screening) and obtains consent', true],
+      ['Ensures chaperone present and privacy', false],
+      ['Assembles equipment: speculum, 3–5% acetic acid solution, cotton swabs, adequate light source', false]
+    ]],
+    ['Procedure Steps', [
+      ['Positions patient in lithotomy position; inserts speculum to visualize cervix', false],
+      ['Cleans cervix of discharge with saline-soaked swab if needed', false],
+      ['Applies 3–5% acetic acid to the cervix using a cotton swab', true],
+      ['Waits 1 minute and observes for acetowhite areas, their margins, and location relative to the transformation zone', true],
+      ['Classifies findings as VIA negative, positive, or suspicious for cancer per standard protocol', true]
+    ]],
+    ['Post-Procedure Steps', [
+      ['Communicates findings to patient sensitively', false],
+      ['Documents findings using standard VIA classification', false],
+      ['Refers for colposcopy/biopsy or treatment if VIA positive, per protocol', true],
+      ['Advises on follow-up screening interval if negative', false]
+    ]]
+  ],
+  ratings: [
+    ['Communication & Empathy', 'Rapport, consent, sensitivity in conveying findings', 'four'],
+    ['Asepsis & Safety', 'Hand hygiene, instrument handling, patient safety', 'four'],
+    ['Overall Technical Skill', 'Fluency and correctness of the procedure as a whole', 'four'],
+    ['Overall Result', 'Assessor verdict for this attempt', 'verdict']
+  ]
+};
+
+const FOUR = ['Needs improvement', 'Borderline', 'Competent', 'Proficient'];
+const VERDICT = ['Needs practice', 'Satisfactory'];
+const LETTERS = 'ABCDEFGH';
+const MARKS = [
+  ['done', 'Done', 'Performed correctly'],
+  ['not', 'Missed', 'Not done or incorrect'],
+  ['na', 'N/A', 'Not applicable to this case']
+];
+
+class Component extends DCLogic {
+  state = {
+    header: { student: '', roll: '', batch: '', date: '2026-08-26', assessor: '', attempt: '1' },
+    marks: {}, remarks: {}, remarkOpen: {},
+    ratings: {}, strengths: '', improvements: '',
+    assessorSign: '', studentSign: '', saved: 'All changes saved'
+  };
+
+  setMark(key, value) {
+    this.setState(s => ({ marks: { ...s.marks, [key]: s.marks[key] === value ? null : value }, saved: 'Saving…' }));
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ saved: 'All changes saved' }), 700);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const acc = 'var(--color-accent-700)';
+    const threshold = this.props.threshold ?? FORM.threshold;
+    const showRemarks = this.props.allowRemarks !== false;
+    const allowNA = this.props.allowNotApplicable !== false;
+
+    let done = 0, not = 0, na = 0, blank = 0, critMissed = 0, critTotal = 0;
+    FORM.sections.forEach(([, steps], si) => steps.forEach(([, crit], ti) => {
+      const m = s.marks[si + ':' + ti];
+      if (crit) critTotal += 1;
+      if (m === 'done') done += 1;
+      else if (m === 'not') { not += 1; if (crit) critMissed += 1; }
+      else if (m === 'na') na += 1;
+      else blank += 1;
+    }));
+    const applicable = done + not;
+    const pct = applicable ? Math.round((done / applicable) * 100) : 0;
+    const meets = applicable > 0 && pct >= threshold && critMissed === 0;
+
+    const headMeta = [
+      { label: 'Reference', value: FORM.code },
+      { label: 'Level', value: FORM.level },
+      { label: 'Setting', value: FORM.setting }
+    ];
+
+    const fieldDefs = [
+      ['student', 'Student name', 'text', 'Full name'],
+      ['roll', 'Roll number', 'text', 'e.g. MBBS/2023/041'],
+      ['batch', 'Batch / year', 'text', 'e.g. 2023 – Phase II'],
+      ['date', 'Date of assessment', 'date', ''],
+      ['assessor', 'Assessor', 'text', 'Faculty name'],
+      ['attempt', 'Attempt no.', 'text', '1']
+    ];
+    const headerFields = fieldDefs.map(([key, label, type, placeholder]) => ({
+      label, type, placeholder, value: s.header[key],
+      onChange: e => { const v = e.target.value; this.setState(st => ({ header: { ...st.header, [key]: v } })); }
+    }));
+
+    let running = 0;
+    const sections = FORM.sections.map(([title, steps], si) => {
+      let secDone = 0, secMarked = 0;
+      steps.forEach((_, ti) => { const m = s.marks[si + ':' + ti]; if (m) { secMarked += 1; if (m === 'done') secDone += 1; } });
+      return {
+        letter: LETTERS[si], title,
+        progress: secMarked + ' of ' + steps.length + ' marked',
+        steps: steps.map(([text, critical], ti) => {
+          running += 1;
+          const key = si + ':' + ti;
+          const m = s.marks[key];
+          const open = showRemarks && !!s.remarkOpen[key];
+          const hasRemark = !!(s.remarks[key] || '').trim();
+          return {
+            n: running, text, critical,
+            textColor: m === 'na' ? 'var(--color-neutral-600)' : 'var(--color-text)',
+            rowBg: m === 'not' && critical ? 'var(--color-accent-100)' : 'transparent',
+            rail: m === 'done' ? acc : (m === 'not' ? 'var(--color-neutral-800)' : 'transparent'),
+            remarkOpen: open, remark: s.remarks[key] || '',
+            onRemark: e => { const v = e.target.value; this.setState(st => ({ remarks: { ...st.remarks, [key]: v } })); },
+            onToggleRemark: () => showRemarks && this.setState(st => ({ remarkOpen: { ...st.remarkOpen, [key]: !st.remarkOpen[key] } })),
+            remarkColor: open || hasRemark ? acc : 'var(--color-neutral-500)',
+            remarkFill: hasRemark ? 'var(--color-accent-200)' : 'none',
+            marks: MARKS.filter(mk => allowNA || mk[0] !== 'na').map(([id, label, title2]) => {
+              const on = m === id;
+              const strong = id === 'done' ? acc : (id === 'not' ? 'var(--color-neutral-800)' : 'var(--color-neutral-500)');
+              return {
+                label, title: title2, padX: id === 'na' ? '11px' : '14px',
+                bg: on ? strong : 'transparent',
+                color: on ? '#fff' : 'var(--color-neutral-600)',
+                shadow: on ? '0 1px 2px rgba(0,0,0,.18)' : 'none',
+                onClick: () => this.setMark(key, id)
+              };
+            })
+          };
+        })
+      };
+    });
+
+    const ratings = FORM.ratings.map(([label, hint, kind], ri) => {
+      const opts = kind === 'verdict' ? VERDICT : FOUR;
+      const picked = s.ratings[ri];
+      return {
+        label, hint,
+        options: opts.map(o => {
+          const on = picked === o;
+          const strong = kind === 'verdict' ? (o === 'Satisfactory' ? acc : 'var(--color-neutral-900)') : 'var(--color-neutral-900)';
+          return {
+            label: o, minWidth: kind === 'verdict' ? '124px' : '104px',
+            bg: on ? strong : '#fff',
+            border: on ? strong : 'var(--color-neutral-400)',
+            color: on ? '#fff' : 'var(--color-neutral-700)',
+            onClick: () => this.setState(st => ({ ratings: { ...st.ratings, [ri]: st.ratings[ri] === o ? null : o } }))
+          };
+        })
+      };
+    });
+
+    const sectionNav = FORM.sections.map(([title, steps], si) => {
+      const marked = steps.filter((_, ti) => s.marks[si + ':' + ti]).length;
+      const complete = marked === steps.length;
+      return {
+        title, count: marked + '/' + steps.length,
+        mark: complete ? '✓' : '',
+        bg: complete ? acc : 'transparent',
+        border: complete ? acc : 'var(--color-neutral-400)'
+      };
+    });
+
+    const verdictPick = s.ratings[FORM.ratings.length - 1];
+    const missingSign = !s.assessorSign.trim();
+    const blockers = [];
+    if (blank) blockers.push(blank + ' step' + (blank === 1 ? '' : 's') + ' unmarked');
+    if (!verdictPick) blockers.push('overall result not set');
+    if (missingSign) blockers.push('assessor signature missing');
+
+    return {
+      deptLabel: FORM.dept + ' · ' + FORM.format + ' assessment',
+      skillName: FORM.skill,
+      headMeta, headerFields, sections, ratings, sectionNav,
+      savedLabel: s.saved,
+      onSaveDraft: () => this.setState({ saved: 'Draft saved just now' }),
+      strengths: s.strengths, improvements: s.improvements,
+      onStrengths: e => this.setState({ strengths: e.target.value }),
+      onImprovements: e => this.setState({ improvements: e.target.value }),
+      assessorSign: s.assessorSign, studentSign: s.studentSign,
+      onAssessorSign: e => this.setState({ assessorSign: e.target.value }),
+      onStudentSign: e => this.setState({ studentSign: e.target.value }),
+      scorePct: applicable ? pct + '%' : '—',
+      scoreDetail: applicable ? done + ' of ' + applicable + ' applicable steps done' : 'Mark steps to begin scoring',
+      scoreBarWidth: (applicable ? pct : 0) + '%',
+      scoreColor: !applicable ? 'var(--color-neutral-400)' : (meets ? acc : 'var(--color-neutral-900)'),
+      thresholdLabel: threshold + '%',
+      tallies: [
+        { label: 'Done', value: done, color: acc },
+        { label: 'Not done', value: not, color: 'var(--color-neutral-900)' },
+        { label: 'N/A', value: na, color: 'var(--color-neutral-600)' }
+      ],
+      criticalAlert: critMissed > 0,
+      criticalAlertText: critMissed + ' of ' + critTotal + ' critical step' + (critMissed === 1 ? '' : 's') + ' marked not done. The attempt cannot be satisfactory while any critical step is missed.',
+      verdictLabel: verdictPick || (applicable ? (meets ? 'Meets threshold' : 'Below threshold') : 'Not yet scored'),
+      verdictColor: verdictPick === 'Satisfactory' || (!verdictPick && meets) ? acc : 'var(--color-text)',
+      verdictNote: verdictPick
+        ? 'Recorded by the assessor. The computed score is kept alongside it.'
+        : (critMissed ? 'A missed critical step overrides the percentage.' : 'Set the overall result in the global ratings section.'),
+      submitDisabled: blockers.length > 0,
+      submitLabel: blockers.length ? 'Complete the form to submit' : 'Submit assessment',
+      blockerVisible: blockers.length > 0,
+      blockerText: 'Outstanding: ' + blockers.join(', ') + '.'
+    };
+  }
+}
+
+</script>
+</body>
+</html>

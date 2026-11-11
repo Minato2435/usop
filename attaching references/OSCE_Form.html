@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OSCE Form</title><style>
+:root{--ink:#111;--muted:#555;--line:#222;--band:#1f3a5f;--band-ink:#fff;--paper:#fff;--bg:#e9ecef;--soft:#f3f6fa;--accent:#1f3a5f}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Times New Roman",Georgia,serif;font-size:12pt}
+.toolbar{position:sticky;top:0;z-index:5;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:10px 16px;background:#20232a}
+.toolbar button{font:600 13px system-ui,sans-serif;padding:8px 16px;border:0;border-radius:6px;cursor:pointer;background:#fff;color:#20232a}
+.toolbar button.primary{background:#4f8cff;color:#fff}
+.sheet{width:210mm;max-width:100%;min-height:297mm;margin:20px auto;background:var(--paper);padding:16mm 16mm 14mm;box-shadow:0 2px 14px rgba(0,0,0,.15)}
+header.form-head{text-align:center;border:2px solid var(--line);padding:10px 12px 8px;margin-bottom:14px}
+header.form-head h1{margin:0;font-size:15pt;letter-spacing:.4px;text-transform:uppercase}
+header.form-head p{margin:4px 0 0;font-style:italic;font-size:10.5pt;color:var(--muted)}
+section{margin:0 0 12px;break-inside:avoid}
+h2{margin:0 0 8px;font-size:11pt;background:var(--band);color:var(--band-ink);padding:4px 8px;letter-spacing:.3px;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 22px}
+.grid .full{grid-column:1/-1}
+.field{display:flex;align-items:flex-end;gap:6px;min-height:26px}
+.field>label,.field>.lbl{white-space:nowrap}
+input.line,textarea{font:inherit;color:#0b3d91;background:transparent;border:0;border-bottom:1px solid var(--line);padding:2px 4px;outline:none;min-width:0}
+input.line{flex:1;height:24px}
+input.line:focus,textarea:focus{background:#fffbe6}
+input.short{flex:0 0 60px;width:60px;text-align:center}
+.date{display:inline-flex;align-items:flex-end;gap:3px}
+.date input{width:40px;flex:0 0 40px;text-align:center}
+.date input.yy{width:54px;flex:0 0 54px}
+.opts{display:flex;flex-wrap:wrap;gap:4px 18px;align-items:center}
+.opts.col{flex-direction:column;align-items:flex-start;gap:5px}
+.opt{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+input.box{appearance:none;-webkit-appearance:none;width:15px;height:15px;border:1.5px solid var(--line);border-radius:0;margin:0;display:inline-grid;place-content:center;cursor:pointer;background:#fff;flex:0 0 15px}
+input.box::before{content:"\2713";font:700 13px/1 Arial,sans-serif;color:#0b3d91;transform:scale(0);transition:transform .08s}
+input.box:checked::before{transform:scale(1)}
+input.box:focus-visible{outline:2px solid #4f8cff;outline-offset:1px}
+.opt .other{width:150px;flex:0 0 150px}
+.note{font-style:italic;font-size:10.5pt;color:var(--muted);margin:-2px 0 6px}
+table{width:100%;border-collapse:collapse;font-size:11pt}
+th,td{border:1px solid var(--line);padding:5px 6px;vertical-align:middle}
+th{background:var(--soft);font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+td.c{text-align:center}
+td input.line{width:100%;border-bottom:0;text-align:center}
+td input.line.left{text-align:left}
+tfoot td{font-weight:700;background:var(--soft);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.fb{margin-bottom:8px}
+.fb .lbl{font-weight:700;display:block;margin-bottom:2px}
+textarea{display:block;width:100%;resize:vertical;min-height:72px;border:0;line-height:24px;padding:0 4px;
+ background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 23px,#999 23px,#999 24px);background-attachment:local}
+.ack{margin:0 0 6px}
+.logbook{border:2px solid var(--line);padding:8px 10px;display:flex;flex-wrap:wrap;gap:6px 22px;align-items:center;margin-top:14px;break-inside:avoid}
+.logbook strong{margin-right:4px}
+.sig{height:30px}
+.calc{color:#0b3d91;font-weight:700}
+@media (max-width:640px){.sheet{padding:16px;margin:0;min-height:0}.grid{grid-template-columns:1fr}html,body{font-size:11pt}.table-wrap{overflow-x:auto}}
+@page{size:A4;margin:12mm}
+@media print{
+ html,body{background:#fff}
+ .toolbar{display:none}
+ .sheet{box-shadow:none;margin:0;padding:0;width:auto;min-height:0}
+ input.line:focus,textarea:focus{background:transparent}
+ textarea{resize:none}
+}
+</style></head>
+<body>
+<div class="toolbar"><button class="primary" onclick="window.print()">Print / Save as PDF</button><button onclick="fillToday()">Fill today's date</button><button onclick="clearForm()">Clear form</button></div>
+<main class="sheet"><form autocomplete="off" onsubmit="return false">
+<header class="form-head"><h1>Objective Structured Clinical Examination (OSCE) Assessment Form</h1><p>(As per NMC CBME Guidelines – Workplace-Based Assessment)</p></header>
+<section><h2>1. Student Details</h2><div class="grid"><div class="field "><label for="student_name">Name:</label><input class="line" id="student_name" name="student_name" ></div><div class="field "><label for="roll_number">Roll Number:</label><input class="line" id="roll_number" name="roll_number" ></div><div class="field "><label for="batch_phase">Batch/Phase:</label><input class="line" id="batch_phase" name="batch_phase" ></div><div class="field "><label for="department">Department:</label><input class="line" id="department" name="department" ></div><div class="field full"><span class="lbl">Date:</span><span class="date"><input class="line" name="osce_date_dd" maxlength="2" inputmode="numeric" placeholder="DD" aria-label="Day"><span>/</span><input class="line" name="osce_date_mm" maxlength="2" inputmode="numeric" placeholder="MM" aria-label="Month"><span>/</span><input class="line yy" name="osce_date_yyyy" maxlength="4" inputmode="numeric" placeholder="YYYY" aria-label="Year"></span></div></div></section><section><h2>2. OSCE Structure</h2><div class="grid"><div class="field"><label for="n_stations">Number of Stations:</label><input class="line short" id="n_stations" name="number_of_stations" inputmode="numeric"></div><div class="field"><label for="max_marks">Maximum Marks:</label><input class="line short" id="max_marks" name="maximum_marks" inputmode="decimal"></div><div class="field full" style="flex-wrap:wrap;align-items:center"><span class="lbl">Type:</span><div class="opts"><label class="opt"><input type="checkbox" class="box" name="osce_type" value="Clinical" data-single> Clinical</label><label class="opt"><input type="checkbox" class="box" name="osce_type" value="Procedural" data-single> Procedural</label><label class="opt"><input type="checkbox" class="box" name="osce_type" value="Communication" data-single> Communication</label><label class="opt"><input type="checkbox" class="box" name="osce_type" value="AETCOM" data-single> AETCOM</label></div></div></div></section><section><h2>3. Station-wise Assessment</h2><div class="table-wrap"><table><colgroup><col style="width:14%"><col style="width:26%"><col style="width:21%"><col style="width:15%"><col style="width:21%"></colgroup><thead><tr><th>Station No.</th><th>Skill Assessed</th><th>Marks Obtained</th><th>Max Marks</th><th>Examiner Initial</th></tr></thead><tbody><tr><td class="c">1</td><td><input class="line left" name="s1_skill" aria-label="Station 1 skill assessed"></td><td><input class="line num obt" name="s1_obtained" inputmode="decimal" aria-label="Station 1 marks obtained"></td><td><input class="line num max" name="s1_max" inputmode="decimal" aria-label="Station 1 max marks"></td><td><input class="line" name="s1_initial" aria-label="Station 1 examiner initial"></td></tr><tr><td class="c">2</td><td><input class="line left" name="s2_skill" aria-label="Station 2 skill assessed"></td><td><input class="line num obt" name="s2_obtained" inputmode="decimal" aria-label="Station 2 marks obtained"></td><td><input class="line num max" name="s2_max" inputmode="decimal" aria-label="Station 2 max marks"></td><td><input class="line" name="s2_initial" aria-label="Station 2 examiner initial"></td></tr><tr><td class="c">3</td><td><input class="line left" name="s3_skill" aria-label="Station 3 skill assessed"></td><td><input class="line num obt" name="s3_obtained" inputmode="decimal" aria-label="Station 3 marks obtained"></td><td><input class="line num max" name="s3_max" inputmode="decimal" aria-label="Station 3 max marks"></td><td><input class="line" name="s3_initial" aria-label="Station 3 examiner initial"></td></tr><tr><td class="c">4</td><td><input class="line left" name="s4_skill" aria-label="Station 4 skill assessed"></td><td><input class="line num obt" name="s4_obtained" inputmode="decimal" aria-label="Station 4 marks obtained"></td><td><input class="line num max" name="s4_max" inputmode="decimal" aria-label="Station 4 max marks"></td><td><input class="line" name="s4_initial" aria-label="Station 4 examiner initial"></td></tr><tr><td class="c">5</td><td><input class="line left" name="s5_skill" aria-label="Station 5 skill assessed"></td><td><input class="line num obt" name="s5_obtained" inputmode="decimal" aria-label="Station 5 marks obtained"></td><td><input class="line num max" name="s5_max" inputmode="decimal" aria-label="Station 5 max marks"></td><td><input class="line" name="s5_initial" aria-label="Station 5 examiner initial"></td></tr><tr><td class="c">6</td><td><input class="line left" name="s6_skill" aria-label="Station 6 skill assessed"></td><td><input class="line num obt" name="s6_obtained" inputmode="decimal" aria-label="Station 6 marks obtained"></td><td><input class="line num max" name="s6_max" inputmode="decimal" aria-label="Station 6 max marks"></td><td><input class="line" name="s6_initial" aria-label="Station 6 examiner initial"></td></tr></tbody><tfoot><tr><td colspan="2" style="text-align:right">Total</td><td class="c calc" id="sum_obt">–</td><td class="c calc" id="sum_max">–</td><td></td></tr></tfoot></table></div></section><section><h2>4. Global Rating (Overall Competence)</h2><div class="opts col"><label class="opt"><input type="checkbox" class="box" name="global_rating" value="Below Expected Level" data-single> Below Expected Level</label><label class="opt"><input type="checkbox" class="box" name="global_rating" value="Meets Expected Level" data-single> Meets Expected Level</label><label class="opt"><input type="checkbox" class="box" name="global_rating" value="Exceeds Expected Level" data-single> Exceeds Expected Level</label></div></section><section><h2>5. Checklist Compliance</h2><div class="opts col"><label class="opt"><input type="checkbox" class="box" name="checklist" value="Standardized checklist used for all stations"> Standardized checklist used for all stations</label><label class="opt"><input type="checkbox" class="box" name="checklist" value="Uniform marking scheme followed"> Uniform marking scheme followed</label></div></section><section><h2>6. Feedback (Mandatory – CBME Requirement)</h2><div class="fb"><label class="lbl" for="fb_strengths">Strengths:</label><textarea id="fb_strengths" name="fb_strengths" rows="3"></textarea></div><div class="fb"><label class="lbl" for="fb_areas_for_improvement">Areas for Improvement:</label><textarea id="fb_areas_for_improvement" name="fb_areas_for_improvement" rows="3"></textarea></div></section><section><h2>7. Result Summary</h2><div class="grid"><div class="field"><label for="tot_obt">Total Marks Obtained:</label><input class="line short" id="tot_obt" name="total_obtained" inputmode="decimal"><span>/</span><input class="line short" id="tot_max" name="total_max" inputmode="decimal" aria-label="Total maximum"></div><div class="field"><label for="pct">Percentage:</label><input class="line short" id="pct" name="percentage" inputmode="decimal"><span>%</span></div><div class="field full" style="flex-wrap:wrap;align-items:center"><span class="lbl">Status:</span><div class="opts"><label class="opt"><input type="checkbox" class="box" name="status" value="Pass" data-single> Pass</label><label class="opt"><input type="checkbox" class="box" name="status" value="Needs Improvement" data-single> Needs Improvement</label></div></div></div></section><section><h2>8. Faculty Details</h2><div class="grid"><div class="field "><label for="faculty_name">Name:</label><input class="line" id="faculty_name" name="faculty_name" ></div><div class="field "><label for="faculty_designation">Designation:</label><input class="line" id="faculty_designation" name="faculty_designation" ></div><div class="field "><label for="faculty_signature">Signature:</label><input class="line" id="faculty_signature" name="faculty_signature" ></div><div class="field "><span class="lbl">Date:</span><span class="date"><input class="line" name="faculty_date_dd" maxlength="2" inputmode="numeric" placeholder="DD" aria-label="Day"><span>/</span><input class="line" name="faculty_date_mm" maxlength="2" inputmode="numeric" placeholder="MM" aria-label="Month"><span>/</span><input class="line yy" name="faculty_date_yyyy" maxlength="4" inputmode="numeric" placeholder="YYYY" aria-label="Year"></span></div></div></section><section><h2>9. Student Acknowledgement</h2><p class="ack">I have received feedback regarding my performance.</p><div class="grid"><div class="field "><label for="student_signature">Student Signature:</label><input class="line" id="student_signature" name="student_signature" ></div><div class="field "><span class="lbl">Date:</span><span class="date"><input class="line" name="student_date_dd" maxlength="2" inputmode="numeric" placeholder="DD" aria-label="Day"><span>/</span><input class="line" name="student_date_mm" maxlength="2" inputmode="numeric" placeholder="MM" aria-label="Month"><span>/</span><input class="line yy" name="student_date_yyyy" maxlength="4" inputmode="numeric" placeholder="YYYY" aria-label="Year"></span></div></div></section><div class="logbook"><strong>&#10004; Logbook Entry Status:</strong><div class="opts"><label class="opt"><input type="checkbox" class="box" name="logbook_status" value="Completed" data-single> Completed</label><label class="opt"><input type="checkbox" class="box" name="logbook_status" value="Repeat Required" data-single> Repeat Required</label></div></div>
+</form></main>
+<script>
+// single-choice groups: radio-like behaviour on square boxes (click again to clear)
+document.querySelectorAll('input.box[data-single]').forEach(b=>{
+  b.addEventListener('change',()=>{ if(b.checked) document.querySelectorAll('input.box[name="'+b.name+'"]').forEach(o=>{ if(o!==b) o.checked=false; }); });
+});
+// date parts: numeric only + auto-advance
+document.querySelectorAll('.date input').forEach((inp,i,all)=>{
+  inp.addEventListener('input',()=>{ inp.value=inp.value.replace(/\D/g,''); if(inp.value.length>=inp.maxLength){ const n=inp.nextElementSibling&&inp.nextElementSibling.nextElementSibling; if(n&&n.tagName==='INPUT') n.focus(); } });
+});
+// "Other" text ticks its box
+document.querySelectorAll('input.other').forEach(t=>t.addEventListener('input',()=>{const b=t.closest('.opt').querySelector('input.box'); if(t.value.trim()) b.checked=true;}));
+// "Today" fills every empty date
+function fillToday(){ const d=new Date(); document.querySelectorAll('.date').forEach(g=>{ const [dd,mm,yy]=g.querySelectorAll('input'); if(!dd.value&&!mm.value&&!yy.value){ dd.value=String(d.getDate()).padStart(2,'0'); mm.value=String(d.getMonth()+1).padStart(2,'0'); yy.value=d.getFullYear(); } }); }
+function clearForm(){ if(confirm('Clear all entries on this form?')){ document.querySelectorAll('input').forEach(i=>{ if(i.type==='checkbox') i.checked=false; else i.value=''; }); document.querySelectorAll('textarea').forEach(t=>t.value=''); if(window.recalc) recalc(); } }
+
+// Auto-totals: station marks fill Total / Percentage unless the examiner has typed their own value
+const touched=new Set();
+['tot_obt','tot_max','pct'].forEach(id=>document.getElementById(id).addEventListener('input',e=>{ e.target.value?touched.add(id):touched.delete(id); }));
+function num(v){ const n=parseFloat(v); return isNaN(n)?null:n; }
+function fmt(n){ return Math.round(n*100)/100+''; }
+window.recalc=function(){
+  let so=0,sm=0,ho=false,hm=false;
+  document.querySelectorAll('input.obt').forEach(i=>{const n=num(i.value); if(n!==null){so+=n;ho=true;}});
+  document.querySelectorAll('input.max').forEach(i=>{const n=num(i.value); if(n!==null){sm+=n;hm=true;}});
+  document.getElementById('sum_obt').textContent=ho?fmt(so):'–';
+  document.getElementById('sum_max').textContent=hm?fmt(sm):'–';
+  const mm=num(document.getElementById('max_marks').value);
+  const den = hm ? sm : mm;
+  if(!touched.has('tot_obt')) document.getElementById('tot_obt').value = ho?fmt(so):'';
+  if(!touched.has('tot_max')) document.getElementById('tot_max').value = den!==null&&(hm||mm!==null)?fmt(den):'';
+  const o=num(document.getElementById('tot_obt').value), d=num(document.getElementById('tot_max').value);
+  if(!touched.has('pct')) document.getElementById('pct').value = (o!==null&&d)?fmt(o/d*100):'';
+};
+document.querySelectorAll('input.num,#max_marks,#tot_obt,#tot_max').forEach(i=>i.addEventListener('input',()=>{ i.value=i.value.replace(/[^0-9.]/g,''); recalc(); }));
+</script>
+</body></html>

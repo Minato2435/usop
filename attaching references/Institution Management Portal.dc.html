@@ -1,0 +1,508 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <template id="__bundler_thumbnail" data-bg-color="#f3f2f2">
+    <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <rect width="120" height="120" fill="#f3f2f2"/>
+      <circle cx="60" cy="52" r="20" fill="none" stroke="#b68235" stroke-width="2"/>
+      <text x="60" y="59" font-family="Georgia, serif" font-size="20" fill="#b68235" text-anchor="middle">I</text>
+      <line x1="30" y1="88" x2="90" y2="88" stroke="#201f1d" stroke-width="1.5"/>
+    </svg>
+  </template>
+  <link rel="stylesheet" href="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/styles.css">
+  <script src="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; background: var(--color-bg); }
+    a { color: var(--color-accent-700); }
+    a:hover { color: var(--color-accent-800); }
+    .im-row { transition: background .12s ease; }
+    .im-row:hover { background: color-mix(in srgb, var(--color-text) 3.5%, transparent); }
+    .im-tab { transition: color .12s ease, border-color .12s ease; }
+  </style>
+</helmet>
+<div style="display:flex; height:100vh; font-family: var(--font-body); color: var(--color-text); overflow:hidden;">
+
+  <nav style="width:76px; flex-shrink:0; background:var(--color-neutral-900); display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px;">
+    <div style="width:40px; height:40px; border-radius:var(--radius-md); background:var(--color-accent); display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#201f1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+    </div>
+    <button style="width:44px; height:32px; border:none; background:transparent; color:rgba(255,255,255,.5); display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="expand">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <div style="height:1px; background:rgba(255,255,255,.1); width:32px; margin:8px 0;"></div>
+    <sc-for list="{{ navIcons }}" as="icon" hint-placeholder-count="7">
+      <button style="width:44px; height:44px; border:none; border-radius:var(--radius-sm); background:{{ icon.bg }}; color:{{ icon.color }}; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;" aria-label="{{ icon.label }}" title="{{ icon.label }}">
+        <span dangerouslySetInnerHTML="{{ icon.svg }}"></span>
+        <sc-if value="{{ icon.dot }}">
+          <span style="position:absolute; top:8px; right:9px; width:6px; height:6px; border-radius:50%; background:var(--color-accent);"></span>
+        </sc-if>
+      </button>
+    </sc-for>
+    <div style="flex:1;"></div>
+    <div style="width:36px; height:36px; border-radius:50%; background:var(--color-accent-800); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-heading); font-weight:600; font-size:15px;">P</div>
+    <button style="width:44px; height:40px; border:none; background:transparent; color:rgba(255,255,255,.55); display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:4px;" aria-label="log out">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </nav>
+
+  <main style="flex:1; overflow-y:auto; min-width:0;">
+    <header style="padding:26px 44px 0; border-bottom:1px solid var(--color-divider); background:var(--color-bg);">
+      <div style="font-size:13px; color:var(--color-neutral-600); margin-bottom:14px;">
+        <a href="#" onClick="{{ stop }}" style="text-decoration:none;">Institutions</a>
+        <span style="margin:0 6px; color:var(--color-neutral-500);">/</span>
+        <span style="color:var(--color-text);">{{ inst.name }}</span>
+      </div>
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding-bottom:22px;">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div style="flex-shrink:0; width:52px; height:52px; border-radius:50%; border:1px solid var(--color-accent-400); display:flex; align-items:center; justify-content:center; font-family:var(--font-heading); font-size:21px; color:var(--color-accent-700);">{{ inst.initial }}</div>
+          <div>
+            <div style="font-family:var(--font-body); font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-accent-700); margin-bottom:4px;">Institution Management</div>
+            <h1 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:30px; margin:0; color:var(--color-text); line-height:1.1;">{{ inst.name }}</h1>
+            <div style="font-size:13px; color:var(--color-neutral-700); margin-top:4px;">{{ inst.type }} &middot; {{ inst.location }}</div>
+          </div>
+        </div>
+        <div style="text-align:right; font-size:13px; color:var(--color-neutral-700); font-variant-numeric:tabular-nums; flex-shrink:0;">
+          <div>{{ today }}</div>
+          <div style="font-family:var(--font-heading); font-size:16px; color:var(--color-text); margin-top:2px;">{{ clock }}</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:28px; margin-bottom:20px;">
+        <div>
+          <div style="font-family:var(--font-heading); font-size:22px; font-variant-numeric:tabular-nums;">{{ stats.deptLabel }}</div>
+          <div style="font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--color-neutral-600); margin-top:2px;">Departments included</div>
+        </div>
+        <div>
+          <div style="font-family:var(--font-heading); font-size:22px; font-variant-numeric:tabular-nums;">{{ stats.compLabel }}</div>
+          <div style="font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--color-neutral-600); margin-top:2px;">Competencies included</div>
+        </div>
+        <div>
+          <div style="font-family:var(--font-heading); font-size:22px; font-variant-numeric:tabular-nums;">{{ stats.templateLabel }}</div>
+          <div style="font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--color-neutral-600); margin-top:2px;">Institution-only templates</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:4px;">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+          <button class="im-tab" onClick="{{ t.onClick }}" style="background:none; border:none; border-bottom:2px solid {{ t.border }}; color:{{ t.color }}; font-family:var(--font-body); font-size:13.5px; font-weight:600; padding:10px 16px; cursor:pointer;">{{ t.label }}</button>
+        </sc-for>
+      </div>
+    </header>
+
+    <div style="padding:24px 44px 56px;">
+      <div class="card" style="padding:14px 18px; margin-bottom:26px; flex-direction:row; align-items:center; gap:10px; background:var(--color-accent-100); border-color:var(--color-accent-300);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-800)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div style="font-size:13px; color:var(--color-accent-800); line-height:1.5;">Configuration only. Nothing here changes what students or faculty see yet — this is the data foundation the submission experience will read from once it ships.</div>
+      </div>
+
+      <sc-if value="{{ isDepartments }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+            <div style="font-size:13.5px; color:var(--color-neutral-700);">{{ deptSummary }}</div>
+            <button class="btn btn-secondary" onClick="{{ includeAllDepts }}">Include all departments</button>
+          </div>
+          <div class="card" style="padding:6px 0;">
+            <sc-for list="{{ deptRows }}" as="row" hint-placeholder-count="6">
+              <div class="im-row" style="display:flex; align-items:center; gap:16px; padding:13px 20px; border-bottom:1px solid var(--color-divider);">
+                <button onClick="{{ row.onToggle }}" aria-label="toggle department" style="width:38px; height:21px; border-radius:11px; border:1px solid {{ row.brd }}; background:{{ row.bg }}; position:relative; flex-shrink:0; cursor:pointer; padding:0;">
+                  <span style="position:absolute; top:1px; left:{{ row.knobLeft }}; width:17px; height:17px; border-radius:50%; background:{{ row.knob }}; transition:left .15s ease;"></span>
+                </button>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-family:var(--font-heading); font-size:17px; color:{{ row.textColor }};">{{ row.name }}</div>
+                  <div style="font-size:12px; color:var(--color-neutral-600);">{{ row.code }}</div>
+                </div>
+                <div style="font-size:12.5px; color:var(--color-neutral-600); text-align:right; flex-shrink:0; width:150px;">{{ row.compLabel }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex; align-items:center; justify-content:space-between; margin:34px 0 16px;">
+            <div>
+              <div style="font-family:var(--font-heading); font-size:19px;">Institution-only departments</div>
+              <div style="font-size:12.5px; color:var(--color-neutral-600); margin-top:2px;">Belong exclusively to {{ inst.name }} — not part of the shared catalog.</div>
+            </div>
+            <button class="btn btn-primary" style="border-color:var(--color-neutral-900); color:var(--color-neutral-900); display:flex; align-items:center; gap:8px;" onClick="{{ openNewDept }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New department
+            </button>
+          </div>
+          <sc-if value="{{ hasCustomDepts }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; flex-wrap:wrap; gap:16px;">
+              <sc-for list="{{ customDeptCards }}" as="c" hint-placeholder-count="1">
+                <div class="card elev-sm" style="width:280px; padding:16px 18px;">
+                  <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px;">
+                    <div class="card-title" style="font-size:17px;">{{ c.name }}</div>
+                    <button onClick="{{ c.onRemove }}" aria-label="remove department" style="background:none; border:none; cursor:pointer; color:var(--color-neutral-500); padding:2px;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                    </button>
+                  </div>
+                  <div style="font-size:12px; color:var(--color-neutral-600); margin-bottom:8px;">{{ c.code }}</div>
+                  <div style="font-size:13px; line-height:1.5; color:var(--color-neutral-700);">{{ c.description }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ noCustomDepts }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:13.5px; color:var(--color-neutral-600); padding:18px 0;">No institution-only departments yet.</div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isCompetencies }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; flex-direction:column; gap:20px;">
+          <sc-for list="{{ compGroups }}" as="group" hint-placeholder-count="3">
+            <div class="card" style="padding:18px 20px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span class="tag tag-accent">{{ group.name }}</span>
+                  <span style="font-size:12.5px; color:var(--color-neutral-600);">{{ group.countLabel }}</span>
+                </div>
+                <div style="display:flex; gap:8px;">
+                  <button class="btn btn-secondary" style="padding:5px 12px; font-size:12.5px;" onClick="{{ group.onSelectAll }}">Select all</button>
+                  <button class="btn btn-secondary" style="padding:5px 12px; font-size:12.5px;" onClick="{{ group.onDeselectAll }}">Deselect all</button>
+                </div>
+              </div>
+              <div style="margin-top:8px;">
+                <sc-for list="{{ group.rows }}" as="row" hint-placeholder-count="4">
+                  <div class="im-row" style="display:flex; align-items:center; gap:14px; padding:10px 4px; border-bottom:1px solid var(--color-divider);">
+                    <button onClick="{{ row.onToggle }}" aria-label="toggle competency" style="width:34px; height:19px; border-radius:10px; border:1px solid {{ row.brd }}; background:{{ row.bg }}; position:relative; flex-shrink:0; cursor:pointer; padding:0;">
+                      <span style="position:absolute; top:1px; left:{{ row.knobLeft }}; width:15px; height:15px; border-radius:50%; background:{{ row.knob }}; transition:left .15s ease;"></span>
+                    </button>
+                    <div style="font-size:14px; color:{{ row.textColor }};">{{ row.name }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ hasExcludedDepts }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:13px; color:var(--color-neutral-600); padding:6px 4px;">Excluded departments (enable in the Departments tab to manage their competencies): {{ excludedDeptNames }}</div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isTemplates }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+            <div style="font-size:13.5px; color:var(--color-neutral-700);">{{ templateSummary }}</div>
+            <button class="btn btn-primary" style="border-color:var(--color-neutral-900); color:var(--color-neutral-900); display:flex; align-items:center; gap:8px;" onClick="{{ openNewTemplate }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New institution template
+            </button>
+          </div>
+          <sc-if value="{{ hasTemplates }}" hint-placeholder-val="{{ true }}">
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:18px;">
+              <sc-for list="{{ templateCards }}" as="tpl" hint-placeholder-count="2">
+                <div class="card elev-sm" style="padding:18px 20px; cursor:pointer;" onClick="{{ tpl.onOpen }}">
+                  <span class="tag tag-outline" style="align-self:flex-start;">{{ tpl.dept }}</span>
+                  <div class="card-title" style="font-size:18px; margin-top:6px;">{{ tpl.name }}</div>
+                  <div class="card-body" style="font-size:13px; line-height:1.5;">{{ tpl.description }}</div>
+                  <div class="hr" style="margin:10px 0;"></div>
+                  <div style="font-size:12px; color:var(--color-neutral-600);">{{ tpl.fieldLabel }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ noTemplates }}" hint-placeholder-val="{{ false }}">
+            <div class="card" style="padding:48px; text-align:center; color:var(--color-neutral-600);">
+              <div style="font-family:var(--font-heading); font-size:20px; color:var(--color-text); margin-bottom:6px;">No institution-only templates yet</div>
+              <div style="font-size:14px;">Create one to give {{ inst.name }} a checklist that belongs to them alone.</div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </main>
+
+  <sc-if value="{{ newDeptOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" onClick="{{ closeNewDept }}">
+      <div class="dialog" style="width:480px; max-width:92vw;" onClick="{{ stop }}">
+        <div class="dialog-title" style="font-size:22px;">New institution department</div>
+        <div class="dialog-body" style="display:flex; flex-direction:column; gap:16px; margin-top:4px;">
+          <div class="dlg-field">
+            <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-bottom:6px;">Department name</label>
+            <input class="input" type="text" placeholder="e.g. Simulation &amp; Skills Lab" value="{{ deptForm.name }}" onChange="{{ onDeptFormChange('name') }}"/>
+          </div>
+          <div class="dlg-field">
+            <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-bottom:6px;">Code</label>
+            <input class="input" type="text" placeholder="e.g. SIM-501" value="{{ deptForm.code }}" onChange="{{ onDeptFormChange('code') }}"/>
+          </div>
+          <div class="dlg-field">
+            <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-bottom:6px;">Description</label>
+            <textarea class="input" placeholder="What this department covers" value="{{ deptForm.description }}" onChange="{{ onDeptFormChange('description') }}"></textarea>
+          </div>
+        </div>
+        <div class="dialog-actions" style="margin-top:20px;">
+          <button class="btn btn-secondary" onClick="{{ closeNewDept }}">Cancel</button>
+          <button class="btn btn-primary" style="background:var(--color-neutral-900); color:#fff; border-color:var(--color-neutral-900);" onClick="{{ createDept }}" disabled="{{ !deptForm.name }}">Create department</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ newTemplateOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" onClick="{{ closeNewTemplate }}">
+      <div class="dialog" style="width:520px; max-width:92vw;" onClick="{{ stop }}">
+        <div class="dialog-title" style="font-size:22px;">New institution template</div>
+        <div class="dialog-body" style="display:flex; flex-direction:column; gap:16px; margin-top:4px;">
+          <div class="dlg-field">
+            <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-bottom:6px;">Template name</label>
+            <input class="input" type="text" placeholder="e.g. Rural Health Outreach Log" value="{{ templateForm.name }}" onChange="{{ onTemplateFormChange('name') }}"/>
+          </div>
+          <div class="dlg-field">
+            <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-bottom:6px;">Department</label>
+            <select class="input" value="{{ templateForm.dept }}" onChange="{{ onTemplateFormChange('dept') }}">
+              <sc-for list="{{ templateDeptOptions }}" as="opt" hint-placeholder-count="6">
+                <option value="{{ opt }}">{{ opt }}</option>
+              </sc-for>
+            </select>
+          </div>
+          <div class="dlg-field">
+            <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-bottom:6px;">Description</label>
+            <textarea class="input" placeholder="What this template is for" value="{{ templateForm.description }}" onChange="{{ onTemplateFormChange('description') }}"></textarea>
+          </div>
+        </div>
+        <div class="dialog-actions" style="margin-top:20px;">
+          <button class="btn btn-secondary" onClick="{{ closeNewTemplate }}">Cancel</button>
+          <button class="btn btn-primary" style="background:var(--color-neutral-900); color:#fff; border-color:var(--color-neutral-900);" onClick="{{ createTemplate }}" disabled="{{ !templateForm.name }}">Create &amp; open editor</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ templateDetailOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" onClick="{{ closeTemplateDetail }}">
+      <div class="dialog" style="width:600px; max-width:92vw; max-height:84vh; overflow-y:auto;" onClick="{{ stop }}">
+        <div style="font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-accent-700);">Institution-only template &middot; {{ activeTemplate.dept }}</div>
+        <div class="dialog-title" style="font-size:24px; margin-top:4px;">{{ activeTemplate.name }}</div>
+        <div class="hr" style="margin:16px 0;"></div>
+        <div class="dlg-field">
+          <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-bottom:6px;">Description</label>
+          <textarea class="input" value="{{ activeTemplate.description }}" onChange="{{ onActiveTemplateChange }}"></textarea>
+        </div>
+        <div style="font-size:13px; color:var(--color-neutral-600); margin-top:14px; line-height:1.5;">This opens in the same log-builder editor used for every SSL template — full field editing, scoped to {{ inst.name }} alone.</div>
+        <div class="dialog-actions" style="margin-top:22px;">
+          <button class="btn btn-secondary" onClick="{{ closeTemplateDetail }}">Close</button>
+          <button class="btn btn-primary" style="background:var(--color-neutral-900); color:#fff; border-color:var(--color-neutral-900);" onClick="{{ closeTemplateDetail }}">Save</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const ICON = (path) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+
+const INSTITUTION = { name: 'Riverside College of Medicine', type: 'Medical College', location: 'Riverside, Karnataka', initial: 'R' };
+
+const CATALOG = [
+  { name: 'Anatomy', code: 'ANAT-101', included: true, comps: ['Cadaveric Dissection Technique', 'Cross-Sectional Imaging Interpretation', 'Surface Landmark Identification'] },
+  { name: 'Physiology', code: 'PHYS-101', included: true, comps: ['Spirometry Performance', 'ECG Recording & Interpretation', 'Blood Pressure Measurement'] },
+  { name: 'Pathology', code: 'PATH-201', included: true, comps: ['Specimen Grossing', 'Frozen Section Technique', 'Peripheral Smear Examination'] },
+  { name: 'Pharmacology', code: 'PHAR-201', included: true, comps: ['Rational Drug Prescribing', 'Adverse Drug Reaction Reporting'] },
+  { name: 'Microbiology', code: 'MICR-201', included: true, comps: ['Gram Staining', 'Culture & Sensitivity Setup', 'Aseptic Technique'] },
+  { name: 'Forensic Medicine', code: 'FMT-201', included: false, comps: ['Medico-Legal Autopsy Assist', 'Injury Report Documentation'] },
+  { name: 'General Medicine', code: 'MED-401', included: true, comps: ['History Taking & Clinical Examination', 'Venipuncture', 'IV Cannulation', 'Arterial Blood Gas Sampling'] },
+  { name: 'General Surgery', code: 'SURG-401', included: true, comps: ['Suturing', 'Sterile Draping', 'Surgical Knot Tying', 'Wound Dressing'] },
+  { name: 'Obstetrics & Gynaecology', code: 'OBGY-401', included: true, comps: ['Per Vaginal Examination', 'Partograph Charting', 'Newborn Resuscitation'] },
+  { name: 'Pediatrics', code: 'PED-401', included: true, comps: ['Growth Chart Plotting', 'Neonatal Examination', 'Immunization Administration'] },
+];
+
+const CUSTOM_DEPTS = [
+  { name: 'Simulation & Skills Lab', code: 'SIM-501', description: 'Institution-run mannequin and task-trainer sessions, unique to this campus.' },
+];
+
+const TEMPLATES = [
+  { name: 'Rural Health Outreach Log', dept: 'Community Medicine', description: 'Documents field camp participation during the outreach rotation.', fieldLabel: '9 fields' },
+  { name: 'Simulation Lab Competency Log', dept: 'Simulation & Skills Lab', description: 'Sign-off sheet for mannequin-based procedure practice.', fieldLabel: '6 fields' },
+];
+
+let uid = 1;
+
+class Component extends DCLogic {
+  state = {
+    tab: 'departments',
+    depts: CATALOG.map(d => ({ ...d, id: 'd' + (uid++), comps: d.comps.map((name, i) => ({ id: 'c' + (uid++), name, included: !(d.name === 'Microbiology' && i === 2) })) })),
+    customDepts: CUSTOM_DEPTS.map(d => ({ ...d, id: 'cd' + (uid++) })),
+    templates: TEMPLATES.map(t => ({ ...t, id: 't' + (uid++) })),
+    newDeptOpen: false, deptForm: { name: '', code: '', description: '' },
+    newTemplateOpen: false, templateForm: { name: '', dept: '', description: '' },
+    activeTemplateId: null,
+  };
+
+  componentDidMount() { this._t = setInterval(() => this.forceUpdate(), 30000); }
+  componentWillUnmount() { clearInterval(this._t); }
+
+  toggleDept(id) {
+    this.setState(s => ({ depts: s.depts.map(d => d.id === id ? { ...d, included: !d.included } : d) }));
+  }
+  toggleComp(deptId, compId) {
+    this.setState(s => ({ depts: s.depts.map(d => d.id !== deptId ? d : { ...d, comps: d.comps.map(c => c.id === compId ? { ...c, included: !c.included } : c) }) }));
+  }
+  setAllComps(deptId, val) {
+    this.setState(s => ({ depts: s.depts.map(d => d.id !== deptId ? d : { ...d, comps: d.comps.map(c => ({ ...c, included: val })) }) }));
+  }
+
+  renderVals() {
+    const now = new Date();
+    const today = now.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' });
+    const clock = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+    const switchStyle = (on, big) => ({
+      brd: on ? 'var(--color-accent-700)' : 'var(--color-divider)',
+      bg: on ? 'var(--color-accent-700)' : 'var(--color-neutral-200)',
+      knob: '#fff',
+      knobLeft: on ? (big ? '18px' : '16px') : '2px',
+    });
+
+    const includedDepts = this.state.depts.filter(d => d.included);
+    const excludedDepts = this.state.depts.filter(d => !d.included);
+    const totalComps = this.state.depts.reduce((a, d) => a + d.comps.length, 0);
+    const includedComps = this.state.depts.reduce((a, d) => a + (d.included ? d.comps.filter(c => c.included).length : 0), 0);
+
+    const deptRows = this.state.depts.map(d => {
+      const inc = d.comps.filter(c => c.included).length;
+      const sw = switchStyle(d.included, true);
+      return {
+        id: d.id, name: d.name, code: d.code,
+        textColor: d.included ? 'var(--color-text)' : 'var(--color-neutral-500)',
+        compLabel: d.included ? `${inc} / ${d.comps.length} competencies` : 'Excluded',
+        onToggle: () => this.toggleDept(d.id),
+        ...sw,
+      };
+    });
+
+    const compGroups = includedDepts.map(d => {
+      const incCount = d.comps.filter(c => c.included).length;
+      return {
+        id: d.id, name: d.name,
+        countLabel: `${incCount} / ${d.comps.length} enabled`,
+        onSelectAll: () => this.setAllComps(d.id, true),
+        onDeselectAll: () => this.setAllComps(d.id, false),
+        rows: d.comps.map(c => {
+          const sw = switchStyle(c.included, false);
+          return {
+            id: c.id, name: c.name,
+            textColor: c.included ? 'var(--color-text)' : 'var(--color-neutral-500)',
+            onToggle: () => this.toggleComp(d.id, c.id),
+            ...sw,
+          };
+        }),
+      };
+    });
+
+    const customDeptCards = this.state.customDepts.map(c => ({
+      id: c.id, name: c.name, code: c.code, description: c.description,
+      onRemove: () => this.setState(s => ({ customDepts: s.customDepts.filter(x => x.id !== c.id) })),
+    }));
+
+    const templateCards = this.state.templates.map(t => ({
+      id: t.id, name: t.name, dept: t.dept, description: t.description, fieldLabel: t.fieldLabel,
+      onOpen: () => this.setState({ activeTemplateId: t.id }),
+    }));
+
+    const activeTemplate = this.state.templates.find(t => t.id === this.state.activeTemplateId) || { name: '', dept: '', description: '' };
+
+    const tabDefs = [
+      { key: 'departments', label: 'Departments' },
+      { key: 'competencies', label: 'SSL Competencies' },
+      { key: 'templates', label: 'Institution Templates' },
+    ];
+    const tabs = tabDefs.map(t => ({
+      key: t.key, label: t.label,
+      onClick: () => this.setState({ tab: t.key }),
+      border: this.state.tab === t.key ? 'var(--color-accent-700)' : 'transparent',
+      color: this.state.tab === t.key ? 'var(--color-text)' : 'var(--color-neutral-600)',
+    }));
+
+    const navIconDefs = [
+      { label: 'Dashboard', path: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>' },
+      { label: 'Institutes', path: '<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h1"/><path d="M14 9h1"/><path d="M9 13h1"/><path d="M14 13h1"/>', active: true },
+      { label: 'Users', path: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' },
+      { label: 'Departments', path: '<rect x="4" y="15" width="4" height="6"/><rect x="10" y="10" width="4" height="11"/><rect x="16" y="6" width="4" height="15"/>' },
+      { label: 'Focus areas', path: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/>' },
+      { label: 'Content layers', path: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>' },
+      { label: 'Media', path: '<rect x="2" y="6" width="15" height="12" rx="2"/><polygon points="22 8 17 12 22 16 22 8"/>' },
+      { label: 'Settings', path: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>' },
+    ];
+    const navIcons = navIconDefs.map(d => ({
+      label: d.label, svg: { __html: ICON(d.path) }, dot: !!d.active,
+      bg: d.active ? 'var(--color-accent-100)' : 'transparent',
+      color: d.active ? 'var(--color-accent-800)' : 'rgba(255,255,255,.55)',
+    }));
+
+    const templateDeptOptions = [...this.state.depts.filter(d => d.included).map(d => d.name), ...this.state.customDepts.map(d => d.name)];
+
+    return {
+      today, clock, navIcons,
+      inst: INSTITUTION,
+      stop: e => e.stopPropagation(),
+      stats: {
+        deptLabel: `${includedDepts.length} / ${this.state.depts.length}`,
+        compLabel: `${includedComps} / ${totalComps}`,
+        templateLabel: `${this.state.templates.length}`,
+      },
+      tabs,
+      isDepartments: this.state.tab === 'departments',
+      isCompetencies: this.state.tab === 'competencies',
+      isTemplates: this.state.tab === 'templates',
+
+      deptSummary: `${includedDepts.length} of ${this.state.depts.length} catalog departments included`,
+      includeAllDepts: () => this.setState(s => ({ depts: s.depts.map(d => ({ ...d, included: true })) })),
+      deptRows,
+      hasCustomDepts: customDeptCards.length > 0,
+      noCustomDepts: customDeptCards.length === 0,
+      customDeptCards,
+      openNewDept: () => this.setState({ newDeptOpen: true, deptForm: { name: '', code: '', description: '' } }),
+      closeNewDept: () => this.setState({ newDeptOpen: false }),
+      newDeptOpen: this.state.newDeptOpen,
+      deptForm: this.state.deptForm,
+      onDeptFormChange: field => e => this.setState(s => ({ deptForm: { ...s.deptForm, [field]: e.target.value } })),
+      createDept: () => {
+        if (!this.state.deptForm.name.trim()) return;
+        const { name, code, description } = this.state.deptForm;
+        this.setState(s => ({ customDepts: [...s.customDepts, { id: 'cd' + (uid++), name, code: code || '—', description: description || 'No description yet.' }], newDeptOpen: false }));
+      },
+
+      compGroups,
+      hasExcludedDepts: excludedDepts.length > 0,
+      excludedDeptNames: excludedDepts.map(d => d.name).join(', '),
+
+      templateSummary: `${this.state.templates.length} template${this.state.templates.length === 1 ? '' : 's'} unique to ${INSTITUTION.name}`,
+      hasTemplates: templateCards.length > 0,
+      noTemplates: templateCards.length === 0,
+      templateCards,
+      openNewTemplate: () => this.setState({ newTemplateOpen: true, templateForm: { name: '', dept: templateDeptOptions[0] || '', description: '' } }),
+      closeNewTemplate: () => this.setState({ newTemplateOpen: false }),
+      newTemplateOpen: this.state.newTemplateOpen,
+      templateForm: this.state.templateForm,
+      templateDeptOptions,
+      onTemplateFormChange: field => e => this.setState(s => ({ templateForm: { ...s.templateForm, [field]: e.target.value } })),
+      createTemplate: () => {
+        if (!this.state.templateForm.name.trim()) return;
+        const { name, dept, description } = this.state.templateForm;
+        const newT = { id: 't' + (uid++), name, dept: dept || templateDeptOptions[0] || 'Unassigned', description: description || 'No description yet.', fieldLabel: '0 fields' };
+        this.setState(s => ({ templates: [...s.templates, newT], newTemplateOpen: false, activeTemplateId: newT.id }));
+      },
+      templateDetailOpen: !!this.state.activeTemplateId,
+      activeTemplate,
+      closeTemplateDetail: () => this.setState({ activeTemplateId: null }),
+      onActiveTemplateChange: e => {
+        const id = this.state.activeTemplateId;
+        this.setState(s => ({ templates: s.templates.map(t => t.id === id ? { ...t, description: e.target.value } : t) }));
+      },
+    };
+  }
+}
+
+</script>
+</body>
+</html>

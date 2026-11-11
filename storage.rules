@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Cross-service firestore.get() (reading Firestore role/active status
+    // directly from Storage Rules) doesn't work reliably on this project —
+    // confirmed by testing: writes and getDownloadURL() reads both 403'd
+    // even for a legitimate Primary Admin, tracing back to this call.
+    // Rather than depend on a broken feature, Storage access here just
+    // requires being signed in — the real access control is (a) the
+    // Firestore videoTutorials/{id} doc's own write rule, which stays
+    // isPrimaryAdmin() and works fine (that's a plain in-service get(), not
+    // cross-service), and (b) the app UI only exposing video upload/manage
+    // to the Primary Admin role in the first place.
+    match /videoTutorials/{videoId}/{fileName} {
+      allow read, write: if request.auth != null;
+    }
+
+    // A video batch's own uploaded videos/thumbnails (see VideoBatch's doc
+    // comment in types/index.ts) — same "signed in only" shape and same
+    // reasoning as videoTutorials above (cross-service firestore.get()
+    // doesn't work reliably here; real access control is the Firestore
+    // videoBatches/{id} doc's own write rule, isPrimaryAdmin()). Storage
+    // `match` segments are never recursive — {fileName} only ever captures
+    // exactly one path segment — so this needs one wildcard per path
+    // segment the app actually writes to, not however many "looks close
+    // enough." The real upload path is `videoBatches/{batchId}/
+    // {videoItemId}/{fileName}` (one batch can hold several videos, each
+    // namespaced under its own item id — see BatchVideoItem), three
+    // segments deep; a two-segment `match /videoBatches/{batchId}/
+    // {fileName}` silently never matches that path at all, so every batch
+    // video/thumbnail upload was permission-denied until this was caught
+    // and fixed — confirmed live by a batch whose uploaded video had
+    // persisted with an empty `url` (the upload rejected, but the batch
+    // doc itself still got created, since that's an unrelated Firestore
+    // write) while its link-sourced sibling video was fine.
+    match /videoBatches/{batchId}/{videoItemId}/{fileName} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Activity photos and sketches: submissions/{studentId}/{submissionId}/{file}.
+    // The studentId segment makes ownership checkable without a cross-service
+    // firestore.get() (unreliable here, see above): only that student can
+    // upload or delete, only images, max 4 MB each. Reading needs sign-in —
+    // faculty / HOD / principal / admins all open these; in practice the app
+    // loads them through download URLs saved on the Firestore doc, which is
+    // itself access-controlled by firestore.rules.
+    match /submissions/{studentId}/{submissionId}/{fileName} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.auth.uid == studentId
+        && request.resource.size < 4 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow delete: if request.auth != null && request.auth.uid == studentId;
+    }
+
+    // Default-deny everything else.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/styles.css">
+  <script src="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; background: var(--color-bg); }
+    a { color: var(--color-accent-700); }
+    a:hover { color: var(--color-accent-800); }
+    .row-node { transition: background .15s ease; }
+    .row-node:hover { background: var(--color-neutral-100); }
+    .stepper { display:inline-flex; flex-direction:column; border:1px solid var(--color-neutral-300);
+      border-radius:var(--radius-sm); overflow:hidden; transition:border-color .15s ease; }
+    .stepper:hover { border-color:var(--color-accent-500); }
+    .stepper-rule { height:1px; background:var(--color-neutral-300); }
+    .stepper:hover .stepper-rule { background:var(--color-accent-300); }
+    .stepper-half { width:26px; height:15px; display:flex; align-items:center; justify-content:center; padding:0;
+      border:none; background:transparent; color:var(--color-neutral-500); cursor:pointer; transition:background .12s ease, color .12s ease; }
+    .stepper-half:hover { background:var(--color-accent-100); color:var(--color-accent-800); }
+    .stepper-half:active { background:var(--color-accent-200); }
+    .sub-btn { display:flex; align-items:center; gap:5px; margin-left:5px; padding:3px 9px 3px 7px;
+      border:1px solid var(--color-accent-400); background:transparent; color:var(--color-accent-700);
+      font-family:var(--font-body); font-size:12px; border-radius:var(--radius-sm); cursor:pointer; white-space:nowrap; }
+    .sub-btn:hover { background:var(--color-accent-100); border-color:var(--color-accent-600); color:var(--color-accent-800); }
+    .sub-btn:active { background:var(--color-accent-200); }
+    .ghost-btn { background:none; border:1px dashed var(--color-accent-400); color:var(--color-accent-700);
+      font-family:var(--font-body); font-size:12px; border-radius:var(--radius-sm); padding:4px 10px; cursor:pointer; }
+    .ghost-btn:hover { background:var(--color-accent-100); }
+    .icon-btn { background:none; border:none; color:var(--color-neutral-600); cursor:pointer; display:flex; align-items:center; padding:4px; border-radius:var(--radius-sm); }
+    .icon-btn:hover { color:var(--color-accent-800); background:var(--color-accent-100); }
+    .bare-input { border:none; background:transparent; font-family:var(--font-body); font-size:14.5px; color:var(--color-text); width:100%; padding:2px 0; border-bottom:1px solid transparent; }
+    .bare-input:focus { outline:none; border-bottom-color:var(--color-accent-400); }
+  </style>
+</helmet>
+<div style="display:flex; height:100vh; font-family:var(--font-body); color:var(--color-text); overflow:hidden;">
+
+  <nav style="width:76px; flex-shrink:0; background:var(--color-neutral-900); display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px;">
+    <div style="width:40px; height:40px; border-radius:var(--radius-md); background:var(--color-accent); display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#201f1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+    </div>
+    <button style="width:44px; height:32px; border:none; background:transparent; color:rgba(255,255,255,.5); display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="expand">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <div style="height:1px; background:rgba(255,255,255,.1); width:32px; margin:8px 0;"></div>
+    <sc-for list="{{ navIcons }}" as="icon" hint-placeholder-count="8">
+      <button style="width:44px; height:44px; border:none; border-radius:var(--radius-sm); background:{{ icon.bg }}; color:{{ icon.color }}; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;" aria-label="{{ icon.label }}" title="{{ icon.label }}">
+        <span dangerouslySetInnerHTML="{{ icon.svg }}"></span>
+        <sc-if value="{{ icon.dot }}">
+          <span style="position:absolute; top:8px; right:9px; width:6px; height:6px; border-radius:50%; background:var(--color-accent);"></span>
+        </sc-if>
+      </button>
+    </sc-for>
+    <div style="flex:1;"></div>
+    <div style="width:36px; height:36px; border-radius:50%; background:var(--color-accent-800); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-heading); font-weight:600; font-size:15px;">P</div>
+    <button style="width:44px; height:40px; border:none; background:transparent; color:rgba(255,255,255,.55); display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:4px;" aria-label="log out">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </nav>
+
+  <main style="flex:1; overflow-y:auto; min-width:0;">
+    <header style="display:flex; align-items:flex-start; justify-content:space-between; padding:28px 44px 24px; border-bottom:1px solid var(--color-divider);">
+      <div>
+        <div style="font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-accent-700); margin-bottom:6px;">Logbook Configuration</div>
+        <h1 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:34px; margin:0;">Log Template</h1>
+        <div style="font-size:13.5px; color:var(--color-neutral-700); margin-top:6px;">{{ breadcrumb }}</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="btn btn-secondary" onClick="{{ openPreview }}">Preview</button>
+        <button class="btn btn-primary" style="background:var(--color-neutral-900); color:#fff; border-color:var(--color-neutral-900);" onClick="{{ save }}">{{ saveLabel }}</button>
+      </div>
+    </header>
+
+    <div style="display:grid; grid-template-columns:340px minmax(0,1fr); align-items:start; gap:0;">
+
+      <aside style="padding:30px 32px 56px; border-right:1px solid var(--color-divider); display:flex; flex-direction:column; gap:26px; position:sticky; top:0;">
+        <div>
+          <div style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-bottom:10px;">Log type</div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <sc-for list="{{ logTypes }}" as="lt" hint-placeholder-count="2">
+              <button onClick="{{ lt.onClick }}" style="text-align:left; cursor:pointer; padding:14px 16px; border-radius:var(--radius-md); background:{{ lt.bg }}; border:1px solid {{ lt.border }}; display:flex; align-items:flex-start; gap:12px; font-family:var(--font-body);">
+                <span style="flex-shrink:0; width:20px; height:20px; border-radius:50%; border:1px solid {{ lt.dotBorder }}; display:flex; align-items:center; justify-content:center; margin-top:2px;">
+                  <span style="width:9px; height:9px; border-radius:50%; background:{{ lt.dotFill }};"></span>
+                </span>
+                <span>
+                  <span style="display:block; font-family:var(--font-heading); font-size:17px; color:var(--color-text);">{{ lt.code }}</span>
+                  <span style="display:block; font-size:12.5px; color:var(--color-neutral-700); margin-top:2px; line-height:1.4;">{{ lt.desc }}</span>
+                </span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="field">
+          <label style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700);">MBBS year</label>
+          <div class="seg" style="display:inline-flex;">
+            <sc-for list="{{ yearOptions }}" as="yr" hint-placeholder-count="4">
+              <button class="seg-opt" style="background:{{ yr.bg }}; color:{{ yr.fg }};" onClick="{{ yr.onClick }}">{{ yr.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="field">
+          <label style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700);">Department</label>
+          <select class="input" value="{{ department }}" onChange="{{ onDeptChange }}">
+            <sc-for list="{{ departmentOptions }}" as="d" hint-placeholder-count="6">
+              <option value="{{ d }}">{{ d }}</option>
+            </sc-for>
+          </select>
+        </div>
+
+        <div class="field">
+          <label style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700);">Log title</label>
+          <input class="input" type="text" placeholder="e.g. Clinical Skills Assessment" value="{{ title }}" onChange="{{ onTitleChange }}"/>
+        </div>
+
+        <div class="hr"></div>
+
+        <div style="display:flex; gap:26px;">
+          <div>
+            <div style="font-family:var(--font-heading); font-size:26px; font-variant-numeric:tabular-nums;">{{ stats.fields }}</div>
+            <div style="font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--color-neutral-600); margin-top:2px;">Fields</div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-heading); font-size:26px; font-variant-numeric:tabular-nums;">{{ stats.depth }}</div>
+            <div style="font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--color-neutral-600); margin-top:2px;">Levels deep</div>
+          </div>
+        </div>
+      </aside>
+
+      <section style="padding:30px 44px 72px; min-width:0; overflow-x:auto;">
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:18px;">
+          <div>
+            <h2 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:22px; margin:0;">Field structure</h2>
+            <div style="font-size:13px; color:var(--color-neutral-700); margin-top:4px;">Nest subfields under any field. Depth is unlimited.</div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-ghost" style="font-size:13px;" onClick="{{ expandAll }}">Expand all</button>
+            <button class="btn btn-ghost" style="font-size:13px;" onClick="{{ collapseAll }}">Collapse all</button>
+          </div>
+        </div>
+
+        <div class="card" style="padding:8px 0 12px; min-width:780px;">
+          <div style="display:flex; align-items:center; gap:16px; padding:8px 22px 10px; border-bottom:1px solid var(--color-divider); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-600); white-space:nowrap;">
+            <div style="flex:1 1 260px; min-width:220px;">Field label</div>
+            <div style="width:150px; flex-shrink:0;">Input type</div>
+            <div style="width:78px; flex-shrink:0; text-align:center;">Required</div>
+            <div style="width:186px; flex-shrink:0; text-align:right;">Insert &amp; actions</div>
+          </div>
+
+          <sc-for list="{{ rows }}" as="row" hint-placeholder-count="6">
+            <div class="row-node" style="display:flex; align-items:center; gap:16px; padding:9px 22px; border-bottom:1px solid var(--color-neutral-200);">
+              <div style="flex:1 1 260px; min-width:220px; display:flex; align-items:center; gap:8px; padding-left:{{ row.indent }};">
+                <sc-if value="{{ row.hasChildren }}" hint-placeholder-val="{{ false }}">
+                  <button class="icon-btn" onClick="{{ row.onToggle }}" aria-label="toggle">
+                    <span dangerouslySetInnerHTML="{{ row.caret }}"></span>
+                  </button>
+                </sc-if>
+                <sc-if value="{{ row.isLeaf }}" hint-placeholder-val="{{ true }}">
+                  <span style="width:26px; display:flex; justify-content:center; color:var(--color-neutral-400);">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
+                  </span>
+                </sc-if>
+                <span style="font-size:11px; color:var(--color-neutral-500); font-variant-numeric:tabular-nums; width:44px; flex-shrink:0;">{{ row.number }}</span>
+                <input class="bare-input" type="text" placeholder="Untitled field" value="{{ row.label }}" onChange="{{ row.onLabelChange }}"/>
+              </div>
+              <div style="width:150px; flex-shrink:0;">
+                <select class="input" style="padding:5px 8px; font-size:13px;" value="{{ row.type }}" onChange="{{ row.onTypeChange }}">
+                  <sc-for list="{{ fieldTypes }}" as="ft" hint-placeholder-count="6">
+                    <option value="{{ ft }}">{{ ft }}</option>
+                  </sc-for>
+                </select>
+              </div>
+              <div style="width:78px; flex-shrink:0; display:flex; justify-content:center;">
+                <button onClick="{{ row.onToggleRequired }}" aria-label="required" style="width:34px; height:19px; border-radius:10px; border:1px solid {{ row.reqBorder }}; background:{{ row.reqBg }}; cursor:pointer; padding:0; display:flex; align-items:center;">
+                  <span style="width:13px; height:13px; border-radius:50%; background:{{ row.reqKnob }}; margin-left:{{ row.reqKnobOffset }}; transition:margin-left .15s ease;"></span>
+                </button>
+              </div>
+              <div class="row-acts" style="width:186px; flex-shrink:0; display:flex; justify-content:flex-end; align-items:center; gap:2px;">
+                <span class="stepper" title="Insert a field above / below">
+                  <button class="stepper-half" onClick="{{ row.onInsertAbove }}" aria-label="insert field above">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                  </button>
+                  <span class="stepper-rule"></span>
+                  <button class="stepper-half" onClick="{{ row.onInsertBelow }}" aria-label="insert field below">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                </span>
+                <button class="sub-btn" onClick="{{ row.onAddChildBottom }}" aria-label="add subfield" title="Add a subfield inside this field">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v8a3 3 0 0 0 3 3h9"/><path d="m13 11 4 4-4 4"/></svg>
+                  Sub
+                </button>
+                <span style="width:1px; height:18px; background:var(--color-neutral-300); margin:0 7px;"></span>
+                <button class="icon-btn" onClick="{{ row.onDuplicate }}" aria-label="duplicate" title="Duplicate with subfields">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+                <button class="icon-btn" onClick="{{ row.onRemove }}" style="color:var(--color-danger, #b3261e);" aria-label="remove" title="Remove">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                </button>
+              </div>
+            </div>
+          </sc-for>
+
+          <div style="padding:14px 22px 4px;">
+            <button class="btn btn-primary" style="font-size:13.5px; display:flex; align-items:center; gap:8px;" onClick="{{ addRootField }}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add log field
+            </button>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; margin-top:16px; font-size:12.5px; color:var(--color-neutral-600);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          The stacked arrows insert a new field above or below this one. <strong style="font-weight:600;">Sub</strong> adds a subfield inside it — available at every level.
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <sc-if value="{{ previewOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" onClick="{{ closePreview }}">
+      <div class="dialog" style="width:620px; max-width:92vw; max-height:84vh; overflow-y:auto;" onClick="{{ stop }}">
+        <div style="font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-accent-700);">{{ logType }} · {{ yearLabel }}</div>
+        <div class="dialog-title" style="font-size:24px; margin-top:4px;">{{ titleOrFallback }}</div>
+        <div style="font-size:13px; color:var(--color-neutral-700); margin-top:-4px;">{{ department }}</div>
+        <div class="hr" style="margin:18px 0;"></div>
+        <div class="dialog-body" style="display:flex; flex-direction:column; gap:14px;">
+          <sc-for list="{{ previewRows }}" as="p" hint-placeholder-count="5">
+            <div style="padding-left:{{ p.indent }};">
+              <div style="display:flex; align-items:baseline; gap:8px;">
+                <span style="font-size:11px; color:var(--color-neutral-500); font-variant-numeric:tabular-nums; width:44px; flex-shrink:0;">{{ p.number }}</span>
+                <span style="font-family:var(--font-heading); font-size:{{ p.size }}; color:var(--color-text);">{{ p.label }}</span>
+                <sc-if value="{{ p.required }}" hint-placeholder-val="{{ false }}">
+                  <span style="color:var(--color-accent-700); font-size:13px;">*</span>
+                </sc-if>
+              </div>
+              <sc-if value="{{ p.showControl }}" hint-placeholder-val="{{ true }}">
+                <div style="margin-left:52px; margin-top:6px; border:1px solid var(--color-neutral-300); border-radius:var(--radius-sm); padding:8px 10px; font-size:13px; color:var(--color-neutral-500); background:var(--color-neutral-100);">{{ p.hint }}</div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <div class="dialog-actions" style="margin-top:24px;">
+          <button class="btn btn-secondary" onClick="{{ closePreview }}">Close</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+const ICON = (path, size) => `<svg width="${size || 18}" height="${size || 18}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+
+const FIELD_TYPES = ['Section', 'Short text', 'Long text', 'Number', 'Date', 'Dropdown', 'Checklist', 'Signature'];
+const HINTS = {
+  'Section': '', 'Short text': 'Single line answer', 'Long text': 'Paragraph answer',
+  'Number': '0', 'Date': 'dd / mm / yyyy', 'Dropdown': 'Select an option',
+  'Checklist': 'Multiple selection', 'Signature': 'Supervisor signature',
+};
+const DEPARTMENTS = ['Anatomy', 'Physiology', 'Biochemistry', 'Pathology', 'Pharmacology', 'Microbiology', 'Community Medicine', 'General Medicine', 'General Surgery', 'Obstetrics & Gynaecology', 'Pediatrics'];
+
+let uid = 100;
+const nid = () => `f${uid++}`;
+
+const SEED = [
+  { id: nid(), label: 'Patient encounter', type: 'Section', required: true, children: [
+    { id: nid(), label: 'Case number', type: 'Short text', required: true, children: [] },
+    { id: nid(), label: 'Presenting complaint', type: 'Long text', required: true, children: [
+      { id: nid(), label: 'Duration', type: 'Short text', required: false, children: [] },
+      { id: nid(), label: 'Associated symptoms', type: 'Checklist', required: false, children: [] },
+    ] },
+    { id: nid(), label: 'Date of encounter', type: 'Date', required: true, children: [] },
+  ] },
+  { id: nid(), label: 'Procedure performed', type: 'Section', required: false, children: [
+    { id: nid(), label: 'Procedure name', type: 'Dropdown', required: true, children: [] },
+    { id: nid(), label: 'Level of involvement', type: 'Dropdown', required: true, children: [] },
+  ] },
+  { id: nid(), label: 'Supervisor verification', type: 'Signature', required: true, children: [] },
+];
+
+const cloneSubtree = (n) => ({ ...n, id: nid(), children: n.children.map(cloneSubtree) });
+const blank = () => ({ id: nid(), label: '', type: 'Short text', required: false, children: [] });
+
+class Component extends DCLogic {
+  state = {
+    logType: 'SSL', year: 1, department: 'Anatomy', title: 'Clinical Skills Assessment',
+    fields: SEED, collapsed: {}, previewOpen: false, saved: false,
+  };
+
+  update(fn) {
+    const walk = (list) => fn(list.map(n => ({ ...n, children: walk(n.children) })));
+    this.setState(s => ({ fields: walk(s.fields), saved: false }));
+  }
+  mutate(id, action) {
+    const walk = (list) => {
+      const out = [];
+      for (const n of list) {
+        if (n.id === id) {
+          if (action.kind === 'remove') continue;
+          if (action.kind === 'duplicate') { out.push({ ...n, children: walk(n.children) }); out.push(cloneSubtree(n)); continue; }
+          if (action.kind === 'addChild') {
+            const kids = walk(n.children);
+            const fresh = blank();
+            out.push({ ...n, type: n.children.length === 0 && n.type !== 'Section' ? 'Section' : n.type,
+              children: action.pos === 'first' ? [fresh, ...kids] : [...kids, fresh] });
+            continue;
+          }
+          if (action.kind === 'insertAbove') { out.push(blank()); out.push({ ...n, children: walk(n.children) }); continue; }
+          if (action.kind === 'insertBelow') { out.push({ ...n, children: walk(n.children) }); out.push(blank()); continue; }
+          if (action.kind === 'set') { out.push({ ...n, ...action.patch, children: walk(n.children) }); continue; }
+        }
+        out.push({ ...n, children: walk(n.children) });
+      }
+      return out;
+    };
+    this.setState(s => ({ fields: walk(s.fields), saved: false }));
+  }
+
+  flatten() {
+    const rows = [];
+    const walk = (list, depth, prefix) => {
+      list.forEach((n, i) => {
+        const number = prefix ? `${prefix}.${i + 1}` : String(i + 1);
+        rows.push({ node: n, depth, number });
+        if (n.children.length && !this.state.collapsed[n.id]) walk(n.children, depth + 1, number);
+      });
+    };
+    walk(this.state.fields, 0, '');
+    return rows;
+  }
+
+  renderVals() {
+    const st = this.state;
+    const flat = this.flatten();
+
+    const caretDown = ICON('<path d="m6 9 6 6 6-6"/>', 15);
+    const caretRight = ICON('<path d="m9 18 6-6-6-6"/>', 15);
+
+    const rows = flat.map(({ node: n, depth, number }) => {
+      return {
+      onInsertAbove: () => this.mutate(n.id, { kind: 'insertAbove' }),
+      onInsertBelow: () => this.mutate(n.id, { kind: 'insertBelow' }),
+      onAddChildTop: () => { this.setState(s => ({ collapsed: { ...s.collapsed, [n.id]: false } })); this.mutate(n.id, { kind: 'addChild', pos: 'first' }); },
+      onAddChildBottom: () => { this.setState(s => ({ collapsed: { ...s.collapsed, [n.id]: false } })); this.mutate(n.id, { kind: 'addChild', pos: 'last' }); },
+      key: n.id, label: n.label, type: n.type, number,
+      indent: `${depth * 26}px`,
+      hasChildren: n.children.length > 0,
+      isLeaf: n.children.length === 0,
+      caret: { __html: st.collapsed[n.id] ? caretRight : caretDown },
+      reqBg: n.required ? 'var(--color-accent-200)' : 'var(--color-neutral-200)',
+      reqBorder: n.required ? 'var(--color-accent-400)' : 'var(--color-neutral-300)',
+      reqKnob: n.required ? 'var(--color-accent-700)' : 'var(--color-neutral-500)',
+      reqKnobOffset: n.required ? '17px' : '2px',
+      onToggle: () => this.setState(s => ({ collapsed: { ...s.collapsed, [n.id]: !s.collapsed[n.id] } })),
+      onLabelChange: e => this.mutate(n.id, { kind: 'set', patch: { label: e.target.value } }),
+      onTypeChange: e => this.mutate(n.id, { kind: 'set', patch: { type: e.target.value } }),
+      onToggleRequired: () => this.mutate(n.id, { kind: 'set', patch: { required: !n.required } }),
+      onDuplicate: () => this.mutate(n.id, { kind: 'duplicate' }),
+      onRemove: () => this.mutate(n.id, { kind: 'remove' }),
+    };});
+
+    const countAll = (list) => list.reduce((a, n) => a + 1 + countAll(n.children), 0);
+    const maxDepth = (list, d) => list.length === 0 ? d : Math.max(...list.map(n => maxDepth(n.children, d + 1)));
+
+    const allPreview = [];
+    (function walk(list, depth, prefix) {
+      list.forEach((n, i) => {
+        const number = prefix ? `${prefix}.${i + 1}` : String(i + 1);
+        allPreview.push({
+          key: n.id, label: n.label || 'Untitled field', number, required: n.required,
+          indent: `${depth * 22}px`,
+          size: depth === 0 ? '18px' : '15px',
+          showControl: n.type !== 'Section',
+          hint: HINTS[n.type] || '',
+        });
+        walk(n.children, depth + 1, number);
+      });
+    })(st.fields, 0, '');
+
+    const logTypeDefs = [
+      { code: 'SSL', desc: 'Structured Skill Log — supervised procedures verified by faculty.' },
+      { code: 'SDL', desc: 'Self-Directed Learning — student-recorded study and reflection.' },
+    ];
+    const logTypes = logTypeDefs.map(t => ({
+      key: t.code, code: t.code, desc: t.desc,
+      onClick: () => this.setState({ logType: t.code, saved: false }),
+      bg: st.logType === t.code ? 'var(--color-accent-100)' : 'transparent',
+      border: st.logType === t.code ? 'var(--color-accent-400)' : 'var(--color-neutral-300)',
+      dotBorder: st.logType === t.code ? 'var(--color-accent-600)' : 'var(--color-neutral-400)',
+      dotFill: st.logType === t.code ? 'var(--color-accent-700)' : 'transparent',
+    }));
+
+    const yearOptions = [1, 2, 3, 4].map(y => ({
+      key: y, label: `Year ${y}`,
+      onClick: () => this.setState({ year: y, saved: false }),
+      bg: st.year === y ? 'var(--color-neutral-900)' : 'transparent',
+      fg: st.year === y ? '#fff' : 'var(--color-text)',
+    }));
+
+    const navIconDefs = [
+      { label: 'Dashboard', path: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>' },
+      { label: 'Institutes', path: '<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h1"/><path d="M14 9h1"/><path d="M9 13h1"/><path d="M14 13h1"/>' },
+      { label: 'Users', path: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' },
+      { label: 'Departments', path: '<rect x="4" y="15" width="4" height="6"/><rect x="10" y="10" width="4" height="11"/><rect x="16" y="6" width="4" height="15"/>' },
+      { label: 'Log templates', path: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>', active: true },
+      { label: 'Focus areas', path: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/>' },
+      { label: 'Media', path: '<rect x="2" y="6" width="15" height="12" rx="2"/><polygon points="22 8 17 12 22 16 22 8"/>' },
+      { label: 'Settings', path: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>' },
+    ];
+
+    const collectIds = (list, acc) => { list.forEach(n => { if (n.children.length) { acc[n.id] = true; collectIds(n.children, acc); } }); return acc; };
+
+    return {
+      navIcons: navIconDefs.map(d => ({
+        label: d.label, svg: { __html: ICON(d.path) }, dot: !!d.active,
+        bg: d.active ? 'var(--color-accent-100)' : 'transparent',
+        color: d.active ? 'var(--color-accent-800)' : 'rgba(255,255,255,.55)',
+      })),
+      logTypes, yearOptions, rows, fieldTypes: FIELD_TYPES,
+      departmentOptions: DEPARTMENTS,
+      department: st.department, title: st.title, logType: st.logType,
+      yearLabel: `Year ${st.year}`,
+      titleOrFallback: st.title || 'Untitled log template',
+      breadcrumb: `${st.logType} · Year ${st.year} · ${st.department}`,
+      stats: { fields: countAll(st.fields), depth: maxDepth(st.fields, 0) },
+      onDeptChange: e => this.setState({ department: e.target.value, saved: false }),
+      onTitleChange: e => this.setState({ title: e.target.value, saved: false }),
+      addRootField: () => this.update(list => [...list, { id: nid(), label: '', type: 'Short text', required: false, children: [] }]),
+      expandAll: () => this.setState({ collapsed: {} }),
+      collapseAll: () => this.setState(s => ({ collapsed: collectIds(s.fields, {}) })),
+      previewOpen: st.previewOpen, previewRows: allPreview,
+      openPreview: () => this.setState({ previewOpen: true }),
+      closePreview: () => this.setState({ previewOpen: false }),
+      stop: e => e.stopPropagation(),
+      saveLabel: st.saved ? 'Saved' : 'Save template',
+      save: () => this.setState({ saved: true }),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

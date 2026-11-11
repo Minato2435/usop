@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/styles.css">
+  <script src="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; background: var(--color-bg); }
+    a { color: var(--color-accent-700); }
+    a:hover { color: var(--color-accent-800); }
+    .u-row { transition: background .15s ease; }
+    .u-row:hover { background: var(--color-neutral-100); }
+    .icon-btn { background:none; border:none; color:var(--color-neutral-600); cursor:pointer; display:flex; align-items:center; padding:5px; border-radius:var(--radius-sm); }
+    .icon-btn:hover { color:var(--color-accent-800); background:var(--color-accent-100); }
+    .role-chip { display:inline-flex; align-items:center; gap:7px; padding:3px 11px 3px 9px; border-radius:999px; font-size:12px; white-space:nowrap; }
+    .dlg-field label { display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-bottom:6px; }
+  </style>
+</helmet>
+<div style="display:flex; height:100vh; font-family:var(--font-body); color:var(--color-text); overflow:hidden;">
+
+  <nav style="width:76px; flex-shrink:0; background:var(--color-neutral-900); display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px;">
+    <div style="width:40px; height:40px; border-radius:var(--radius-md); background:var(--color-accent); display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#201f1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+    </div>
+    <button style="width:44px; height:32px; border:none; background:transparent; color:rgba(255,255,255,.5); display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="expand">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <div style="height:1px; background:rgba(255,255,255,.1); width:32px; margin:8px 0;"></div>
+    <sc-for list="{{ navIcons }}" as="icon" hint-placeholder-count="8">
+      <button style="width:44px; height:44px; border:none; border-radius:var(--radius-sm); background:{{ icon.bg }}; color:{{ icon.color }}; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;" aria-label="{{ icon.label }}" title="{{ icon.label }}">
+        <span dangerouslySetInnerHTML="{{ icon.svg }}"></span>
+        <sc-if value="{{ icon.dot }}">
+          <span style="position:absolute; top:8px; right:9px; width:6px; height:6px; border-radius:50%; background:var(--color-accent);"></span>
+        </sc-if>
+      </button>
+    </sc-for>
+    <div style="flex:1;"></div>
+    <div style="width:36px; height:36px; border-radius:50%; background:var(--color-accent-800); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-heading); font-weight:600; font-size:15px;">P</div>
+    <button style="width:44px; height:40px; border:none; background:transparent; color:rgba(255,255,255,.55); display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:4px;" aria-label="log out">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </nav>
+
+  <main style="flex:1; overflow-y:auto; min-width:0;">
+    <header style="display:flex; align-items:flex-start; justify-content:space-between; padding:28px 44px 24px; border-bottom:1px solid var(--color-divider);">
+      <div>
+        <div style="font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-accent-700); margin-bottom:6px;">Access &amp; Accounts</div>
+        <h1 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:34px; margin:0;">Users</h1>
+        <div style="font-size:13.5px; color:var(--color-neutral-700); margin-top:6px;">{{ summaryLine }}</div>
+      </div>
+      <button class="btn btn-primary" style="background:var(--color-neutral-900); color:#fff; border-color:var(--color-neutral-900); display:inline-flex; align-items:center; gap:8px;" onClick="{{ openDialog }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add user
+      </button>
+    </header>
+
+    <div style="padding:26px 44px 64px;">
+
+      <div style="display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); border:1px solid var(--color-neutral-300); border-radius:var(--radius-md); overflow:hidden; margin-bottom:28px;">
+        <sc-for list="{{ roleCards }}" as="r" hint-placeholder-count="6">
+          <button onClick="{{ r.onClick }}" style="text-align:left; cursor:pointer; font-family:var(--font-body); padding:16px 18px; border:none; border-right:1px solid var(--color-neutral-300); border-bottom:2px solid {{ r.underline }}; background:{{ r.bg }};">
+            <div style="font-family:var(--font-heading); font-size:28px; font-variant-numeric:tabular-nums; line-height:1; color:var(--color-text);">{{ r.count }}</div>
+            <div style="font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--color-neutral-600); margin-top:8px; line-height:1.3;">{{ r.label }}</div>
+          </button>
+        </sc-for>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin-bottom:20px;">
+        <div style="position:relative; width:300px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-neutral-500)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; left:12px; top:50%; transform:translateY(-50%);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="input" style="padding-left:36px;" type="text" placeholder="Search name, email or ID" value="{{ search }}" onChange="{{ onSearchChange }}"/>
+        </div>
+        <select class="input" style="width:auto;" value="{{ institution }}" onChange="{{ onInstChange }}">
+          <option value="all">All institutions</option>
+          <sc-for list="{{ institutionOptions }}" as="i" hint-placeholder-count="4">
+            <option value="{{ i }}">{{ i }}</option>
+          </sc-for>
+        </select>
+        <div class="seg" style="display:inline-flex;">
+          <sc-for list="{{ statusOptions }}" as="s" hint-placeholder-count="3">
+            <button class="seg-opt" style="background:{{ s.bg }}; color:{{ s.fg }};" onClick="{{ s.onClick }}">{{ s.label }}</button>
+          </sc-for>
+        </div>
+        <sc-if value="{{ filtersActive }}" hint-placeholder-val="{{ false }}">
+          <button class="btn btn-ghost" style="font-size:13px;" onClick="{{ clearFilters }}">Clear filters</button>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
+        <div class="card" style="padding:0; overflow-x:auto;">
+          <div style="min-width:1080px; display:flex; align-items:center; gap:18px; padding:12px 24px; border-bottom:1px solid var(--color-divider); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-600); white-space:nowrap;">
+            <div style="flex:1 1 280px; min-width:240px;">Name</div>
+            <div style="width:168px; flex-shrink:0;">Role</div>
+            <div style="width:200px; flex-shrink:0;">Institution</div>
+            <div style="width:150px; flex-shrink:0;">Department</div>
+            <div style="width:104px; flex-shrink:0;">Status</div>
+            <div style="width:116px; flex-shrink:0;">Last active</div>
+            <div style="width:92px; flex-shrink:0;"></div>
+          </div>
+
+          <sc-for list="{{ users }}" as="u" hint-placeholder-count="8">
+            <div class="u-row" style="min-width:1080px; display:flex; align-items:center; gap:18px; padding:14px 24px; border-bottom:1px solid var(--color-neutral-200);">
+              <div style="flex:1 1 280px; min-width:240px; display:flex; align-items:center; gap:13px;">
+                <span style="flex-shrink:0; width:38px; height:38px; border-radius:50%; border:1px solid var(--color-accent-400); display:flex; align-items:center; justify-content:center; font-family:var(--font-heading); font-size:15px; color:var(--color-accent-700);">{{ u.initials }}</span>
+                <span style="min-width:0;">
+                  <span style="display:block; font-family:var(--font-heading); font-size:18px; line-height:1.25;">{{ u.name }}</span>
+                  <span style="display:block; font-size:12.5px; color:var(--color-neutral-600); margin-top:2px;">{{ u.email }}</span>
+                </span>
+              </div>
+              <div style="width:168px; flex-shrink:0;">
+                <span class="role-chip" style="border:1px solid {{ u.roleBorder }}; color:{{ u.roleColor }};">
+                  <span style="width:6px; height:6px; border-radius:50%; background:{{ u.roleColor }};"></span>{{ u.role }}
+                </span>
+              </div>
+              <div style="width:200px; flex-shrink:0; font-size:13.5px;">{{ u.institution }}</div>
+              <div style="width:150px; flex-shrink:0; font-size:13.5px; color:var(--color-neutral-700);">{{ u.department }}</div>
+              <div style="width:104px; flex-shrink:0;">
+                <span style="display:inline-flex; align-items:center; gap:7px; font-size:13px; color:var(--color-neutral-700);">
+                  <span style="width:7px; height:7px; border-radius:50%; background:{{ u.statusDot }};"></span>{{ u.status }}
+                </span>
+              </div>
+              <div style="width:116px; flex-shrink:0; font-size:13px; color:var(--color-neutral-700); font-variant-numeric:tabular-nums;">{{ u.lastActive }}</div>
+              <div style="width:92px; flex-shrink:0; display:flex; justify-content:flex-end; gap:2px;">
+                <button class="icon-btn" aria-label="edit" title="Edit user">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
+                </button>
+                <button class="icon-btn" onClick="{{ u.onToggleStatus }}" aria-label="toggle status" title="{{ u.toggleTitle }}">
+                  <span dangerouslySetInnerHTML="{{ u.toggleIcon }}"></span>
+                </button>
+                <button class="icon-btn" aria-label="more" title="More">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+                </button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+        <div class="card" style="padding:56px; text-align:center;">
+          <div style="font-family:var(--font-heading); font-size:21px; margin-bottom:6px;">No users match these filters</div>
+          <div style="font-size:14px; color:var(--color-neutral-600); margin-bottom:20px;">Clear the filters, or invite someone new.</div>
+          <button class="btn btn-primary" onClick="{{ openDialog }}">Add user</button>
+        </div>
+      </sc-if>
+    </div>
+  </main>
+
+  <sc-if value="{{ dialogOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" onClick="{{ closeDialog }}">
+      <div class="dialog" style="width:600px; max-width:92vw; max-height:88vh; overflow-y:auto;" onClick="{{ stop }}">
+        <div style="font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-accent-700);">Access &amp; Accounts</div>
+        <div class="dialog-title" style="font-size:24px; margin-top:4px;">Add user</div>
+        <div class="dialog-body" style="display:flex; flex-direction:column; gap:18px; margin-top:8px;">
+          <div class="dlg-field">
+            <label>Role</label>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <sc-for list="{{ formRoles }}" as="r" hint-placeholder-count="6">
+                <button onClick="{{ r.onClick }}" style="text-align:left; cursor:pointer; font-family:var(--font-body); padding:11px 13px; border-radius:var(--radius-sm); background:{{ r.bg }}; border:1px solid {{ r.border }}; display:flex; align-items:center; gap:10px;">
+                  <span style="flex-shrink:0; width:16px; height:16px; border-radius:50%; border:1px solid {{ r.dotBorder }}; display:flex; align-items:center; justify-content:center;">
+                    <span style="width:8px; height:8px; border-radius:50%; background:{{ r.dotFill }};"></span>
+                  </span>
+                  <span style="font-size:14px; color:var(--color-text);">{{ r.label }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="font-size:12.5px; color:var(--color-neutral-600); margin-top:9px; line-height:1.5;">{{ roleHint }}</div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+            <div class="dlg-field">
+              <label>Full name</label>
+              <input class="input" type="text" placeholder="e.g. Dr. Kavita Menon" value="{{ form.name }}" onChange="{{ onFormChange('name') }}"/>
+            </div>
+            <div class="dlg-field">
+              <label>Email</label>
+              <input class="input" type="email" placeholder="name@college.edu" value="{{ form.email }}" onChange="{{ onFormChange('email') }}"/>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+            <div class="dlg-field">
+              <label>Institution</label>
+              <select class="input" value="{{ form.institution }}" onChange="{{ onFormChange('institution') }}">
+                <sc-for list="{{ institutionOptions }}" as="i" hint-placeholder-count="4">
+                  <option value="{{ i }}">{{ i }}</option>
+                </sc-for>
+              </select>
+            </div>
+            <div class="dlg-field">
+              <label>Department</label>
+              <select class="input" value="{{ form.department }}" onChange="{{ onFormChange('department') }}" disabled="{{ deptDisabled }}">
+                <option value="—">Not applicable</option>
+                <sc-for list="{{ departmentOptions }}" as="d" hint-placeholder-count="6">
+                  <option value="{{ d }}">{{ d }}</option>
+                </sc-for>
+              </select>
+            </div>
+          </div>
+          <div class="dlg-field">
+            <label>{{ idLabel }}</label>
+            <input class="input" type="text" placeholder="{{ idPlaceholder }}" value="{{ form.code }}" onChange="{{ onFormChange('code') }}"/>
+          </div>
+        </div>
+        <div class="dialog-actions" style="margin-top:24px;">
+          <button class="btn btn-secondary" onClick="{{ closeDialog }}">Cancel</button>
+          <button class="btn btn-primary" style="background:var(--color-neutral-900); color:#fff; border-color:var(--color-neutral-900);" onClick="{{ createUser }}" disabled="{{ createDisabled }}">Send invitation</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+const ICON = (path) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+
+const ROLES = ['Primary Admin', 'Institutional Admin', 'Principal', 'HOD', 'Faculty', 'Student'];
+const ROLE_HINTS = {
+  'Primary Admin': 'Full platform access across every institution, including billing and role assignment.',
+  'Institutional Admin': 'Manages one institution — its departments, staff accounts and log templates.',
+  'Principal': 'Read access to all departments in their institution, plus approval of published templates.',
+  'HOD': 'Owns one department: assigns faculty, approves logs and manages its templates.',
+  'Faculty': 'Verifies and signs off student log entries for their department.',
+  'Student': 'Records log entries against the templates assigned to their MBBS year.',
+};
+const NO_DEPT = ['Primary Admin', 'Institutional Admin', 'Principal'];
+
+const INSTITUTIONS = ['Riverside College of Medicine', 'St. Xavier Institute of Health Sciences', 'Lakeview School of Nursing', 'Meridian Dental College'];
+const DEPARTMENTS = ['Anatomy', 'Physiology', 'Biochemistry', 'Pathology', 'Pharmacology', 'Microbiology', 'Community Medicine', 'General Medicine', 'General Surgery', 'Obstetrics & Gynaecology', 'Pediatrics'];
+
+const USERS = [
+  { id: 1, name: 'Priya Nair', email: 'priya.nair@medlog.in', role: 'Primary Admin', institution: 'All institutions', department: '—', status: 'Active', lastActive: 'Today' },
+  { id: 2, name: 'Arun Deshpande', email: 'a.deshpande@riverside.edu', role: 'Institutional Admin', institution: 'Riverside College of Medicine', department: '—', status: 'Active', lastActive: 'Today' },
+  { id: 3, name: 'Dr. Meera Fernandes', email: 'principal@riverside.edu', role: 'Principal', institution: 'Riverside College of Medicine', department: '—', status: 'Active', lastActive: 'Yesterday' },
+  { id: 4, name: 'Dr. Kavita Menon', email: 'k.menon@riverside.edu', role: 'HOD', institution: 'Riverside College of Medicine', department: 'Anatomy', status: 'Active', lastActive: '22 Aug' },
+  { id: 5, name: 'Dr. Suresh Iyer', email: 's.iyer@riverside.edu', role: 'HOD', institution: 'Riverside College of Medicine', department: 'Pathology', status: 'Active', lastActive: '21 Aug' },
+  { id: 6, name: 'Dr. Nandini Bose', email: 'n.bose@stxavier.edu', role: 'Faculty', institution: 'St. Xavier Institute of Health Sciences', department: 'Pharmacology', status: 'Active', lastActive: '20 Aug' },
+  { id: 7, name: 'Dr. Vikram Shah', email: 'v.shah@riverside.edu', role: 'Faculty', institution: 'Riverside College of Medicine', department: 'General Surgery', status: 'Invited', lastActive: '—' },
+  { id: 8, name: 'Dr. Rekha Pillai', email: 'r.pillai@stxavier.edu', role: 'Faculty', institution: 'St. Xavier Institute of Health Sciences', department: 'Community Medicine', status: 'Active', lastActive: '19 Aug' },
+  { id: 9, name: 'Aditya Kulkarni', email: 'aditya.k@student.riverside.edu', role: 'Student', institution: 'Riverside College of Medicine', department: 'Anatomy', status: 'Active', lastActive: 'Today' },
+  { id: 10, name: 'Sneha Raghavan', email: 'sneha.r@student.riverside.edu', role: 'Student', institution: 'Riverside College of Medicine', department: 'Physiology', status: 'Active', lastActive: 'Today' },
+  { id: 11, name: 'Imran Qureshi', email: 'imran.q@student.stxavier.edu', role: 'Student', institution: 'St. Xavier Institute of Health Sciences', department: 'Pathology', status: 'Suspended', lastActive: '02 Jul' },
+  { id: 12, name: 'Divya Shetty', email: 'divya.s@student.lakeview.edu', role: 'Student', institution: 'Lakeview School of Nursing', department: 'Community Medicine', status: 'Invited', lastActive: '—' },
+];
+
+const initials = (n) => n.replace(/^Dr\.\s*/, '').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+class Component extends DCLogic {
+  state = {
+    users: USERS, search: '', role: 'all', institution: 'all', status: 'all',
+    dialogOpen: false, formRole: 'Faculty',
+    form: { name: '', email: '', institution: INSTITUTIONS[0], department: DEPARTMENTS[0], code: '' },
+    seq: 100,
+  };
+
+  renderVals() {
+    const st = this.state;
+    const q = st.search.trim().toLowerCase();
+
+    const filtered = st.users.filter(u =>
+      (st.role === 'all' || u.role === st.role) &&
+      (st.institution === 'all' || u.institution === st.institution) &&
+      (st.status === 'all' || u.status === st.status) &&
+      (!q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.department.toLowerCase().includes(q))
+    );
+
+    const roleTone = r => {
+      if (r === 'Primary Admin') return ['var(--color-accent-600)', 'var(--color-accent-800)'];
+      if (r === 'Institutional Admin' || r === 'Principal') return ['var(--color-accent-400)', 'var(--color-accent-700)'];
+      if (r === 'HOD') return ['var(--color-neutral-500)', 'var(--color-neutral-800)'];
+      return ['var(--color-neutral-300)', 'var(--color-neutral-700)'];
+    };
+    const statusDot = s => s === 'Active' ? 'var(--color-accent-600)'
+      : s === 'Invited' ? 'var(--color-neutral-400)' : 'var(--color-neutral-300)';
+
+    const pauseIcon = ICON('<circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/>').replace('width="18" height="18"', 'width="16" height="16"');
+    const playIcon = ICON('<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>').replace('width="18" height="18"', 'width="16" height="16"');
+
+    const users = filtered.map(u => {
+      const [border, color] = roleTone(u.role);
+      return {
+        key: u.id, name: u.name, email: u.email, role: u.role,
+        institution: u.institution, department: u.department,
+        status: u.status, lastActive: u.lastActive,
+        initials: initials(u.name),
+        roleBorder: border, roleColor: color,
+        statusDot: statusDot(u.status),
+        toggleTitle: u.status === 'Suspended' ? 'Reactivate' : 'Suspend',
+        toggleIcon: { __html: u.status === 'Suspended' ? playIcon : pauseIcon },
+        onToggleStatus: () => this.setState(s => ({
+          users: s.users.map(x => x.id === u.id
+            ? { ...x, status: x.status === 'Suspended' ? 'Active' : 'Suspended' } : x),
+        })),
+      };
+    });
+
+    const roleCards = ROLES.map(r => ({
+      key: r, label: r, count: st.users.filter(u => u.role === r).length,
+      onClick: () => this.setState({ role: st.role === r ? 'all' : r }),
+      bg: st.role === r ? 'var(--color-accent-100)' : 'transparent',
+      underline: st.role === r ? 'var(--color-accent-600)' : 'transparent',
+    }));
+
+    const seg = (cur, val) => ({
+      bg: cur === val ? 'var(--color-neutral-900)' : 'transparent',
+      fg: cur === val ? '#fff' : 'var(--color-text)',
+    });
+    const statusOptions = ['all', 'Active', 'Invited', 'Suspended'].map(s => ({
+      key: s, label: s === 'all' ? 'All statuses' : s,
+      onClick: () => this.setState({ status: s }), ...seg(st.status, s),
+    }));
+
+    const formRoles = ROLES.map(r => ({
+      key: r, label: r,
+      onClick: () => this.setState({ formRole: r }),
+      bg: st.formRole === r ? 'var(--color-accent-100)' : 'transparent',
+      border: st.formRole === r ? 'var(--color-accent-400)' : 'var(--color-neutral-300)',
+      dotBorder: st.formRole === r ? 'var(--color-accent-600)' : 'var(--color-neutral-400)',
+      dotFill: st.formRole === r ? 'var(--color-accent-700)' : 'transparent',
+    }));
+
+    const isStudent = st.formRole === 'Student';
+    const navIconDefs = [
+      { label: 'Dashboard', path: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>' },
+      { label: 'Institutes', path: '<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h1"/><path d="M14 9h1"/><path d="M9 13h1"/><path d="M14 13h1"/>' },
+      { label: 'Users', path: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', active: true },
+      { label: 'Departments', path: '<rect x="4" y="15" width="4" height="6"/><rect x="10" y="10" width="4" height="11"/><rect x="16" y="6" width="4" height="15"/>' },
+      { label: 'Log templates', path: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>' },
+      { label: 'Focus areas', path: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/>' },
+      { label: 'Media', path: '<rect x="2" y="6" width="15" height="12" rx="2"/><polygon points="22 8 17 12 22 16 22 8"/>' },
+      { label: 'Settings', path: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>' },
+    ];
+
+    return {
+      navIcons: navIconDefs.map(d => ({
+        label: d.label, svg: { __html: ICON(d.path) }, dot: !!d.active,
+        bg: d.active ? 'var(--color-accent-100)' : 'transparent',
+        color: d.active ? 'var(--color-accent-800)' : 'rgba(255,255,255,.55)',
+      })),
+      users, roleCards, statusOptions, formRoles,
+      institutionOptions: INSTITUTIONS, departmentOptions: DEPARTMENTS,
+      search: st.search, institution: st.institution, status: st.status,
+      onSearchChange: e => this.setState({ search: e.target.value }),
+      onInstChange: e => this.setState({ institution: e.target.value }),
+      summaryLine: `${filtered.length} of ${st.users.length} accounts · ${st.users.filter(u => u.status === 'Invited').length} pending invitations`,
+      hasResults: filtered.length > 0,
+      noResults: filtered.length === 0,
+      filtersActive: st.role !== 'all' || st.institution !== 'all' || st.status !== 'all' || !!q,
+      clearFilters: () => this.setState({ role: 'all', institution: 'all', status: 'all', search: '' }),
+
+      dialogOpen: st.dialogOpen,
+      openDialog: () => this.setState({ dialogOpen: true, form: { name: '', email: '', institution: INSTITUTIONS[0], department: DEPARTMENTS[0], code: '' } }),
+      closeDialog: () => this.setState({ dialogOpen: false }),
+      stop: e => e.stopPropagation(),
+      form: st.form,
+      onFormChange: field => e => this.setState(s => ({ form: { ...s.form, [field]: e.target.value } })),
+      roleHint: ROLE_HINTS[st.formRole],
+      deptDisabled: NO_DEPT.includes(st.formRole),
+      idLabel: isStudent ? 'Roll number' : 'Staff ID',
+      idPlaceholder: isStudent ? 'e.g. MB2026-114' : 'e.g. STF-2041',
+      createDisabled: !st.form.name.trim() || !st.form.email.trim(),
+      createUser: () => {
+        const f = st.form;
+        if (!f.name.trim() || !f.email.trim()) return;
+        const dept = NO_DEPT.includes(st.formRole) ? '—' : f.department;
+        this.setState(s => ({
+          users: [...s.users, {
+            id: s.seq, name: f.name, email: f.email, role: s.formRole,
+            institution: f.institution, department: dept, status: 'Invited', lastActive: '—',
+          }],
+          seq: s.seq + 1, dialogOpen: false,
+        }));
+      },
+    };
+  }
+}
+
+</script>
+</body>
+</html>

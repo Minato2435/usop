@@ -1,0 +1,14 @@
+[
+  {
+    "origin": [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175",
+      "https://usop-38351.web.app",
+      "https://usop-38351.firebaseapp.com"
+    ],
+    "method": ["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin", "X-Goog-Upload-Protocol", "X-Goog-Upload-Status", "X-Goog-Upload-URL", "X-Goog-Upload-Command"]
+  }
+]

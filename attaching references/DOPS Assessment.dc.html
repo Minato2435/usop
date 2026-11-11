@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <template id="__bundler_thumbnail" data-bg-color="#f3f2f2">
+    <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <rect width="120" height="120" fill="#f3f2f2"/>
+      <circle cx="60" cy="52" r="22" fill="none" stroke="#b68235" stroke-width="3"/>
+      <path d="m50 52 7 7 14-15" stroke="#201f1d" stroke-width="3" fill="none"/>
+      <line x1="34" y1="92" x2="86" y2="92" stroke="#201f1d" stroke-width="1.5"/>
+    </svg>
+  </template>
+  <link rel="stylesheet" href="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/styles.css">
+  <script src="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/_ds_bundle.js"></script>
+  <style>
+    body { margin:0; background:var(--color-bg); }
+    a { color:var(--color-accent-700); }
+    a:hover { color:var(--color-accent-800); }
+    .kicker { font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--color-neutral-700); line-height:1.45; }
+    .band { border-top:1px solid var(--color-divider); padding:24px 0; display:grid; grid-template-columns:158px minmax(0,1fr); gap:36px; align-items:start; }
+    .sec-head { display:flex; align-items:center; gap:14px; padding:30px 0 8px; }
+    .sec-letter { width:26px; height:26px; flex-shrink:0; border-radius:var(--radius-sm); background:var(--color-neutral-900); color:#fff; font-family:var(--font-heading); font-size:13px; display:flex; align-items:center; justify-content:center; }
+    .sec-name { font-family:var(--font-heading); font-size:19px; }
+    .sec-rule { flex:1; height:1px; background:var(--color-divider); }
+    .sec-n { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-variant-numeric:tabular-nums; color:var(--color-neutral-700); }
+    .step { display:grid; grid-template-columns:30px minmax(0,1fr) auto; gap:18px; padding:16px 0 17px 16px; border-top:1px solid var(--color-neutral-200); border-left:2px solid transparent; align-items:start; transition:border-color .14s, background .14s; }
+    .step.done { border-left-color:var(--color-accent-600); }
+    .step.notdone { border-left-color:var(--color-neutral-900); }
+    .step.na { border-left-color:var(--color-neutral-300); opacity:.7; }
+    .step-n { font-family:var(--font-heading); font-size:15px; color:var(--color-neutral-700); font-variant-numeric:tabular-nums; text-align:right; padding-top:2px; }
+    .step-t { font-size:14.5px; line-height:1.55; text-wrap:pretty; }
+    .seg { display:inline-flex; border:1px solid var(--color-neutral-300); border-radius:999px; overflow:hidden; }
+    .seg button { border:none; background:transparent; font-family:var(--font-body); font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; padding:7px 14px; cursor:pointer; color:var(--color-neutral-700); transition:background .12s, color .12s; }
+    .seg button:hover { color:var(--color-text); }
+    .seg button.on-done { background:var(--color-accent-700); color:#fff; }
+    .seg button.on-not { background:var(--color-neutral-900); color:#fff; }
+    .seg button.on-na { background:var(--color-neutral-200); color:var(--color-neutral-900); }
+    .rmk-btn { display:inline-flex; align-items:center; gap:7px; border:none; background:transparent; font-family:var(--font-body); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); cursor:pointer; padding:0; margin-top:10px; }
+    .rmk-btn:hover { color:var(--color-accent-800); }
+    .rmk-input { width:100%; box-sizing:border-box; margin-top:10px; border:1px solid #ddd6ca; border-left:2px solid var(--color-accent-400); border-radius:0 var(--radius-sm) var(--radius-sm) 0; background:rgba(255,255,255,.55); font-family:var(--font-body); font-size:13.5px; line-height:1.6; color:var(--color-text); padding:11px 14px; min-height:64px; resize:vertical; }
+    .rmk-input:focus { outline:none; border-color:var(--color-accent-500); border-left-color:var(--color-accent-700); }
+    .rmk-read { margin-top:10px; padding:2px 0 2px 14px; border-left:2px solid var(--color-accent-400); font-size:13.5px; line-height:1.65; color:var(--color-neutral-800); }
+    .rail { position:sticky; top:0; align-self:start; width:288px; flex-shrink:0; border-left:1px solid var(--color-divider); padding:30px 30px 40px; }
+    .score-n { font-family:var(--font-heading); font-size:58px; line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+    .meter { height:3px; background:var(--color-neutral-200); margin-top:16px; }
+    .meter-fill { height:3px; background:var(--color-accent-700); transition:width .3s ease; }
+    .tally { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; margin-top:24px; background:var(--color-divider); border:1px solid var(--color-divider); }
+    .tally > div { background:var(--color-bg); padding:12px 8px; text-align:center; }
+    .tally-n { font-family:var(--font-heading); font-size:21px; line-height:1; font-variant-numeric:tabular-nums; }
+    .srow { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--color-neutral-200); font-size:13.5px; }
+    .srow:last-child { border-bottom:none; }
+    .sdot { width:16px; height:16px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+    .thumb { width:88px; height:66px; border:1px solid #ddd6ca; border-radius:var(--radius-sm); background-color:rgba(45,43,43,.045); background-image:repeating-linear-gradient(45deg, rgba(45,43,43,.06) 0 8px, transparent 8px 16px); display:flex; align-items:center; justify-content:center; color:var(--color-neutral-700); }
+    .note-body { font-size:14.5px; line-height:1.7; }
+    .note-body p { margin:0 0 11px; }
+    .note-body p:last-child { margin-bottom:0; }
+    @media (max-width: 1080px) {
+      .split { flex-direction:column; }
+      .rail { position:static; width:auto; border-left:none; border-top:1px solid var(--color-divider); padding:26px 0 40px; }
+      .band { grid-template-columns:minmax(0,1fr); gap:12px; }
+    }
+    @media (max-width: 760px) {
+      .step { grid-template-columns:30px minmax(0,1fr); row-gap:12px; }
+      .step .seg { grid-column:2; justify-self:start; }
+    }
+  </style>
+</helmet>
+<div style="display:flex; height:100vh; font-family:var(--font-body); color:var(--color-text); overflow:hidden;">
+
+  <nav style="width:76px; flex-shrink:0; background:var(--color-neutral-900); display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px;">
+    <div style="width:40px; height:40px; border-radius:var(--radius-md); background:var(--color-accent); display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#201f1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+    </div>
+    <button style="width:44px; height:32px; border:none; background:transparent; color:rgba(255,255,255,.5); display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="expand">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <div style="height:1px; background:rgba(255,255,255,.1); width:32px; margin:8px 0;"></div>
+    <sc-for list="{{ navIcons }}" as="icon" hint-placeholder-count="5">
+      <button style="width:44px; height:44px; border:none; border-radius:var(--radius-sm); background:{{ icon.bg }}; color:{{ icon.color }}; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;" aria-label="{{ icon.label }}" title="{{ icon.label }}">
+        <span dangerouslySetInnerHTML="{{ icon.svg }}"></span>
+        <sc-if value="{{ icon.dot }}">
+          <span style="position:absolute; top:8px; right:9px; width:6px; height:6px; border-radius:50%; background:var(--color-accent);"></span>
+        </sc-if>
+      </button>
+    </sc-for>
+    <div style="flex:1;"></div>
+    <div style="width:36px; height:36px; border-radius:50%; background:var(--color-accent-800); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-heading); font-weight:600; font-size:15px;">AK</div>
+    <button style="width:44px; height:40px; border:none; background:transparent; color:rgba(255,255,255,.55); display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:4px;" aria-label="log out">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </nav>
+
+  <main style="flex:1; overflow-y:auto; min-width:0;">
+    <header style="padding:24px 40px 22px; border-bottom:1px solid var(--color-divider);">
+      <div style="font-size:13px; color:var(--color-neutral-700); margin-bottom:14px;">
+        <a href="#" onClick="{{ stop }}" style="text-decoration:none;">&larr; Student activities</a>
+      </div>
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:24px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:16px; min-width:0;">
+          <span style="flex-shrink:0; width:48px; height:48px; border-radius:50%; border:1px solid var(--color-accent-400); display:flex; align-items:center; justify-content:center; font-family:var(--font-heading); font-size:18px; color:var(--color-accent-700);">{{ student.initial }}</span>
+          <div style="min-width:0;">
+            <div style="font-family:var(--font-heading); font-size:24px; line-height:1.15;">{{ student.name }}</div>
+            <div style="font-size:12.5px; color:var(--color-neutral-700); margin-top:4px;">{{ student.meta }}</div>
+          </div>
+        </div>
+        <span style="display:inline-flex; align-items:center; gap:9px; padding:7px 16px; border-radius:999px; border:1px solid {{ status.border }}; background:{{ status.bg }}; color:{{ status.color }}; font-size:12.5px; flex-shrink:0;">
+          <span dangerouslySetInnerHTML="{{ status.icon }}"></span>{{ status.label }}
+        </span>
+      </div>
+    </header>
+
+    <div style="padding:0 40px 90px;">
+
+      <section class="band" style="border-top:none;">
+        <div>
+          <div class="kicker">Description</div>
+          <div style="font-size:12px; color:var(--color-neutral-700); margin-top:7px; line-height:1.55;">{{ submittedOn }}</div>
+        </div>
+        <div class="note-body" dangerouslySetInnerHTML="{{ noteHtml }}"></div>
+      </section>
+
+      <section class="band">
+        <div>
+          <div class="kicker">Attachments</div>
+          <div style="font-size:12px; color:var(--color-neutral-700); margin-top:7px; line-height:1.55;">{{ attachCount }}</div>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:10px;">
+          <sc-for list="{{ attachments }}" as="a" hint-placeholder-count="3">
+            <div>
+              <div class="thumb"><span dangerouslySetInnerHTML="{{ a.icon }}"></span></div>
+              <div style="font-size:11px; color:var(--color-neutral-700); margin-top:6px; max-width:88px; line-height:1.4;">{{ a.caption }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <div class="split" style="display:flex; align-items:flex-start; gap:0; border-top:1px solid var(--color-divider); margin-top:8px;">
+        <div style="flex:1; min-width:0; padding:30px 34px 0 0;">
+          <div class="kicker" style="color:var(--color-accent-700);">{{ form.kicker }}</div>
+          <h1 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:34px; line-height:1.08; margin:8px 0 0;">{{ form.title }}</h1>
+          <div style="font-size:13.5px; color:var(--color-neutral-700); margin-top:8px;">{{ form.sub }}</div>
+
+          <sc-for list="{{ sections }}" as="s" hint-placeholder-count="3">
+            <section>
+              <div class="sec-head">
+                <span class="sec-letter">{{ s.letter }}</span>
+                <span class="sec-name">{{ s.name }}</span>
+                <span class="sec-rule"></span>
+                <span class="sec-n">{{ s.marked }}</span>
+              </div>
+              <sc-for list="{{ s.steps }}" as="p" hint-placeholder-count="4">
+                <div class="step {{ p.stateClass }}">
+                  <div class="step-n">{{ p.n }}</div>
+                  <div style="min-width:0;">
+                    <div class="step-t">{{ p.text }}</div>
+                    <sc-if value="{{ p.showRemarkButton }}" hint-placeholder-val="{{ true }}">
+                      <button class="rmk-btn" onClick="{{ p.onAddRemark }}">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        Remark
+                      </button>
+                    </sc-if>
+                    <sc-if value="{{ p.editing }}" hint-placeholder-val="{{ false }}">
+                      <textarea class="rmk-input" placeholder="What you observed on this step&hellip;" value="{{ p.remark }}" onChange="{{ p.onRemarkChange }}"></textarea>
+                    </sc-if>
+                    <sc-if value="{{ p.readOnlyRemark }}" hint-placeholder-val="{{ false }}">
+                      <div class="rmk-read">{{ p.remark }}</div>
+                    </sc-if>
+                  </div>
+                  <div class="seg">
+                    <button class="{{ p.doneClass }}" onClick="{{ p.onDone }}">Done</button>
+                    <button class="{{ p.notClass }}" onClick="{{ p.onNot }}">Not done</button>
+                    <button class="{{ p.naClass }}" onClick="{{ p.onNa }}">N/A</button>
+                  </div>
+                </div>
+              </sc-for>
+            </section>
+          </sc-for>
+
+          <div style="display:flex; align-items:center; gap:12px; margin-top:34px; padding-top:22px; border-top:1px solid var(--color-divider);">
+            <div style="font-size:12.5px; color:var(--color-neutral-700); flex:1; min-width:0;">{{ actionHint }}</div>
+            <button class="btn btn-secondary" onClick="{{ reset }}">Clear marks</button>
+            <button class="btn btn-primary" style="background:var(--color-neutral-900); color:#fff; border-color:var(--color-neutral-900);" onClick="{{ sign }}" disabled="{{ signDisabled }}">{{ signLabel }}</button>
+          </div>
+        </div>
+
+        <aside class="rail">
+          <div class="kicker">Live score</div>
+          <div style="margin-top:14px;">
+            <span class="score-n">{{ pct }}</span>
+            <span style="font-family:var(--font-heading); font-size:24px; color:var(--color-neutral-700);">%</span>
+          </div>
+          <div style="font-size:12px; color:var(--color-neutral-700); margin-top:8px; line-height:1.5;">{{ scoreLine }}</div>
+          <div class="meter"><div class="meter-fill" style="width:{{ pctWidth }};"></div></div>
+
+          <div class="tally">
+            <sc-for list="{{ tallies }}" as="t" hint-placeholder-count="3">
+              <div>
+                <div class="tally-n" style="color:{{ t.color }};">{{ t.value }}</div>
+                <div class="kicker" style="margin-top:5px; font-size:10px;">{{ t.label }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div class="kicker" style="margin-top:30px;">Sections</div>
+          <div style="margin-top:8px;">
+            <sc-for list="{{ sectionStatus }}" as="s" hint-placeholder-count="3">
+              <div class="srow">
+                <span class="sdot" style="background:{{ s.dotBg }}; border:1px solid {{ s.dotBorder }};">
+                  <span dangerouslySetInnerHTML="{{ s.icon }}"></span>
+                </span>
+                <span style="flex:1; min-width:0;">{{ s.name }}</span>
+                <span style="font-variant-numeric:tabular-nums; color:var(--color-neutral-700); font-size:12.5px;">{{ s.ratio }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div class="kicker" style="margin-top:30px;">Result</div>
+          <div style="font-family:var(--font-heading); font-size:24px; margin-top:8px; color:{{ result.color }};">{{ result.label }}</div>
+          <div style="font-size:12.5px; color:var(--color-neutral-700); margin-top:6px; line-height:1.55;">{{ result.note }}</div>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:900}}">
+const ICON = (path, size) => `<svg width="${size || 18}" height="${size || 18}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+
+const STUDENT = { name: 'Janardhan Rao', initial: 'J', roll: '8347839748343', year: 'Year 1', date: '15 Sept 2026', attempt: 'First attempt' };
+
+const FORM = {
+  kicker: 'Dermatology · DOPS assessment',
+  title: 'Dark Ground Illumination',
+  sub: 'Direct Observation of Procedural Skills — mark each step you observed.',
+};
+
+const NOTE_HTML = '<p>Performed dark ground illumination on a suspected primary syphilitic lesion in the OPD. Slide prepared from serous exudate after cleaning the lesion with saline, examined under the dark-field microscope within ten minutes of collection.</p><p>Motile spirochaetes identified and shown to the supervising registrar before the slide was discarded per protocol.</p>';
+
+const ATTACHMENTS = [
+  { caption: 'Microscope setup', kind: 'photo' },
+  { caption: 'Field notes sheet', kind: 'photo' },
+  { caption: 'Sketch — slide layout', kind: 'sketch' },
+];
+
+const SECTIONS = [
+  {
+    id: 'pre', letter: 'A', name: 'Pre-procedure',
+    steps: [
+      'Confirms indication (suspected primary syphilis or other treponemal lesion)',
+      'Explains procedure to patient and obtains consent',
+      'Assembles equipment: dark-field microscope, glass slide and coverslip, saline, gloves',
+    ],
+  },
+  {
+    id: 'proc', letter: 'B', name: 'Procedure',
+    steps: [
+      'Wears gloves and observes standard precautions throughout',
+      'Cleans the lesion surface with saline and gauze without causing bleeding',
+      'Expresses serous exudate from the base of the lesion',
+      'Transfers the specimen to the slide and applies the coverslip without air bubbles',
+      'Adjusts the dark-field condenser and focuses to identify motile spirochaetes',
+    ],
+  },
+  {
+    id: 'post', letter: 'C', name: 'Post-procedure',
+    steps: [
+      'Interprets the finding correctly and states the limitations of the test',
+      'Discards the slide and sharps into the correct waste streams',
+      'Documents the finding in the case record',
+      'Explains the result and next steps to the patient',
+    ],
+  },
+];
+
+const TOTAL = SECTIONS.reduce((n, s) => n + s.steps.length, 0);
+
+class Component extends DCLogic {
+  state = { marks: {}, remarks: {}, openRemarks: {}, signed: false };
+
+  key(sid, i) { return `${sid}-${i}`; }
+
+  setMark(k, v) {
+    this.setState(s => ({ marks: { ...s.marks, [k]: s.marks[k] === v ? undefined : v } }));
+  }
+
+  renderVals() {
+    const st = this.state;
+    const signed = st.signed;
+
+    const values = Object.values(st.marks).filter(Boolean);
+    const done = values.filter(v => v === 'done').length;
+    const not = values.filter(v => v === 'not').length;
+    const na = values.filter(v => v === 'na').length;
+    const applicable = TOTAL - na;
+    const marked = done + not + na;
+    const pct = applicable > 0 ? Math.round((done / applicable) * 100) : 0;
+    const allMarked = marked === TOTAL;
+
+    const sections = SECTIONS.map(sec => {
+      const n = sec.steps.filter((_, i) => st.marks[this.key(sec.id, i)]).length;
+      return {
+        key: sec.id, letter: sec.letter, name: sec.name,
+        marked: `${n} of ${sec.steps.length} marked`,
+        steps: sec.steps.map((text, i) => {
+          const k = this.key(sec.id, i);
+          const v = st.marks[k];
+          const remark = st.remarks[k] || '';
+          const editing = !signed && !!st.openRemarks[k];
+          return {
+            key: k, n: String(i + 1), text,
+            stateClass: v === 'done' ? 'done' : v === 'not' ? 'notdone' : v === 'na' ? 'na' : '',
+            doneClass: v === 'done' ? 'on-done' : '',
+            notClass: v === 'not' ? 'on-not' : '',
+            naClass: v === 'na' ? 'on-na' : '',
+            onDone: () => !signed && this.setMark(k, 'done'),
+            onNot: () => !signed && this.setMark(k, 'not'),
+            onNa: () => !signed && this.setMark(k, 'na'),
+            remark, editing,
+            readOnlyRemark: !editing && !!remark,
+            showRemarkButton: !signed && !editing && !remark,
+            onAddRemark: () => this.setState(s => ({ openRemarks: { ...s.openRemarks, [k]: true } })),
+            onRemarkChange: (e) => this.setState(s => ({ remarks: { ...s.remarks, [k]: e.target.value } })),
+          };
+        }),
+      };
+    });
+
+    const sectionStatus = SECTIONS.map(sec => {
+      const n = sec.steps.filter((_, i) => st.marks[this.key(sec.id, i)]).length;
+      const complete = n === sec.steps.length;
+      return {
+        key: sec.id, name: sec.name, ratio: `${n}/${sec.steps.length}`,
+        dotBg: complete ? 'var(--color-accent-700)' : 'transparent',
+        dotBorder: complete ? 'var(--color-accent-700)' : 'var(--color-neutral-400)',
+        icon: { __html: complete ? ICON('<polyline points="20 6 9 17 4 12"/>', 9).replace('stroke="currentColor"', 'stroke="#fff"').replace('stroke-width="1.8"', 'stroke-width="3.5"') : '' },
+      };
+    });
+
+    const resultLabel = !allMarked ? 'Pending' : pct >= 80 ? 'Satisfactory' : pct >= 60 ? 'Borderline' : 'Not satisfactory';
+
+    const photoIcon = { __html: ICON('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>', 19) };
+    const sketchIcon = { __html: ICON('<path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/>', 19) };
+
+    const navIconDefs = [
+      { label: 'Dashboard', path: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>' },
+      { label: 'Review queue', path: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/>', active: true },
+      { label: 'My students', path: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>' },
+      { label: 'Videos', path: '<rect x="2" y="6" width="15" height="12" rx="2"/><polygon points="22 8 17 12 22 16 22 8"/>' },
+      { label: 'Settings', path: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>' },
+    ];
+
+    return {
+      stop: e => e.preventDefault(),
+      navIcons: navIconDefs.map(d => ({
+        label: d.label, svg: { __html: ICON(d.path) }, dot: !!d.active,
+        bg: d.active ? 'var(--color-accent-100)' : 'transparent',
+        color: d.active ? 'var(--color-accent-800)' : 'rgba(255,255,255,.55)',
+      })),
+
+      student: { name: STUDENT.name, initial: STUDENT.initial, meta: `${STUDENT.roll} · ${STUDENT.year} · ${STUDENT.date} · ${STUDENT.attempt}` },
+      status: signed
+        ? { label: 'Signed off', color: 'var(--color-accent-800)', border: 'var(--color-accent-500)', bg: 'var(--color-accent-100)', icon: { __html: ICON('<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>', 14) } }
+        : { label: 'In assessment', color: 'var(--color-neutral-800)', border: 'var(--color-neutral-400)', bg: 'transparent', icon: { __html: ICON('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', 14) } },
+
+      submittedOn: `Submitted ${STUDENT.date}`,
+      noteHtml: { __html: NOTE_HTML },
+      attachCount: `${ATTACHMENTS.length} files`,
+      attachments: ATTACHMENTS.map((a, i) => ({ key: i, caption: a.caption, icon: a.kind === 'sketch' ? sketchIcon : photoIcon })),
+
+      form: FORM,
+      sections,
+      sectionStatus,
+
+      pct: String(pct),
+      pctWidth: `${pct}%`,
+      scoreLine: `${done} of ${applicable} applicable steps done${na ? ` · ${na} marked N/A` : ''}`,
+      tallies: [
+        { key: 'd', value: done, label: 'Done', color: 'var(--color-accent-700)' },
+        { key: 'n', value: not, label: 'Not done', color: 'var(--color-neutral-900)' },
+        { key: 'a', value: na, label: 'N/A', color: 'var(--color-neutral-700)' },
+      ],
+
+      result: {
+        label: resultLabel,
+        color: !allMarked ? 'var(--color-neutral-700)' : pct >= 80 ? 'var(--color-accent-800)' : 'var(--color-neutral-900)',
+        note: signed ? 'Recorded by the assessor.' : !allMarked ? `${TOTAL - marked} steps still to mark.` : 'Sign off to record this result.',
+      },
+
+      actionHint: signed ? 'This assessment is signed and locked.'
+        : !allMarked ? `Mark every step to sign off — ${TOTAL - marked} left.`
+        : 'All steps marked. Ready to sign.',
+      signDisabled: !allMarked || signed,
+      signLabel: signed ? 'Signed' : 'Sign off assessment',
+      sign: () => this.setState({ signed: true }),
+      reset: () => this.setState({ marks: {}, remarks: {}, openRemarks: {}, signed: false }),
+    };
+  }
+}
+</script>
+</body>
+</html>

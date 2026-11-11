@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/styles.css">
+  <script src="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; background: var(--color-bg); }
+    a { color: var(--color-accent-700); }
+    a:hover { color: var(--color-accent-800); }
+    .icon-btn { background:none; border:1px solid transparent; color:var(--color-neutral-600); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:5px; border-radius:var(--radius-sm); }
+    .icon-btn:hover { color:var(--color-accent-800); background:var(--color-accent-100); border-color:var(--color-accent-400); }
+    .step-row:hover { background:var(--color-neutral-100); }
+    .step-row:hover .step-tools { opacity:1; }
+    .flat-input { width:100%; border:none; background:transparent; font-family:var(--font-body); font-size:14.5px; color:var(--color-text); padding:6px 0; outline:none; border-bottom:1px solid transparent; }
+    .flat-input:focus { border-bottom-color:var(--color-accent-600); }
+    .flat-input::placeholder { color:var(--color-neutral-500); font-style:italic; }
+  </style>
+</helmet>
+<div style="display:flex; height:100vh; font-family:var(--font-body); color:var(--color-text); overflow:hidden;">
+
+  <nav style="width:76px; flex-shrink:0; background:var(--color-neutral-900); display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px;">
+    <div style="width:40px; height:40px; border-radius:var(--radius-md); background:var(--color-accent); display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#201f1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+    </div>
+    <div style="height:1px; background:rgba(255,255,255,.1); width:32px; margin:8px 0;"></div>
+    <sc-for list="{{ navIcons }}" as="icon" hint-placeholder-count="7">
+      <button style="width:44px; height:44px; border:none; border-radius:var(--radius-sm); background:{{ icon.bg }}; color:{{ icon.color }}; display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="{{ icon.label }}" title="{{ icon.label }}">
+        <span dangerouslySetInnerHTML="{{ icon.svg }}"></span>
+      </button>
+    </sc-for>
+    <div style="flex:1;"></div>
+    <div style="width:36px; height:36px; border-radius:50%; background:var(--color-accent-800); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-heading); font-weight:600; font-size:15px;">P</div>
+  </nav>
+
+  <main style="flex:1; overflow-y:auto; min-width:0;">
+    <header style="display:flex; align-items:flex-start; justify-content:space-between; gap:24px; padding:28px 40px 22px; border-bottom:1px solid var(--color-divider);">
+      <div>
+        <div style="font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-accent-700); margin-bottom:6px;">Assessment Library &middot; New competency</div>
+        <h1 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:34px; margin:0;">Competency Builder</h1>
+        <div style="font-size:13.5px; color:var(--color-neutral-700); margin-top:6px;">Attach a DOPS checklist to a department, then lay out its steps, rating scales and sign-off.</div>
+      </div>
+      <div style="display:flex; gap:10px; flex-shrink:0; padding-top:6px;">
+        <button class="btn btn-ghost" style="font-size:13px;">Save draft</button>
+        <button class="btn btn-primary" style="background:var(--color-neutral-900); color:#fff; border-color:var(--color-neutral-900);" disabled="{{ publishDisabled }}">Publish competency</button>
+      </div>
+    </header>
+
+    <div style="display:flex; align-items:flex-start; gap:0;">
+
+      <div style="flex:1; min-width:0; padding:30px 40px 80px;">
+
+        <section style="margin-bottom:38px;">
+          <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:16px;">
+            <span style="font-family:var(--font-heading); font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--color-accent-700); white-space:nowrap; flex-shrink:0;">Step 01</span>
+            <h2 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:22px; margin:0;">Department</h2>
+            <span style="font-size:12.5px; color:var(--color-neutral-600);">The competency lives inside this department's curriculum.</span>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px 28px; border:1px solid var(--color-neutral-300); border-left:3px solid {{ deptRail }}; border-radius:var(--radius-sm); background:#fff; padding:12px 20px; max-width:760px;">
+            <select class="input" style="flex:1 1 240px; min-width:200px; border:none; background:transparent; font-family:var(--font-heading); font-size:19px; padding:4px 0; cursor:pointer;" value="{{ dept }}" onChange="{{ onDept }}">
+              <option value="">Select a department&hellip;</option>
+              <sc-for list="{{ departmentOptions }}" as="d" hint-placeholder-count="8">
+                <option value="{{ d.name }}">{{ d.name }}</option>
+              </sc-for>
+            </select>
+            <sc-for list="{{ deptStats }}" as="s" hint-placeholder-count="2">
+              <div style="flex:0 0 auto;">
+                <div style="font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-600); white-space:nowrap;">{{ s.label }}</div>
+                <div style="font-family:var(--font-heading); font-size:18px; line-height:1.15; margin-top:3px; font-variant-numeric:tabular-nums; color:{{ s.color }}; white-space:nowrap;">{{ s.value }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+
+        <section style="margin-bottom:38px;">
+          <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:16px;">
+            <span style="font-family:var(--font-heading); font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--color-accent-700); white-space:nowrap; flex-shrink:0;">Step 02</span>
+            <h2 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:22px; margin:0;">Identity</h2>
+          </div>
+          <div class="card" style="padding:24px 26px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:22px 26px;">
+              <div style="grid-column:1 / -1;">
+                <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-bottom:6px;">Skill / procedure name</label>
+                <input class="input" style="font-family:var(--font-heading); font-size:20px; padding:10px 12px;" type="text" placeholder="e.g. Visual Inspection of Cervix with Acetic Acid (VIA)" value="{{ skill }}" onChange="{{ onSkill }}"/>
+              </div>
+              <div>
+                <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-bottom:6px;">Competency reference</label>
+                <input class="input" type="text" placeholder="GMER 2019, Table 11" value="{{ code }}" onChange="{{ onCode }}"/>
+              </div>
+              <div>
+                <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-bottom:6px;">Setting</label>
+                <input class="input" type="text" placeholder="Skills lab, ward, outpatient station&hellip;" value="{{ setting }}" onChange="{{ onSetting }}"/>
+              </div>
+              <div>
+                <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-bottom:8px;">Level of expected performance</label>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                  <sc-for list="{{ levels }}" as="l" hint-placeholder-count="4">
+                    <button onClick="{{ l.onClick }}" style="display:flex; align-items:center; gap:10px; text-align:left; cursor:pointer; font-family:var(--font-body); font-size:13.5px; padding:8px 11px; border:1px solid {{ l.border }}; border-radius:var(--radius-sm); background:{{ l.bg }}; color:var(--color-text);">
+                      <span style="width:24px; height:24px; flex-shrink:0; border-radius:50%; border:1px solid {{ l.badgeBorder }}; background:{{ l.badgeBg }}; color:{{ l.badgeColor }}; font-family:var(--font-heading); font-size:12px; display:flex; align-items:center; justify-content:center;">{{ l.key }}</span>
+                      {{ l.label }}
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+              <div>
+                <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-bottom:8px;">Domains assessed</label>
+                <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                  <sc-for list="{{ domains }}" as="d" hint-placeholder-count="4">
+                    <button onClick="{{ d.onClick }}" style="cursor:pointer; font-family:var(--font-body); font-size:13px; padding:7px 14px; border-radius:999px; border:1px solid {{ d.border }}; background:{{ d.bg }}; color:{{ d.color }};">{{ d.label }}</button>
+                  </sc-for>
+                </div>
+                <div style="margin-top:18px; font-size:12.5px; color:var(--color-neutral-600); line-height:1.6;">Domains drive which global rating scales are suggested below.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section style="margin-bottom:38px;">
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:14px; margin-bottom:16px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:baseline; gap:14px;">
+              <span style="font-family:var(--font-heading); font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--color-accent-700); white-space:nowrap; flex-shrink:0;">Step 03</span>
+              <h2 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:22px; margin:0;">Observable steps</h2>
+              <span style="font-size:12.5px; color:var(--color-neutral-600);">{{ stepSummary }}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-600);">Start from</span>
+              <sc-for list="{{ templates }}" as="t" hint-placeholder-count="2">
+                <button class="btn btn-ghost" style="font-size:12.5px; border:1px solid var(--color-neutral-300);" onClick="{{ t.onClick }}">{{ t.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+
+          <sc-for list="{{ sections }}" as="s" hint-placeholder-count="3">
+            <div class="card" style="padding:0; margin-bottom:14px; overflow:hidden;">
+              <div style="display:flex; align-items:center; gap:14px; padding:14px 20px; border-bottom:1px solid var(--color-divider); background:var(--color-neutral-100);">
+                <span style="width:28px; height:28px; flex-shrink:0; border-radius:50%; background:var(--color-neutral-900); color:#fff; font-family:var(--font-heading); font-size:13px; display:flex; align-items:center; justify-content:center;">{{ s.letter }}</span>
+                <input class="flat-input" style="font-family:var(--font-heading); font-size:19px; flex:1; min-width:0;" type="text" placeholder="Section title" value="{{ s.title }}" onChange="{{ s.onTitle }}"/>
+                <span style="font-size:11.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--color-neutral-600); white-space:nowrap;">{{ s.count }}</span>
+                <button class="icon-btn" aria-label="Remove section" onClick="{{ s.onRemove }}">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+                </button>
+              </div>
+
+              <sc-for list="{{ s.steps }}" as="st" hint-placeholder-count="3">
+                <div class="step-row" style="display:flex; align-items:flex-start; gap:14px; padding:11px 20px; border-bottom:1px solid var(--color-neutral-200);">
+                  <span style="width:26px; flex-shrink:0; text-align:right; font-family:var(--font-heading); font-size:15px; font-variant-numeric:tabular-nums; color:var(--color-neutral-600); padding-top:6px;">{{ st.n }}</span>
+                  <input class="flat-input" style="flex:1; min-width:0;" type="text" placeholder="Describe one observable action&hellip;" value="{{ st.text }}" onChange="{{ st.onText }}"/>
+                  <button onClick="{{ st.onToggleCritical }}" style="flex-shrink:0; cursor:pointer; font-family:var(--font-body); font-size:11px; letter-spacing:.07em; text-transform:uppercase; padding:5px 10px; border-radius:999px; border:1px solid {{ st.critBorder }}; background:{{ st.critBg }}; color:{{ st.critColor }}; margin-top:2px;">{{ st.critLabel }}</button>
+                  <span class="step-tools" style="display:flex; gap:2px; flex-shrink:0; opacity:{{ st.toolsOpacity }}; transition:opacity .15s ease; margin-top:1px;">
+                    <button class="icon-btn" aria-label="Move up" onClick="{{ st.onUp }}">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                    </button>
+                    <button class="icon-btn" aria-label="Move down" onClick="{{ st.onDown }}">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    <button class="icon-btn" aria-label="Delete step" onClick="{{ st.onRemove }}">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </span>
+                </div>
+              </sc-for>
+
+              <button onClick="{{ s.onAddStep }}" style="display:flex; align-items:center; gap:9px; width:100%; cursor:pointer; font-family:var(--font-body); font-size:13.5px; color:var(--color-accent-800); background:transparent; border:none; padding:13px 20px; text-align:left;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add step to {{ s.shortTitle }}
+              </button>
+            </div>
+          </sc-for>
+
+          <button class="btn btn-ghost" style="font-size:13px; border:1px dashed var(--color-neutral-400); width:100%; justify-content:center; padding:12px;" onClick="{{ addSection }}">Add another section</button>
+        </section>
+
+        <section style="margin-bottom:38px;">
+          <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:16px;">
+            <span style="font-family:var(--font-heading); font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--color-accent-700); white-space:nowrap; flex-shrink:0;">Step 04</span>
+            <h2 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:22px; margin:0;">Global ratings &amp; outcome</h2>
+          </div>
+          <div class="card" style="padding:6px 26px 20px;">
+            <sc-for list="{{ ratings }}" as="r" hint-placeholder-count="3">
+              <div style="display:flex; align-items:center; gap:18px; padding:15px 0; border-bottom:1px solid var(--color-neutral-200);">
+                <input class="flat-input" style="flex:1 1 240px; min-width:0; font-size:15px;" type="text" placeholder="Rating dimension" value="{{ r.label }}" onChange="{{ r.onLabel }}"/>
+                <div style="display:flex; gap:6px; flex-shrink:0;">
+                  <sc-for list="{{ r.scaleOptions }}" as="o" hint-placeholder-count="2">
+                    <button onClick="{{ o.onClick }}" style="cursor:pointer; font-family:var(--font-body); font-size:12.5px; padding:6px 12px; border:1px solid {{ o.border }}; background:{{ o.bg }}; color:{{ o.color }}; border-radius:var(--radius-sm);">{{ o.label }}</button>
+                  </sc-for>
+                </div>
+                <button class="icon-btn" aria-label="Remove rating" onClick="{{ r.onRemove }}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </sc-for>
+            <button onClick="{{ addRating }}" style="display:flex; align-items:center; gap:9px; cursor:pointer; font-family:var(--font-body); font-size:13.5px; color:var(--color-accent-800); background:transparent; border:none; padding:14px 0 4px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add rating dimension
+            </button>
+            <sc-if value="{{ suggestionVisible }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px; padding:14px 16px; border:1px solid var(--color-accent-400); background:var(--color-accent-100); border-radius:var(--radius-sm); display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                <span style="font-size:13px; color:var(--color-accent-900);">{{ suggestionText }}</span>
+                <button class="btn btn-ghost" style="font-size:12.5px;" onClick="{{ acceptSuggestion }}">Add it</button>
+              </div>
+            </sc-if>
+          </div>
+        </section>
+
+        <section>
+          <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:16px;">
+            <span style="font-family:var(--font-heading); font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--color-accent-700); white-space:nowrap; flex-shrink:0;">Step 05</span>
+            <h2 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:22px; margin:0;">Rules &amp; sign-off</h2>
+          </div>
+          <div class="card" style="padding:8px 26px 22px;">
+            <sc-for list="{{ rules }}" as="r" hint-placeholder-count="4">
+              <div style="display:flex; align-items:center; gap:20px; padding:15px 0; border-bottom:1px solid var(--color-neutral-200);">
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:14.5px;">{{ r.label }}</div>
+                  <div style="font-size:12.5px; color:var(--color-neutral-600); margin-top:3px;">{{ r.hint }}</div>
+                </div>
+                <button onClick="{{ r.onToggle }}" aria-label="{{ r.label }}" style="flex-shrink:0; cursor:pointer; width:46px; height:26px; border-radius:999px; border:1px solid {{ r.trackBorder }}; background:{{ r.track }}; position:relative; padding:0;">
+                  <span style="position:absolute; top:2px; left:{{ r.knobLeft }}; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:left .16s ease;"></span>
+                </button>
+              </div>
+            </sc-for>
+            <div style="display:flex; align-items:center; gap:18px; padding:18px 0 0;">
+              <div style="flex:1;">
+                <div style="font-size:14.5px;">Pass threshold</div>
+                <div style="font-size:12.5px; color:var(--color-neutral-600); margin-top:3px;">Share of applicable steps marked done for a suggested satisfactory result.</div>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px; flex-shrink:0;">
+                <input type="range" min="50" max="100" step="5" value="{{ threshold }}" onChange="{{ onThreshold }}" style="width:180px; accent-color:var(--color-accent-700);"/>
+                <span style="font-family:var(--font-heading); font-size:22px; font-variant-numeric:tabular-nums; width:60px;">{{ thresholdLabel }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside style="width:340px; flex-shrink:0; border-left:1px solid var(--color-divider); position:sticky; top:0; max-height:100vh; overflow-y:auto; padding:30px 28px 40px; background:var(--color-neutral-100);">
+        <div style="font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-neutral-600); margin-bottom:14px;">Checklist preview</div>
+
+        <div style="border:1px solid var(--color-neutral-300); border-radius:var(--radius-md); background:#fff; overflow:hidden;">
+          <div style="padding:18px 18px 16px; background:var(--color-neutral-900); color:#fff;">
+            <div style="font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--color-accent-400);">{{ previewDept }}</div>
+            <div style="font-family:var(--font-heading); font-size:20px; line-height:1.25; margin-top:7px;">{{ previewSkill }}</div>
+            <div style="font-size:12px; color:rgba(255,255,255,.68); margin-top:6px; line-height:1.5;">{{ previewMeta }}</div>
+          </div>
+          <div style="padding:16px 18px;">
+            <sc-for list="{{ previewSections }}" as="p" hint-placeholder-count="3">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--color-neutral-200);">
+                <span style="font-size:13.5px;">{{ p.title }}</span>
+                <span style="font-size:12px; color:var(--color-neutral-600); white-space:nowrap;">{{ p.count }}</span>
+              </div>
+            </sc-for>
+            <div style="display:flex; align-items:baseline; justify-content:space-between; padding:12px 0 4px;">
+              <span style="font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-600);">Total steps</span>
+              <span style="font-family:var(--font-heading); font-size:26px; line-height:1; font-variant-numeric:tabular-nums;">{{ totalSteps }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:24px; font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-neutral-600); margin-bottom:12px;">Before publishing</div>
+        <sc-for list="{{ checks }}" as="c" hint-placeholder-count="4">
+          <div style="display:flex; align-items:flex-start; gap:11px; padding:8px 0;">
+            <span style="width:18px; height:18px; flex-shrink:0; border-radius:50%; border:1px solid {{ c.border }}; background:{{ c.bg }}; color:{{ c.fg }}; display:flex; align-items:center; justify-content:center; font-size:11px; margin-top:1px;">{{ c.mark }}</span>
+            <span style="font-size:13px; color:{{ c.textColor }}; line-height:1.45;">{{ c.label }}</span>
+          </div>
+        </sc-for>
+
+        <div style="margin-top:22px; padding-top:18px; border-top:1px solid var(--color-neutral-300); font-size:12.5px; color:var(--color-neutral-600); line-height:1.6;">{{ criticalNote }}</div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;stepNumbering&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;continuous&quot;,&quot;per-section&quot;],&quot;default&quot;:&quot;continuous&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Builder&quot;},&quot;showCriticalFlags&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Builder&quot;}}">
+const ICONS = [
+  ['Institutions','<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-4 7 4v13M9 21v-6h6v6"/></svg>'],
+  ['Departments','<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>'],
+  ['Competencies','<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'],
+  ['Log templates','<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>'],
+  ['Users','<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-8 0v2"/><circle cx="12" cy="7" r="4"/></svg>'],
+  ['Reports','<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'],
+  ['Settings','<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.8 1.17V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 7 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 2.6 15H2.5a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9"/></svg>']
+];
+
+const DEPARTMENTS = [
+  ['Gynecology', 18], ['Ophthalmology', 11], ['General Medicine', 34], ['General Surgery', 29],
+  ['Pediatrics', 22], ['Otorhinolaryngology', 9], ['Orthopedics', 14], ['Community Medicine', 7]
+];
+
+const LEVELS = [
+  ['O', 'Observed'], ['A', 'Assisted'], ['P', 'Performed under supervision'], ['I', 'Independently performed']
+];
+
+const DOMAIN_LIST = ['Cognitive', 'Psychomotor', 'Affective', 'Communication'];
+
+const TEMPLATES = {
+  via: {
+    label: 'VIA (Gynecology)',
+    dept: 'Gynecology', skill: 'Visual Inspection of Cervix with Acetic Acid (VIA)',
+    code: 'GMER 2019, Table 11', level: 'O', domains: ['Psychomotor', 'Cognitive'],
+    setting: 'Skills Lab – Cervical Model → Observed on Patient',
+    sections: [
+      ['Pre-Procedure Steps', [
+        ['Explains procedure to patient (cervical cancer screening) and obtains consent', true],
+        ['Ensures chaperone present and privacy', false],
+        ['Assembles equipment: speculum, 3–5% acetic acid solution, cotton swabs, adequate light source', false]
+      ]],
+      ['Procedure Steps', [
+        ['Positions patient in lithotomy position; inserts speculum to visualize cervix', false],
+        ['Cleans cervix of discharge with saline-soaked swab if needed', false],
+        ['Applies 3–5% acetic acid to the cervix using a cotton swab', true],
+        ['Waits 1 minute and observes for acetowhite areas, their margins, and location relative to the transformation zone', true],
+        ['Classifies findings as VIA negative, positive, or suspicious for cancer per standard protocol', true]
+      ]],
+      ['Post-Procedure Steps', [
+        ['Communicates findings to patient sensitively', false],
+        ['Documents findings using standard VIA classification', false],
+        ['Refers for colposcopy/biopsy or treatment if VIA positive, per protocol', true],
+        ['Advises on follow-up screening interval if negative', false]
+      ]]
+    ],
+    ratings: [['Communication & Empathy', '4-point'], ['Asepsis & Safety', '4-point'], ['Overall Technical Skill', '4-point'], ['Overall Result', 'Pass / Practice']]
+  },
+  va: {
+    label: 'Visual Acuity (Ophthalmology)',
+    dept: 'Ophthalmology', skill: 'Visual Acuity Testing',
+    code: 'GMER 2019, Table 11', level: 'I', domains: ['Cognitive', 'Psychomotor'],
+    setting: 'Skills Lab / Outpatient – Snellen Chart Station',
+    sections: [
+      ['Pre-Procedure Steps', [
+        ['Explains procedure to patient and obtains cooperation', false],
+        ['Positions patient at the correct testing distance from the chart', true],
+        ['Tests each eye separately, occluding the other eye without pressure', true]
+      ]],
+      ['Procedure Steps', [
+        ['Asks patient to read the smallest line possible on the chart with the first eye', false],
+        ['Records visual acuity for that eye, noting correction status (with/without glasses/pinhole as indicated)', true],
+        ['Repeats for the other eye', false],
+        ['Tests near vision separately if indicated', false],
+        ['If patient cannot read the largest letter, tests counting fingers, hand movements, or perception of light', true]
+      ]],
+      ['Post-Procedure Steps', [
+        ['Documents visual acuity for each eye clearly using standard notation', true],
+        ['Communicates findings to the patient', false],
+        ['Refers for further assessment if acuity is reduced or does not correct with pinhole', false]
+      ]]
+    ],
+    ratings: [['Communication & Empathy', '4-point'], ['Overall Technical Skill', '4-point'], ['Overall Result', 'Pass / Practice']]
+  }
+};
+
+const LETTERS = 'ABCDEFGH';
+const SCALES = ['4-point', 'Pass / Practice'];
+
+class Component extends DCLogic {
+  state = {
+    dept: null,
+    skill: '',
+    code: 'GMER 2019, Table 11',
+    setting: '',
+    level: null,
+    domains: [],
+    sections: [
+      { title: 'Pre-Procedure Steps', steps: [{ text: '', critical: false }] },
+      { title: 'Procedure Steps', steps: [{ text: '', critical: false }] },
+      { title: 'Post-Procedure Steps', steps: [{ text: '', critical: false }] }
+    ],
+    ratings: [
+      { label: 'Overall Technical Skill', scale: '4-point' },
+      { label: 'Overall Result', scale: 'Pass / Practice' }
+    ],
+    rules: { na: true, remarks: true, ack: true, attempts: false },
+    threshold: 90
+  };
+
+  patchSections(fn) {
+    this.setState(s => {
+      const sections = s.sections.map(sec => ({ title: sec.title, steps: sec.steps.map(st => ({ ...st })) }));
+      fn(sections);
+      return { sections };
+    });
+  }
+
+  applyTemplate(key) {
+    const t = TEMPLATES[key];
+    this.setState({
+      dept: t.dept, skill: t.skill, code: t.code, setting: t.setting, level: t.level,
+      domains: t.domains.slice(),
+      sections: t.sections.map(([title, steps]) => ({ title, steps: steps.map(([text, critical]) => ({ text, critical })) })),
+      ratings: t.ratings.map(([label, scale]) => ({ label, scale }))
+    });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const acc = 'var(--color-accent-700)';
+    const totalSteps = s.sections.reduce((n, sec) => n + sec.steps.filter(st => st.text.trim()).length, 0);
+    const criticalCount = s.sections.reduce((n, sec) => n + sec.steps.filter(st => st.text.trim() && st.critical).length, 0);
+
+    const navIcons = ICONS.map(([label, svg], i) => ({
+      label, svg: { __html: svg },
+      bg: i === 2 ? 'rgba(255,255,255,.12)' : 'transparent',
+      color: i === 2 ? '#fff' : 'rgba(255,255,255,.55)'
+    }));
+
+    const deptRow = DEPARTMENTS.find(d => d[0] === s.dept);
+    const departmentOptions = DEPARTMENTS.map(([name, count]) => ({ name, count }));
+    const deptStats = [
+      { label: 'Published', value: deptRow ? deptRow[1] + ' competencies' : '—', color: deptRow ? 'var(--color-text)' : 'var(--color-neutral-500)' },
+      { label: 'This record', value: deptRow ? 'DOPS draft' : '—', color: deptRow ? acc : 'var(--color-neutral-500)' }
+    ];
+
+    const levels = LEVELS.map(([key, label]) => {
+      const on = s.level === key;
+      return {
+        key, label,
+        bg: on ? 'var(--color-accent-100)' : '#fff',
+        border: on ? 'var(--color-accent-600)' : 'var(--color-neutral-300)',
+        badgeBg: on ? 'var(--color-accent-700)' : 'transparent',
+        badgeBorder: on ? 'var(--color-accent-700)' : 'var(--color-neutral-400)',
+        badgeColor: on ? '#fff' : 'var(--color-neutral-700)',
+        onClick: () => this.setState({ level: key })
+      };
+    });
+
+    const domains = DOMAIN_LIST.map(label => {
+      const on = s.domains.includes(label);
+      return {
+        label,
+        bg: on ? 'var(--color-neutral-900)' : '#fff',
+        border: on ? 'var(--color-neutral-900)' : 'var(--color-neutral-400)',
+        color: on ? '#fff' : 'var(--color-neutral-700)',
+        onClick: () => this.setState(st => ({
+          domains: st.domains.includes(label) ? st.domains.filter(d => d !== label) : st.domains.concat(label)
+        }))
+      };
+    });
+
+    let running = 0;
+    const sections = s.sections.map((sec, si) => {
+      const filled = sec.steps.filter(st => st.text.trim()).length;
+      return {
+        letter: LETTERS[si] || '+',
+        title: sec.title,
+        shortTitle: (sec.title || 'section').toLowerCase(),
+        count: filled + (filled === 1 ? ' step' : ' steps'),
+        onTitle: e => { const v = e.target.value; this.patchSections(all => { all[si].title = v; }); },
+        onRemove: () => this.patchSections(all => { all.splice(si, 1); }),
+        onAddStep: () => this.patchSections(all => { all[si].steps.push({ text: '', critical: false }); }),
+        steps: sec.steps.map((st, ti) => {
+          running += 1;
+          const n = this.props.stepNumbering === 'per-section' ? ti + 1 : running;
+          const crit = st.critical && this.props.showCriticalFlags !== false;
+          return {
+            n, text: st.text,
+            critLabel: crit ? 'Critical' : 'Critical?',
+            critBg: crit ? 'var(--color-accent-700)' : 'transparent',
+            critBorder: crit ? 'var(--color-accent-700)' : 'var(--color-neutral-400)',
+            critColor: crit ? '#fff' : 'var(--color-neutral-600)',
+            toolsOpacity: st.text.trim() ? 0.35 : 0.55,
+            onText: e => { const v = e.target.value; this.patchSections(all => { all[si].steps[ti].text = v; }); },
+            onToggleCritical: () => this.patchSections(all => { all[si].steps[ti].critical = !all[si].steps[ti].critical; }),
+            onRemove: () => this.patchSections(all => { all[si].steps.splice(ti, 1); }),
+            onUp: () => this.patchSections(all => {
+              if (ti > 0) { const a = all[si].steps; [a[ti - 1], a[ti]] = [a[ti], a[ti - 1]]; }
+            }),
+            onDown: () => this.patchSections(all => {
+              const a = all[si].steps;
+              if (ti < a.length - 1) { [a[ti + 1], a[ti]] = [a[ti], a[ti + 1]]; }
+            })
+          };
+        })
+      };
+    });
+
+    const ratings = s.ratings.map((r, ri) => ({
+      label: r.label,
+      onLabel: e => { const v = e.target.value; this.setState(st => ({ ratings: st.ratings.map((x, i) => i === ri ? { ...x, label: v } : x) })); },
+      onRemove: () => this.setState(st => ({ ratings: st.ratings.filter((_, i) => i !== ri) })),
+      scaleOptions: SCALES.map(sc => ({
+        label: sc,
+        bg: r.scale === sc ? 'var(--color-neutral-900)' : '#fff',
+        border: r.scale === sc ? 'var(--color-neutral-900)' : 'var(--color-neutral-400)',
+        color: r.scale === sc ? '#fff' : 'var(--color-neutral-700)',
+        onClick: () => this.setState(st => ({ ratings: st.ratings.map((x, i) => i === ri ? { ...x, scale: sc } : x) }))
+      }))
+    }));
+
+    const ruleDefs = [
+      ['na', 'Allow "not applicable" on steps', 'Excluded from the score denominator.'],
+      ['remarks', 'Per-step remarks field', 'Assessor can annotate any single step.'],
+      ['ack', 'Student acknowledgement required', 'Typed name captured alongside the assessor signature.'],
+      ['attempts', 'Track attempt number', 'Links repeat attempts of the same competency.']
+    ];
+    const rules = ruleDefs.map(([key, label, hint]) => {
+      const on = !!s.rules[key];
+      return {
+        label, hint,
+        track: on ? 'var(--color-accent-700)' : 'var(--color-neutral-300)',
+        trackBorder: on ? 'var(--color-accent-700)' : 'var(--color-neutral-400)',
+        knobLeft: on ? '23px' : '2px',
+        onToggle: () => this.setState(st => ({ rules: { ...st.rules, [key]: !st.rules[key] } }))
+      };
+    });
+
+    const needsAsepsis = s.domains.includes('Psychomotor') && !s.ratings.some(r => /asepsis/i.test(r.label));
+    const needsComm = s.domains.includes('Communication') && !s.ratings.some(r => /communicat/i.test(r.label));
+    const suggestionLabel = needsAsepsis ? 'Asepsis & Safety' : (needsComm ? 'Communication & Empathy' : null);
+
+    const checkDefs = [
+      [!!s.dept, 'Department selected'],
+      [!!s.skill.trim(), 'Skill name entered'],
+      [!!s.level, 'Performance level set'],
+      [totalSteps >= 5, 'At least five observable steps'],
+      [s.ratings.length > 0, 'One or more global ratings'],
+      [s.ratings.some(r => r.scale === 'Pass / Practice'), 'An outcome verdict scale']
+    ];
+    const checks = checkDefs.map(([ok, label]) => ({
+      label, mark: ok ? '✓' : '',
+      bg: ok ? 'var(--color-accent-700)' : 'transparent',
+      border: ok ? 'var(--color-accent-700)' : 'var(--color-neutral-400)',
+      fg: '#fff',
+      textColor: ok ? 'var(--color-neutral-700)' : 'var(--color-text)'
+    }));
+
+    const previewMetaParts = [];
+    if (s.code.trim()) previewMetaParts.push(s.code.trim());
+    const lvl = LEVELS.find(l => l[0] === s.level);
+    if (lvl) previewMetaParts.push('Level: ' + lvl[1] + ' (' + lvl[0] + ')');
+    if (s.domains.length) previewMetaParts.push(s.domains.join(' + '));
+
+    return {
+      navIcons, departmentOptions, deptStats, levels,
+      dept: s.dept || '',
+      deptRail: s.dept ? 'var(--color-accent-700)' : 'var(--color-neutral-300)',
+      onDept: e => this.setState({ dept: e.target.value || null }), domains, sections, ratings, rules, checks,
+      skill: s.skill, code: s.code, setting: s.setting,
+      onSkill: e => this.setState({ skill: e.target.value }),
+      onCode: e => this.setState({ code: e.target.value }),
+      onSetting: e => this.setState({ setting: e.target.value }),
+      addSection: () => this.patchSections(all => { all.push({ title: 'New section', steps: [{ text: '', critical: false }] }); }),
+      addRating: () => this.setState(st => ({ ratings: st.ratings.concat({ label: '', scale: '4-point' }) })),
+      templates: Object.keys(TEMPLATES).map(k => ({ label: TEMPLATES[k].label, onClick: () => this.applyTemplate(k) })),
+      stepSummary: totalSteps + ' steps across ' + s.sections.length + ' sections',
+      totalSteps,
+      threshold: s.threshold,
+      thresholdLabel: s.threshold + '%',
+      onThreshold: e => this.setState({ threshold: Number(e.target.value) }),
+      suggestionVisible: !!suggestionLabel,
+      suggestionText: suggestionLabel ? 'This competency assesses ' + (needsAsepsis ? 'psychomotor skill' : 'communication') + '. Most departments also rate "' + suggestionLabel + '".' : '',
+      acceptSuggestion: () => suggestionLabel && this.setState(st => ({ ratings: st.ratings.concat({ label: suggestionLabel, scale: '4-point' }) })),
+      previewDept: s.dept ? s.dept + ' · DOPS' : 'No department yet',
+      previewSkill: s.skill.trim() || 'Untitled competency',
+      previewMeta: previewMetaParts.join(' · ') || 'Reference, level and domains appear here.',
+      previewSections: s.sections.map((sec, i) => {
+        const filled = sec.steps.filter(st => st.text.trim()).length;
+        return { title: (LETTERS[i] || '+') + '. ' + (sec.title || 'Untitled section'), count: filled + ' steps' };
+      }),
+      criticalNote: criticalCount
+        ? criticalCount + ' step' + (criticalCount === 1 ? ' is' : 's are') + ' marked critical. Missing any one of them fails the attempt regardless of the ' + s.threshold + '% threshold.'
+        : 'No critical steps marked yet. Mark the steps that must never be missed — safety, consent, classification.',
+      publishDisabled: checkDefs.some(c => !c[0])
+    };
+  }
+}
+
+</script>
+</body>
+</html>

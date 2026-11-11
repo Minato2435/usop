@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital DOPS Checklist &ndash; Early Management of Trauma / Trauma Life Support</title>
+<style>
+  :root{
+    --navy:#1F3864;
+    --navy-dark:#152648;
+    --accent:#2E75B6;
+    --accent-light:#DCE6F1;
+    --green:#2E7D32;
+    --green-bg:#E5F3E6;
+    --red:#B3261E;
+    --red-bg:#FBE7E6;
+    --gray:#6B7280;
+    --gray-bg:#EEF0F2;
+    --paper:#FFFFFF;
+    --bg:#F4F6F9;
+    --border:#D8DEE6;
+    --text:#1A2433;
+    --text-soft:#5B6472;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:960px; margin:0 auto; padding:0 0 80px;}
+
+  /* ---------- Header ---------- */
+  .topbar{
+    background:linear-gradient(135deg, var(--navy) 0%, var(--navy-dark) 100%);
+    color:#fff; padding:22px 24px 20px;
+  }
+  .topbar .eyebrow{
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:#9FB6D9; font-weight:600; margin-bottom:6px;
+  }
+  .topbar h1{margin:0; font-size:22px; font-weight:700; line-height:1.25;}
+  .topbar .sub{color:#C9D8EC; font-size:13.5px; margin-top:4px;}
+  .badge-row{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;}
+  .badge{
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22);
+    border-radius:20px; padding:5px 12px; font-size:12px; color:#E7EEF8;
+  }
+
+  /* ---------- Sticky score bar ---------- */
+  .scorebar{
+    position:sticky; top:0; z-index:30;
+    background:#fff; border-bottom:1px solid var(--border);
+    box-shadow:0 2px 10px rgba(20,30,50,.06);
+    padding:10px 24px; display:flex; align-items:center; gap:20px;
+    flex-wrap:wrap;
+  }
+  .scorebar .ring-wrap{display:flex; align-items:center; gap:10px;}
+  .ring{width:44px; height:44px; position:relative;}
+  .ring svg{transform:rotate(-90deg);}
+  .ring circle{fill:none; stroke-width:5;}
+  .ring .track{stroke:#E5E9EF;}
+  .ring .fill{stroke:var(--accent); stroke-linecap:round; transition:stroke-dashoffset .3s ease;}
+  .ring .pct{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; color:var(--navy);
+  }
+  .score-label{font-size:12px; color:var(--text-soft); line-height:1.3;}
+  .score-label b{color:var(--text); font-size:14px;}
+  .scorebar .fill-space{flex:1;}
+  .progress-pill{
+    font-size:12px; padding:5px 10px; border-radius:20px; background:var(--gray-bg); color:var(--text-soft);
+    font-weight:600;
+  }
+
+  /* ---------- Cards ---------- */
+  .card{
+    background:var(--paper); margin:18px 24px 0; border-radius:10px;
+    border:1px solid var(--border); overflow:hidden;
+  }
+  .card-head{
+    padding:14px 18px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:#FAFBFD;
+  }
+  .card-head h2{margin:0; font-size:15px; font-weight:700; color:var(--navy);}
+  .card-head .hint{font-size:12px; color:var(--text-soft);}
+  .card-body{padding:16px 18px;}
+
+  /* ---------- Meta grid (header details) ---------- */
+  .meta-grid{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:12px 16px;
+  }
+  @media (max-width:700px){ .meta-grid{grid-template-columns:repeat(2,1fr);} }
+  .field label{
+    display:block; font-size:11px; font-weight:700; letter-spacing:.03em;
+    color:var(--text-soft); text-transform:uppercase; margin-bottom:5px;
+  }
+  .field input[type=text], .field input[type=date], .field input[type=number], .field select{
+    width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:7px;
+    font-size:14px; color:var(--text); background:#fff;
+  }
+  .field input:focus, .field select:focus, textarea:focus{
+    outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);
+  }
+  .radio-row{display:flex; gap:14px; margin-top:4px; flex-wrap:wrap;}
+  .radio-row label{
+    display:flex; align-items:center; gap:6px; font-size:13px; font-weight:500;
+    color:var(--text); text-transform:none; letter-spacing:0;
+  }
+
+  /* ---------- Steps table ---------- */
+  .steps{width:100%; border-collapse:collapse;}
+  .steps thead th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--text-soft); padding:8px 6px; border-bottom:2px solid var(--border);
+  }
+  .steps thead th.center{text-align:center;}
+  .steps tbody tr{border-bottom:1px solid var(--border);}
+  .steps tbody tr:last-child{border-bottom:none;}
+  .steps td{padding:10px 6px; vertical-align:top; font-size:13.5px;}
+  .steps td.sn{color:var(--text-soft); font-weight:600; width:26px;}
+  .steps td.step{width:38%;}
+  .steps td.remarks{width:22%;}
+  .steps td.remarks input{
+    width:100%; padding:7px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px;
+  }
+  .pill-group{display:flex; gap:6px; justify-content:center; flex-wrap:wrap;}
+  .pill{
+    border:1px solid var(--border); border-radius:7px; padding:7px 9px; cursor:pointer;
+    font-size:12px; font-weight:600; color:var(--text-soft); background:#fff;
+    display:flex; align-items:center; gap:5px; user-select:none; transition:.12s;
+  }
+  .pill input{display:none;}
+  .pill:hover{border-color:var(--accent);}
+  .pill.state-done.active{background:var(--green-bg); border-color:var(--green); color:var(--green);}
+  .pill.state-notdone.active{background:var(--red-bg); border-color:var(--red); color:var(--red);}
+  .pill.state-na.active{background:var(--gray-bg); border-color:var(--gray); color:var(--text-soft);}
+
+  /* ---------- Global rating ---------- */
+  .rating-row{
+    display:grid; grid-template-columns:1fr 1.4fr; gap:10px 16px; align-items:center;
+    padding:10px 0; border-bottom:1px solid var(--border);
+  }
+  .rating-row:last-child{border-bottom:none;}
+  .rating-row .label{font-size:13.5px; font-weight:600; color:var(--text);}
+  .seg{display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden;}
+  .seg button{
+    flex:1; padding:8px 6px; border:none; background:#fff; font-size:12px; cursor:pointer;
+    color:var(--text-soft); border-right:1px solid var(--border); font-weight:600;
+  }
+  .seg button:last-child{border-right:none;}
+  .seg button.active{background:var(--accent); color:#fff;}
+
+  textarea{
+    width:100%; min-height:70px; border:1px solid var(--border); border-radius:8px;
+    padding:10px; font-size:13.5px; font-family:inherit; resize:vertical;
+  }
+
+  .sign-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:8px;}
+  @media (max-width:600px){.sign-grid{grid-template-columns:1fr;}}
+
+  /* ---------- Action bar ---------- */
+  .actions{
+    position:sticky; bottom:0; z-index:30; background:#fff; border-top:1px solid var(--border);
+    padding:12px 24px; display:flex; gap:10px; flex-wrap:wrap; box-shadow:0 -2px 10px rgba(20,30,50,.06);
+  }
+  .btn{
+    border:none; border-radius:8px; padding:11px 16px; font-size:13.5px; font-weight:700;
+    cursor:pointer; display:flex; align-items:center; gap:7px;
+  }
+  .btn-primary{background:var(--accent); color:#fff;}
+  .btn-primary:hover{background:#255e94;}
+  .btn-outline{background:#fff; color:var(--navy); border:1.5px solid var(--navy);}
+  .btn-outline:hover{background:var(--accent-light);}
+  .btn-ghost{background:transparent; color:var(--red); border:1.5px solid transparent;}
+  .btn-ghost:hover{text-decoration:underline;}
+  .actions .spacer{flex:1;}
+  .export-note{font-size:11.5px; color:var(--text-soft); padding:0 24px; margin-top:6px;}
+
+  /* ---------- Print ---------- */
+  @media print{
+    body{background:#fff;}
+    .scorebar{position:static; box-shadow:none;}
+    .actions, .export-note{display:none;}
+    .card{border:1px solid #999; margin:10px 0; page-break-inside:avoid;}
+    .topbar{background:var(--navy) !important; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    .pill{border:1px solid #999;}
+    .pill.state-done.active{background:#dff0e0 !important; -webkit-print-color-adjust:exact;}
+    .pill.state-notdone.active{background:#fbdede !important; -webkit-print-color-adjust:exact;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="topbar">
+    <div class="eyebrow">Skills Lab &middot; Digital DOPS Checklist</div>
+    <h1>Early Management of Trauma / Trauma Life Support</h1>
+    <div class="sub">GMER 2019, Table 11 &middot; Level: Independently Performed / Demonstration (I/D) &middot; Direct Observation of Procedural Skills</div>
+    <div class="badge-row">
+      <span class="badge">Domain: Psychomotor / Team Skill</span>
+      <span class="badge">Setting: Skills Lab – Trauma Simulation</span>
+      <span class="badge">Department: General Surgery</span>
+    </div>
+  </div>
+
+  <div class="scorebar">
+    <div class="ring-wrap">
+      <div class="ring">
+        <svg width="44" height="44" viewBox="0 0 44 44">
+          <circle class="track" cx="22" cy="22" r="18"></circle>
+          <circle class="fill" id="scoreRingFill" cx="22" cy="22" r="18" stroke-dasharray="113" stroke-dashoffset="113"></circle>
+        </svg>
+        <div class="pct" id="scorePct">0%</div>
+      </div>
+      <div class="score-label">Steps correct<br><b id="scoreFraction">0 / 15</b></div>
+    </div>
+    <div class="progress-pill" id="progressPill">0 of 15 steps rated</div>
+    <div class="fill-space"></div>
+    <div class="progress-pill" id="resultPill" style="background:var(--gray-bg);">Result: Not yet determined</div>
+  </div>
+
+  <!-- ============ Session details ============ -->
+  <div class="card">
+    <div class="card-head"><h2>Assessment Details</h2></div>
+    <div class="card-body">
+      <div class="meta-grid">
+        <div class="field"><label>Student Name</label><input type="text" id="studentName"></div>
+        <div class="field"><label>Roll No.</label><input type="text" id="rollNo"></div>
+        <div class="field"><label>Phase / Batch</label><input type="text" id="phaseBatch" value="Phase III Part 2 &ndash; General Surgery"></div>
+        <div class="field"><label>Attempt No.</label><input type="number" id="attemptNo" min="1" value="1"></div>
+        <div class="field"><label>Assessor Name</label><input type="text" id="assessorName"></div>
+        <div class="field"><label>Date</label><input type="date" id="assessDate"></div>
+        <div class="field">
+          <label>Assessment Type</label>
+          <div class="radio-row">
+            <label><input type="radio" name="assessType" value="Formative" checked> Formative</label>
+            <label><input type="radio" name="assessType" value="Summative"> Summative / Certifying</label>
+          </div>
+        </div>
+        <div class="field"><label>Setting</label><input type="text" id="setting" value="Skills Lab – Trauma Simulation"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Sections ============ -->
+  <div class="card">
+    <div class="card-head">
+      <h2>A. Pre-Procedure Steps</h2>
+      <span class="hint">3 steps</span>
+    </div>
+    <div class="card-body">
+      <table class="steps">
+        <thead><tr><th class="center">#</th><th>Step</th><th class="center">Rating</th><th>Remarks</th></tr></thead>
+        <tbody id="sectionA"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>B. Procedure Steps</h2>
+      <span class="hint">8 steps</span>
+    </div>
+    <div class="card-body">
+      <table class="steps">
+        <thead><tr><th class="center">#</th><th>Step</th><th class="center">Rating</th><th>Remarks</th></tr></thead>
+        <tbody id="sectionB"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>C. Post-Procedure Steps</h2>
+      <span class="hint">4 steps</span>
+    </div>
+    <div class="card-body">
+      <table class="steps">
+        <thead><tr><th class="center">#</th><th>Step</th><th class="center">Rating</th><th>Remarks</th></tr></thead>
+        <tbody id="sectionC"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ Global rating ============ -->
+  <div class="card">
+    <div class="card-head"><h2>D. Global Rating &amp; Outcome</h2></div>
+    <div class="card-body" id="globalRatings">
+      <div class="rating-row">
+        <div class="label">Communication &amp; Empathy</div>
+        <div class="seg" data-group="comm">
+          <button data-val="Below Expectation">Below</button>
+          <button data-val="Borderline">Borderline</button>
+          <button data-val="Meets Expectation">Meets</button>
+          <button data-val="Exceeds Expectation">Exceeds</button>
+        </div>
+      </div>
+      <div class="rating-row">
+        <div class="label">Asepsis &amp; Safety</div>
+        <div class="seg" data-group="asepsis">
+          <button data-val="Below Expectation">Below</button>
+          <button data-val="Borderline">Borderline</button>
+          <button data-val="Meets Expectation">Meets</button>
+          <button data-val="Exceeds Expectation">Exceeds</button>
+        </div>
+      </div>
+      <div class="rating-row">
+        <div class="label">Overall Technical Skill</div>
+        <div class="seg" data-group="technical">
+          <button data-val="Below Expectation">Below</button>
+          <button data-val="Borderline">Borderline</button>
+          <button data-val="Meets Expectation">Meets</button>
+          <button data-val="Exceeds Expectation">Exceeds</button>
+        </div>
+      </div>
+      <div class="rating-row">
+        <div class="label">Overall Result</div>
+        <div class="seg" data-group="result">
+          <button data-val="Satisfactory">Satisfactory &ndash; Competency Achieved</button>
+          <button data-val="Needs Further Practice">Needs Further Practice</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Feedback & signatures ============ -->
+  <div class="card">
+    <div class="card-head"><h2>Faculty Feedback</h2></div>
+    <div class="card-body">
+      <textarea id="feedback" placeholder="Free-text comments on performance, safety, and next steps..."></textarea>
+      <div class="sign-grid">
+        <div class="field"><label>Student Acknowledgement (typed name)</label><input type="text" id="studentSign"></div>
+        <div class="field"><label>Assessor Signature (typed name)</label><input type="text" id="assessorSign"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="export-note">
+    This is a standalone, offline-capable form &mdash; nothing is sent to a server. Export before closing this tab or your entries will be lost. Use Export JSON/CSV to feed data into your institution's digital logbook/LMS; use Print/PDF for a signed paper or PDF record.
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" onclick="exportPDF()">&#128424; Print / Save as PDF</button>
+    <button class="btn btn-outline" onclick="exportJSON()">&#8681; Export JSON</button>
+    <button class="btn btn-outline" onclick="exportCSV()">&#8681; Export CSV</button>
+    <div class="spacer"></div>
+    <button class="btn btn-ghost" onclick="clearForm()">Clear form</button>
+  </div>
+
+</div>
+
+<script>
+const SECTIONS = {
+  sectionA: [
+    "Ensures scene/personal safety before approaching the patient",
+    "Activates trauma team/emergency response as per protocol",
+    "Assembles trauma resuscitation equipment (airway, IV access, monitoring)"
+  ],
+  sectionB: [
+    "Performs a systematic primary survey: Airway with C-spine control",
+    "Assesses and manages Breathing",
+    "Assesses and manages Circulation with hemorrhage control",
+    "Assesses Disability/neurological status",
+    "Completes Exposure with environmental control",
+    "Secures IV access and initiates fluid resuscitation as indicated",
+    "Performs a secondary survey once the patient is stabilized",
+    "Continuously reassesses vital signs and response to interventions"
+  ],
+  sectionC: [
+    "Arranges appropriate imaging/investigations per findings",
+    "Communicates clearly with the trauma team and documents findings/interventions with times",
+    "Arranges definitive care/transfer to appropriate specialty/higher center as needed",
+    "Provides a structured handover (e.g., ATMIST/SBAR) to the receiving team"
+  ]
+};
+
+let stepState = {}; // key: "sectionA-0" -> {rating: 'done'|'notdone'|'na', remark: ''}
+let ratingState = { comm:null, asepsis:null, technical:null, result:null };
+
+function buildSteps(){
+  let sn = 0;
+  Object.keys(SECTIONS).forEach(sectionId=>{
+    const tbody = document.getElementById(sectionId);
+    SECTIONS[sectionId].forEach((text, idx)=>{
+      sn++;
+      const key = sectionId + "-" + idx;
+      stepState[key] = { rating:null, remark:"" };
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="sn">${sn}</td>
+        <td class="step">${text}</td>
+        <td>
+          <div class="pill-group" data-key="${key}">
+            <label class="pill state-done" data-state="done">
+              <input type="radio" name="rate-${key}"> Done
+            </label>
+            <label class="pill state-notdone" data-state="notdone">
+              <input type="radio" name="rate-${key}"> Not done
+            </label>
+            <label class="pill state-na" data-state="na">
+              <input type="radio" name="rate-${key}"> N/A
+            </label>
+          </div>
+        </td>
+        <td class="remarks"><input type="text" data-remark-key="${key}" placeholder="optional"></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+
+  document.querySelectorAll(".pill").forEach(pill=>{
+    pill.addEventListener("click", ()=>{
+      const group = pill.parentElement;
+      const key = group.getAttribute("data-key");
+      const state = pill.getAttribute("data-state");
+      stepState[key].rating = state;
+      [...group.children].forEach(p=>p.classList.remove("active"));
+      pill.classList.add("active");
+      updateScore();
+    });
+  });
+
+  document.querySelectorAll("input[data-remark-key]").forEach(inp=>{
+    inp.addEventListener("input", ()=>{
+      const key = inp.getAttribute("data-remark-key");
+      stepState[key].remark = inp.value;
+    });
+  });
+}
+
+function updateScore(){
+  const keys = Object.keys(stepState);
+  const total = keys.length;
+  let rated = 0, done = 0, applicable = 0;
+  keys.forEach(k=>{
+    const r = stepState[k].rating;
+    if(r){ rated++; }
+    if(r === "done"){ done++; applicable++; }
+    if(r === "notdone"){ applicable++; }
+  });
+  const pct = applicable > 0 ? Math.round((done/applicable)*100) : 0;
+  document.getElementById("scoreFraction").textContent = `${done} / ${applicable > 0 ? applicable : total}`;
+  document.getElementById("scorePct").textContent = pct + "%";
+  document.getElementById("progressPill").textContent = `${rated} of ${total} steps rated`;
+
+  const circumference = 113;
+  const offset = circumference - (pct/100) * circumference;
+  document.getElementById("scoreRingFill").style.strokeDashoffset = offset;
+
+  const resultPill = document.getElementById("resultPill");
+  if(ratingState.result){
+    resultPill.textContent = "Result: " + ratingState.result;
+    resultPill.style.background = ratingState.result === "Satisfactory" ? "var(--green-bg)" : "var(--red-bg)";
+    resultPill.style.color = ratingState.result === "Satisfactory" ? "var(--green)" : "var(--red)";
+  } else if(rated === total && applicable > 0){
+    const suggestion = pct >= 90 ? "Likely Satisfactory (suggested)" : "Likely needs more practice (suggested)";
+    resultPill.textContent = "Result: " + suggestion;
+    resultPill.style.background = "var(--gray-bg)";
+    resultPill.style.color = "var(--text-soft)";
+  } else {
+    resultPill.textContent = "Result: Not yet determined";
+    resultPill.style.background = "var(--gray-bg)";
+    resultPill.style.color = "var(--text-soft)";
+  }
+}
+
+document.querySelectorAll(".seg").forEach(seg=>{
+  const group = seg.getAttribute("data-group");
+  seg.querySelectorAll("button").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      ratingState[group] = btn.getAttribute("data-val");
+      [...seg.children].forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      if(group === "result") updateScore();
+    });
+  });
+});
+
+function todayISO(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+document.getElementById("assessDate").value = todayISO();
+
+function gatherData(){
+  const meta = {
+    studentName: document.getElementById("studentName").value,
+    rollNo: document.getElementById("rollNo").value,
+    phaseBatch: document.getElementById("phaseBatch").value,
+    attemptNo: document.getElementById("attemptNo").value,
+    assessorName: document.getElementById("assessorName").value,
+    assessDate: document.getElementById("assessDate").value,
+    assessType: document.querySelector('input[name="assessType"]:checked').value,
+    setting: document.getElementById("setting").value,
+    feedback: document.getElementById("feedback").value,
+    studentSign: document.getElementById("studentSign").value,
+    assessorSign: document.getElementById("assessorSign").value,
+  };
+  const steps = [];
+  let sn = 0;
+  Object.keys(SECTIONS).forEach(sectionId=>{
+    SECTIONS[sectionId].forEach((text, idx)=>{
+      sn++;
+      const key = sectionId + "-" + idx;
+      steps.push({
+        no: sn,
+        section: sectionId,
+        text,
+        rating: stepState[key].rating || "",
+        remark: stepState[key].remark || ""
+      });
+    });
+  });
+  return { skill: "Early Management of Trauma / Trauma Life Support", competencyCode: "GMER 2019, Table 11", meta, steps, ratings: ratingState };
+}
+
+function exportJSON(){
+  const data = gatherData();
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  triggerDownload(blob, fileBaseName() + ".json");
+}
+
+function exportCSV(){
+  const data = gatherData();
+  let rows = [["Field","Value"]];
+  Object.entries(data.meta).forEach(([k,v])=>rows.push([k, v]));
+  rows.push(["","",]);
+  rows.push(["#","Section","Step","Rating","Remark"]);
+  data.steps.forEach(s=>rows.push([s.no, s.section, s.text, s.rating, s.remark]));
+  rows.push(["","",]);
+  Object.entries(data.ratings).forEach(([k,v])=>rows.push([k, v || ""]));
+  const csv = rows.map(r=>r.map(csvEscape).join(",")).join("\\n");
+  const blob = new Blob([csv], {type:"text/csv"});
+  triggerDownload(blob, fileBaseName() + ".csv");
+}
+
+function csvEscape(val){
+  const s = String(val ?? "");
+  if(s.includes(",") || s.includes('"') || s.includes("\\n")){
+    return '"' + s.replace(/"/g,'""') + '"';
+  }
+  return s;
+}
+
+function fileBaseName(){
+  const name = (document.getElementById("studentName").value || "student").replace(/[^a-z0-9]+/gi,"_");
+  const date = document.getElementById("assessDate").value || todayISO();
+  return `Trauma_Life_Support_DOPS_${name}_${date}`;
+}
+
+function triggerDownload(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportPDF(){
+  window.print();
+}
+
+function clearForm(){
+  if(!confirm("Clear all entries on this form? This cannot be undone.")) return;
+  document.querySelectorAll('input[type=text], input[type=number]').forEach(i=>i.value="");
+  document.getElementById("phaseBatch").value = "Phase III Part 2 \u2013 General Surgery";
+  document.getElementById("setting").value = "Skills Lab – Trauma Simulation";
+  document.getElementById("attemptNo").value = 1;
+  document.getElementById("assessDate").value = todayISO();
+  document.getElementById("feedback").value = "";
+  document.querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".seg button").forEach(b=>b.classList.remove("active"));
+  Object.keys(stepState).forEach(k=>{ stepState[k].rating=null; stepState[k].remark=""; });
+  Object.keys(ratingState).forEach(k=>ratingState[k]=null);
+  document.querySelectorAll("input[data-remark-key]").forEach(i=>i.value="");
+  updateScore();
+}
+
+buildSteps();
+updateScore();
+</script>
+
+</body>
+</html>

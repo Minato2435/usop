@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/styles.css">
+  <script src="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; background: var(--color-bg); }
+    a { color: var(--color-accent-700); }
+    a:hover { color: var(--color-accent-800); }
+    .tpl-row { transition: background .15s ease; }
+    .tpl-row:hover { background: var(--color-neutral-100); }
+
+    .icon-btn { background:none; border:none; color:var(--color-neutral-600); cursor:pointer; display:flex; align-items:center; padding:5px; border-radius:var(--radius-sm); }
+    .icon-btn:hover { color:var(--color-accent-800); background:var(--color-accent-100); }
+    .type-pill { display:inline-flex; align-items:center; gap:6px; padding:2px 9px; border-radius:999px; font-size:11.5px; letter-spacing:.06em; }
+  </style>
+</helmet>
+<div style="display:flex; height:100vh; font-family:var(--font-body); color:var(--color-text); overflow:hidden;">
+
+  <nav style="width:76px; flex-shrink:0; background:var(--color-neutral-900); display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px;">
+    <div style="width:40px; height:40px; border-radius:var(--radius-md); background:var(--color-accent); display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#201f1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+    </div>
+    <button style="width:44px; height:32px; border:none; background:transparent; color:rgba(255,255,255,.5); display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="expand">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <div style="height:1px; background:rgba(255,255,255,.1); width:32px; margin:8px 0;"></div>
+    <sc-for list="{{ navIcons }}" as="icon" hint-placeholder-count="8">
+      <button style="width:44px; height:44px; border:none; border-radius:var(--radius-sm); background:{{ icon.bg }}; color:{{ icon.color }}; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;" aria-label="{{ icon.label }}" title="{{ icon.label }}">
+        <span dangerouslySetInnerHTML="{{ icon.svg }}"></span>
+        <sc-if value="{{ icon.dot }}">
+          <span style="position:absolute; top:8px; right:9px; width:6px; height:6px; border-radius:50%; background:var(--color-accent);"></span>
+        </sc-if>
+      </button>
+    </sc-for>
+    <div style="flex:1;"></div>
+    <div style="width:36px; height:36px; border-radius:50%; background:var(--color-accent-800); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-heading); font-weight:600; font-size:15px;">P</div>
+    <button style="width:44px; height:40px; border:none; background:transparent; color:rgba(255,255,255,.55); display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:4px;" aria-label="log out">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </nav>
+
+  <main style="flex:1; overflow-y:auto; min-width:0;">
+    <header style="display:flex; align-items:flex-start; justify-content:space-between; padding:28px 44px 24px; border-bottom:1px solid var(--color-divider);">
+      <div>
+        <div style="font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-accent-700); margin-bottom:6px;">Logbook Configuration</div>
+        <h1 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:34px; margin:0;">Log Templates</h1>
+        <div style="font-size:13.5px; color:var(--color-neutral-700); margin-top:6px;">{{ summaryLine }}</div>
+      </div>
+      <a href="Log Templates.dc.html" class="btn btn-primary" style="background:var(--color-neutral-900); color:#fff; border-color:var(--color-neutral-900); display:inline-flex; align-items:center; gap:8px; text-decoration:none;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add log template
+      </a>
+    </header>
+
+    <div style="padding:26px 44px 64px;">
+
+      <div style="display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); border:1px solid var(--color-neutral-300); border-radius:var(--radius-md); overflow:hidden; margin-bottom:28px;">
+        <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+          <div style="padding:18px 22px; border-right:1px solid var(--color-neutral-300);">
+            <div style="font-family:var(--font-heading); font-size:30px; font-variant-numeric:tabular-nums; line-height:1;">{{ s.value }}</div>
+            <div style="font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-600); margin-top:8px;">{{ s.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:22px; flex-wrap:wrap; margin-bottom:20px;">
+        <div style="position:relative; width:290px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-neutral-500)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; left:12px; top:50%; transform:translateY(-50%);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="input" style="padding-left:36px;" type="text" placeholder="Search templates" value="{{ search }}" onChange="{{ onSearchChange }}"/>
+        </div>
+        <div class="seg" style="display:inline-flex;">
+          <sc-for list="{{ typeOptions }}" as="t" hint-placeholder-count="3">
+            <button class="seg-opt" style="background:{{ t.bg }}; color:{{ t.fg }};" onClick="{{ t.onClick }}">{{ t.label }}</button>
+          </sc-for>
+        </div>
+        <div class="seg" style="display:inline-flex;">
+          <sc-for list="{{ yearOptions }}" as="y" hint-placeholder-count="5">
+            <button class="seg-opt" style="background:{{ y.bg }}; color:{{ y.fg }};" onClick="{{ y.onClick }}">{{ y.label }}</button>
+          </sc-for>
+        </div>
+        <select class="input" style="width:auto;" value="{{ status }}" onChange="{{ onStatusChange }}">
+          <option value="all">All statuses</option>
+          <option value="Published">Published</option>
+          <option value="Draft">Draft</option>
+          <option value="Archived">Archived</option>
+        </select>
+      </div>
+
+      <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
+        <div class="card" style="padding:0; overflow-x:auto;">
+          <div style="min-width:1040px; display:flex; align-items:center; gap:18px; padding:12px 24px; border-bottom:1px solid var(--color-divider); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-600); white-space:nowrap;">
+            <div style="flex:1 1 300px; min-width:240px;">Template</div>
+            <div style="width:86px; flex-shrink:0;">Type</div>
+            <div style="width:150px; flex-shrink:0;">Department</div>
+            <div style="width:64px; flex-shrink:0; text-align:right;">Fields</div>
+            <div style="width:104px; flex-shrink:0;">Status</div>
+            <div style="width:126px; flex-shrink:0;">Updated</div>
+            <div style="width:96px; flex-shrink:0;"></div>
+          </div>
+
+          <sc-for list="{{ templates }}" as="t" hint-placeholder-count="6">
+            <div class="tpl-row" style="min-width:1040px; display:flex; align-items:center; gap:18px; padding:15px 24px; border-bottom:1px solid var(--color-neutral-200);">
+              <div style="flex:1 1 300px; min-width:240px;">
+                <div style="font-family:var(--font-heading); font-size:18.5px; line-height:1.25;">{{ t.title }}</div>
+                <div style="font-size:12.5px; color:var(--color-neutral-600); margin-top:3px;">{{ t.subline }}</div>
+              </div>
+              <div style="width:86px; flex-shrink:0;">
+                <span class="type-pill" style="border:1px solid {{ t.pillBorder }}; color:{{ t.pillColor }};">{{ t.type }}</span>
+              </div>
+              <div style="width:150px; flex-shrink:0; font-size:13.5px;">{{ t.department }}</div>
+              <div style="width:64px; flex-shrink:0; text-align:right; font-variant-numeric:tabular-nums; font-size:14px;">{{ t.fieldCount }}</div>
+              <div style="width:104px; flex-shrink:0;">
+                <span style="display:inline-flex; align-items:center; gap:7px; font-size:13px; color:var(--color-neutral-700);">
+                  <span style="width:7px; height:7px; border-radius:50%; background:{{ t.statusDot }};"></span>
+                  {{ t.status }}
+                </span>
+              </div>
+              <div style="width:126px; flex-shrink:0; font-size:13px; color:var(--color-neutral-700); font-variant-numeric:tabular-nums;">{{ t.updated }}</div>
+              <div class="tpl-acts" style="width:96px; flex-shrink:0; display:flex; justify-content:flex-end; gap:2px;">
+                <a href="Log Templates.dc.html" class="icon-btn" aria-label="edit" title="Edit template">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
+                </a>
+                <button class="icon-btn" onClick="{{ t.onDuplicate }}" aria-label="duplicate" title="Duplicate">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+                <button class="icon-btn" onClick="{{ t.onArchive }}" aria-label="archive" title="{{ t.archiveTitle }}">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9"/><line x1="10" y1="13" x2="14" y2="13"/></svg>
+                </button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+        <div class="card" style="padding:56px; text-align:center;">
+          <div style="font-family:var(--font-heading); font-size:21px; margin-bottom:6px;">No templates match these filters</div>
+          <div style="font-size:14px; color:var(--color-neutral-600); margin-bottom:20px;">Clear the filters, or start a new template from scratch.</div>
+          <a href="Log Templates.dc.html" class="btn btn-primary" style="text-decoration:none;">Add log template</a>
+        </div>
+      </sc-if>
+    </div>
+  </main>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+const ICON = (path) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+
+const TEMPLATES = [
+  { id: 1, title: 'Clinical Skills Assessment', type: 'SSL', year: 1, department: 'Anatomy', fieldCount: 12, status: 'Published', updated: '18 Aug 2026', author: 'Dr. K. Menon' },
+  { id: 2, title: 'Dissection Record', type: 'SSL', year: 1, department: 'Anatomy', fieldCount: 9, status: 'Published', updated: '12 Aug 2026', author: 'Dr. K. Menon' },
+  { id: 3, title: 'Self-Study Reflection', type: 'SDL', year: 1, department: 'Physiology', fieldCount: 6, status: 'Draft', updated: '21 Aug 2026', author: 'Dr. A. Rao' },
+  { id: 4, title: 'Histopathology Slide Review', type: 'SSL', year: 2, department: 'Pathology', fieldCount: 15, status: 'Published', updated: '05 Aug 2026', author: 'Dr. S. Iyer' },
+  { id: 5, title: 'Seminar & Journal Club Log', type: 'SDL', year: 2, department: 'Pharmacology', fieldCount: 7, status: 'Published', updated: '29 Jul 2026', author: 'Dr. N. Bose' },
+  { id: 6, title: 'Community Field Visit', type: 'SDL', year: 3, department: 'Community Medicine', fieldCount: 11, status: 'Draft', updated: '20 Aug 2026', author: 'Dr. R. Pillai' },
+  { id: 7, title: 'Minor OT Procedure Log', type: 'SSL', year: 4, department: 'General Surgery', fieldCount: 18, status: 'Published', updated: '02 Aug 2026', author: 'Dr. V. Shah' },
+  { id: 8, title: 'Labour Room Attendance', type: 'SSL', year: 4, department: 'Obstetrics & Gynaecology', fieldCount: 14, status: 'Published', updated: '30 Jul 2026', author: 'Dr. M. Fernandes' },
+  { id: 9, title: 'Ward Round Case Notes', type: 'SSL', year: 4, department: 'General Medicine', fieldCount: 16, status: 'Archived', updated: '14 Jun 2026', author: 'Dr. T. Kulkarni' },
+];
+
+class Component extends DCLogic {
+  state = { templates: TEMPLATES, search: '', type: 'all', year: 'all', status: 'all' };
+
+  renderVals() {
+    const st = this.state;
+    const q = st.search.trim().toLowerCase();
+
+    const filtered = st.templates.filter(t =>
+      (st.type === 'all' || t.type === st.type) &&
+      (st.year === 'all' || t.year === st.year) &&
+      (st.status === 'all' || t.status === st.status) &&
+      (!q || t.title.toLowerCase().includes(q) || t.department.toLowerCase().includes(q))
+    );
+
+    const statusDot = s => s === 'Published' ? 'var(--color-accent-600)'
+      : s === 'Draft' ? 'var(--color-neutral-400)' : 'var(--color-neutral-300)';
+
+    const templates = filtered.map(t => ({
+      key: t.id, title: t.title, type: t.type, department: t.department,
+      fieldCount: t.fieldCount, status: t.status, updated: t.updated,
+      subline: `Year ${t.year} · ${t.author}`,
+      pillBorder: t.type === 'SSL' ? 'var(--color-accent-500)' : 'var(--color-neutral-400)',
+      pillColor: t.type === 'SSL' ? 'var(--color-accent-800)' : 'var(--color-neutral-700)',
+      statusDot: statusDot(t.status),
+      archiveTitle: t.status === 'Archived' ? 'Restore' : 'Archive',
+      onDuplicate: () => this.setState(s => {
+        const i = s.templates.findIndex(x => x.id === t.id);
+        const copy = { ...t, id: Math.max(...s.templates.map(x => x.id)) + 1, title: `${t.title} (copy)`, status: 'Draft', updated: 'Just now' };
+        const next = [...s.templates];
+        next.splice(i + 1, 0, copy);
+        return { templates: next };
+      }),
+      onArchive: () => this.setState(s => ({
+        templates: s.templates.map(x => x.id === t.id
+          ? { ...x, status: x.status === 'Archived' ? 'Draft' : 'Archived' } : x),
+      })),
+    }));
+
+    const all = st.templates;
+    const stats = [
+      { key: 'total', value: all.length, label: 'Templates' },
+      { key: 'ssl', value: all.filter(t => t.type === 'SSL').length, label: 'SSL templates' },
+      { key: 'sdl', value: all.filter(t => t.type === 'SDL').length, label: 'SDL templates' },
+      { key: 'draft', value: all.filter(t => t.status === 'Draft').length, label: 'Awaiting review' },
+    ];
+
+    const seg = (cur, val) => ({
+      bg: cur === val ? 'var(--color-neutral-900)' : 'transparent',
+      fg: cur === val ? '#fff' : 'var(--color-text)',
+    });
+    const typeOptions = [
+      { key: 'all', label: 'All types', onClick: () => this.setState({ type: 'all' }), ...seg(st.type, 'all') },
+      { key: 'SSL', label: 'SSL', onClick: () => this.setState({ type: 'SSL' }), ...seg(st.type, 'SSL') },
+      { key: 'SDL', label: 'SDL', onClick: () => this.setState({ type: 'SDL' }), ...seg(st.type, 'SDL') },
+    ];
+    const yearOptions = [
+      { key: 'all', label: 'All years', onClick: () => this.setState({ year: 'all' }), ...seg(st.year, 'all') },
+      ...[1, 2, 3, 4].map(y => ({ key: y, label: `Y${y}`, onClick: () => this.setState({ year: y }), ...seg(st.year, y) })),
+    ];
+
+    const navIconDefs = [
+      { label: 'Dashboard', path: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>' },
+      { label: 'Institutes', path: '<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h1"/><path d="M14 9h1"/><path d="M9 13h1"/><path d="M14 13h1"/>' },
+      { label: 'Users', path: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' },
+      { label: 'Departments', path: '<rect x="4" y="15" width="4" height="6"/><rect x="10" y="10" width="4" height="11"/><rect x="16" y="6" width="4" height="15"/>' },
+      { label: 'Log templates', path: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>', active: true },
+      { label: 'Focus areas', path: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/>' },
+      { label: 'Media', path: '<rect x="2" y="6" width="15" height="12" rx="2"/><polygon points="22 8 17 12 22 16 22 8"/>' },
+      { label: 'Settings', path: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>' },
+    ];
+
+    return {
+      navIcons: navIconDefs.map(d => ({
+        label: d.label, svg: { __html: ICON(d.path) }, dot: !!d.active,
+        bg: d.active ? 'var(--color-accent-100)' : 'transparent',
+        color: d.active ? 'var(--color-accent-800)' : 'rgba(255,255,255,.55)',
+      })),
+      stats, templates, typeOptions, yearOptions,
+      search: st.search, status: st.status,
+      onSearchChange: e => this.setState({ search: e.target.value }),
+      onStatusChange: e => this.setState({ status: e.target.value }),
+      summaryLine: `${filtered.length} of ${all.length} templates shown`,
+      hasResults: filtered.length > 0,
+      noResults: filtered.length === 0,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

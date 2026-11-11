@@ -1,0 +1,434 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasRole(role) {
+      return isSignedIn() && userDoc().data.role == role;
+    }
+
+    function isActive() {
+      return isSignedIn() && userDoc().data.active == true;
+    }
+
+    function sameInstitution(institutionId) {
+      return isSignedIn() && userDoc().data.institutionId == institutionId;
+    }
+
+    function sameDepartment(departmentId) {
+      return isSignedIn() && userDoc().data.departmentId == departmentId;
+    }
+
+    // Students have no department field — they're bound by year only, and
+    // every department enabled for their college in their year applies to
+    // them. Faculty/HOD keep one departmentId (sameDepartment above still
+    // covers faculty<->hod reads). These two helpers cover student<->staff:
+    //   - a student reading a faculty/HOD profile in their own college
+    //     (e.g. the Activities page's faculty picker, for whichever
+    //     department they chose for that activity).
+    //   - a faculty member (via their associated years) or an HOD (via
+    //     their own department's year) reading a student of that year.
+    function studentReadsCollegeStaff(data) {
+      return hasRole('student') && (data.role == 'faculty' || data.role == 'hod');
+    }
+
+    function staffSeesStudentYear(mbbsYear) {
+      return (hasRole('faculty') && userDoc().data.associatedMbbsYears != null && mbbsYear in userDoc().data.associatedMbbsYears)
+        || (hasRole('hod') && userDoc().data.departmentId != null
+            && get(/databases/$(database)/documents/departments/$(userDoc().data.departmentId)).data.mbbsYear == mbbsYear);
+    }
+
+    function isPrimaryAdmin() {
+      return hasRole('primaryAdmin');
+    }
+
+    function isSkillLabDirector() {
+      return hasRole('skillLabDirector');
+    }
+
+    // users/{uid} — each user reads/writes their own profile;
+    // primary admin has full access; institution admin can read/write
+    // users within their own institution.
+    match /users/{uid} {
+      allow read: if isPrimaryAdmin()
+        || request.auth.uid == uid
+        // Skill Lab Director is platform-wide (like Primary Admin) and
+        // approves certificate requests from every college — needs the
+        // requesting student's (and the other approver's) profile.
+        || (isActive() && isSkillLabDirector())
+        || (hasRole('institutionAdmin') && sameInstitution(resource.data.institutionId))
+        // Faculty/HOD reading another faculty/HOD profile in their own
+        // department. Student<->staff reads are the two branches below,
+        // since students carry no department of their own.
+        || (isActive() && sameInstitution(resource.data.institutionId) && sameDepartment(resource.data.departmentId))
+        // Student reading a faculty/HOD profile in their own college — the
+        // Activities page's faculty picker filters by role + department.
+        || (isActive() && sameInstitution(resource.data.institutionId) && studentReadsCollegeStaff(resource.data))
+        // Faculty/HOD reading a student of their year — watchDepartmentUsers'
+        // roster query filters institutionId + role + mbbsYear, exactly the
+        // fields this branch reads; also covers a faculty member reading
+        // the profile behind one of their own submissions.
+        || (isActive() && sameInstitution(resource.data.institutionId) && resource.data.role == 'student' && staffSeesStudentYear(resource.data.mbbsYear))
+        // Principal's institution-wide monitoring dashboard needs to read
+        // users across every department of their institution (student/
+        // faculty/HOD counts per department) — the existing cross-
+        // department branch above only covers reading within one's OWN
+        // department, which doesn't cover a principal's cross-department
+        // reads since a principal has no departmentId of their own.
+        || (isActive() && hasRole('principal') && sameInstitution(resource.data.institutionId));
+
+      allow write: if isPrimaryAdmin()
+        || (hasRole('institutionAdmin') && sameInstitution(resource.data.institutionId));
+    }
+
+    // institutions/{institutionId} — primary admin manages; members of an
+    // institution can read their own institution's document.
+    match /institutions/{institutionId} {
+      // Skill Lab Director is platform-wide and reviews certificate
+      // requests from every college — needs college names.
+      allow read: if isPrimaryAdmin() || sameInstitution(institutionId) || (isActive() && isSkillLabDirector());
+      allow write: if isPrimaryAdmin();
+    }
+
+    // departments/{departmentId} — primary admin manages globally;
+    // institution admin manages within their own institution; all signed-in,
+    // active members of an institution can read its department list. The
+    // shared catalog (institutionId == "") also needs to be readable by any
+    // active user — sameInstitution('') is only true for a user whose OWN
+    // institutionId is '', which no real institution admin ever has, so
+    // without this an institution admin's own Departments page couldn't
+    // even list the catalog to decide what to include/exclude. Department
+    // names aren't sensitive, same reasoning already applied to
+    // logTemplates' global-scope branch.
+    match /departments/{departmentId} {
+      allow read: if isPrimaryAdmin()
+        || (isActive() && isSkillLabDirector())
+        || (isActive() && resource.data.institutionId == '')
+        || (isActive() && sameInstitution(resource.data.institutionId));
+
+      allow write: if isPrimaryAdmin()
+        || (hasRole('institutionAdmin') && sameInstitution(resource.data.institutionId));
+    }
+
+    // --- Dynamic Form Engine (Phase 2) ---
+
+    function isInstitutionAdminFor(institutionId) {
+      return hasRole('institutionAdmin') && sameInstitution(institutionId);
+    }
+
+    // A template is readable by: primary admin, any active user if it's a
+    // global template, or active members of the owning institution if it's
+    // an institution-scoped template. Writable by: primary admin for global
+    // templates, or the owning institution's admin for institution templates.
+    function canReadTemplateData(data) {
+      return isPrimaryAdmin()
+        // Skill Lab Director authors certificate presets for every college
+        // and needs each college's own SSL logs (read-only).
+        || (isActive() && isSkillLabDirector())
+        || (isActive() && data.scope == 'global')
+        || (isActive() && data.scope == 'institution' && sameInstitution(data.institutionId));
+    }
+
+    function canWriteTemplateData(data) {
+      return isPrimaryAdmin()
+        || (data.scope == 'institution' && isInstitutionAdminFor(data.institutionId));
+    }
+
+    match /logTemplates/{templateId} {
+      allow read: if canReadTemplateData(resource.data);
+      allow create: if canWriteTemplateData(request.resource.data);
+      allow update, delete: if canWriteTemplateData(resource.data);
+
+      // SSL recursive category tree, stored flat with parentId pointers.
+      // Read is relaxed to "any active user" rather than re-checking the
+      // parent template's scope/institution: Firestore denies list queries
+      // outright unless every field the rule depends on is also a query
+      // filter, and a cross-document get() can't satisfy that for a plain
+      // orderBy('order') listing. Taxonomy titles aren't sensitive data —
+      // the real per-institution boundary is enforced on logTemplates
+      // itself (you can't discover a templateId to query without first
+      // reading a template you're already allowed to read) and, later, on
+      // actual student submissions. Writes stay fully scoped since they
+      // target one known document, where the cross-document get() works fine.
+      match /nodes/{nodeId} {
+        allow read: if isActive();
+        allow write: if canWriteTemplateData(get(/databases/$(database)/documents/logTemplates/$(templateId)).data);
+      }
+
+      // SDL flat category list — same reasoning as nodes above.
+      match /categories/{categoryId} {
+        allow read: if isActive();
+        allow write: if canWriteTemplateData(get(/databases/$(database)/documents/logTemplates/$(templateId)).data);
+      }
+    }
+
+    // Evaluation-form schemas attached to SSL leaf nodes. Any active user can
+    // read (faculty need to render them; students never write them). Any
+    // admin (primary or institution) can author one — they're just field
+    // definitions, not scoped/sensitive data on their own.
+    match /formSchemas/{schemaId} {
+      allow read: if isActive();
+      allow write: if isPrimaryAdmin() || hasRole('institutionAdmin');
+    }
+
+    // Per-institution enable/disable toggle for a global template.
+    match /institutionTemplateOverrides/{overrideId} {
+      allow read: if isPrimaryAdmin()
+        || (isActive() && sameInstitution(resource.data.institutionId));
+      allow create: if isPrimaryAdmin() || isInstitutionAdminFor(request.resource.data.institutionId);
+      allow update, delete: if isPrimaryAdmin() || isInstitutionAdminFor(resource.data.institutionId);
+    }
+
+    // Per-institution include/exclude toggle for a shared-catalog department
+    // (departments/{id} with institutionId == ""). Same shape as the
+    // department rule itself, not the template-override rule above, since
+    // department writes aren't split by create/update/delete.
+    match /institutionDepartmentOverrides/{overrideId} {
+      allow read: if isPrimaryAdmin()
+        || (isActive() && isSkillLabDirector())
+        || (isActive() && sameInstitution(resource.data.institutionId));
+      allow write: if isPrimaryAdmin()
+        || (hasRole('institutionAdmin') && sameInstitution(resource.data.institutionId));
+    }
+
+    // Per-institution enable/disable toggle for a single SSL competency
+    // (a node under a *global* SSL template) — one level more granular than
+    // institutionTemplateOverrides above.
+    match /institutionCompetencyOverrides/{overrideId} {
+      allow read: if isPrimaryAdmin()
+        || (isActive() && isSkillLabDirector())
+        || (isActive() && sameInstitution(resource.data.institutionId));
+      allow create: if isPrimaryAdmin() || isInstitutionAdminFor(request.resource.data.institutionId);
+      allow update, delete: if isPrimaryAdmin() || isInstitutionAdminFor(resource.data.institutionId);
+    }
+
+    // Per-institution fork of a global competency's evaluation form — points
+    // at a private FormSchema copy instead of a boolean, so an institution
+    // can edit a competency's checklist without touching the global form.
+    match /institutionCompetencyFormOverrides/{overrideId} {
+      // watchInstitutionCompetencyFormOverride() (the Competency Editor's
+      // "does this institution already have a fork?" check) does a plain
+      // get() by composite id, which is very often a *miss* — the very
+      // first time an institution admin customizes a given competency, no
+      // fork doc exists yet. On a nonexistent document `resource` is null,
+      // so `resource.data.institutionId` throws instead of evaluating to
+      // false — an error, which Firestore surfaces as permission-denied.
+      // Primary Admin never hit this because isPrimaryAdmin() short-
+      // circuits the `||` before touching resource.data; an institution
+      // admin doesn't get that free pass, so the `resource == null` check
+      // has to come first here.
+      allow read: if isPrimaryAdmin()
+        || (isActive() && (resource == null || sameInstitution(resource.data.institutionId)));
+      allow create: if isPrimaryAdmin() || isInstitutionAdminFor(request.resource.data.institutionId);
+      allow update, delete: if isPrimaryAdmin() || isInstitutionAdminFor(resource.data.institutionId);
+    }
+
+    // Video tutorials (Module 07) — Primary-Admin-authored catalog content,
+    // department + MBBS year + audience (student/faculty) tagged. Read is
+    // relaxed to "any active user" for the same reason logTemplates/nodes
+    // and /categories are above: a list query can't satisfy a cross-
+    // document check against the requesting user's own department/role,
+    // and video metadata (title/department/audience) isn't sensitive. The
+    // real "this student only sees their department's student videos"
+    // filter is a client-side query once the student/faculty dashboards
+    // that consume this collection exist. Write also allows an institution
+    // admin to author their own institution-exclusive video (institutionId
+    // == their own), same create/update/delete split as institutionId-
+    // scoped logTemplates above — they still can't touch a global
+    // (institutionId == "") or another institution's video.
+    match /videoTutorials/{videoId} {
+      allow read: if isActive();
+      allow create: if isPrimaryAdmin() || isInstitutionAdminFor(request.resource.data.institutionId);
+      allow update, delete: if isPrimaryAdmin() || isInstitutionAdminFor(resource.data.institutionId);
+    }
+
+    // Per-institution include/exclude toggle for a shared-catalog video —
+    // same shape as institutionCompetencyOverrides.
+    match /institutionVideoOverrides/{overrideId} {
+      allow read: if isPrimaryAdmin()
+        || (isActive() && sameInstitution(resource.data.institutionId));
+      allow create: if isPrimaryAdmin() || isInstitutionAdminFor(request.resource.data.institutionId);
+      allow update, delete: if isPrimaryAdmin() || isInstitutionAdminFor(resource.data.institutionId);
+    }
+
+    // Platform Configuration (Module 09) — a single singleton doc
+    // (platformConfig/settings) holding platform-wide settings like the
+    // active color theme. Plain get(), not a list query.
+    match /platformConfig/{docId} {
+      allow read: if isActive();
+      allow write: if isPrimaryAdmin();
+    }
+
+    // Student SSL activity submissions (Module 3 + 4). A student logs the
+    // activity (description/images/tree selection) and submits it to one
+    // faculty member; the faculty is the one who fills the DOPS-style
+    // checklist (`answers`) during review, layering their own evaluation +
+    // decision on top. `create` requires the caller to be the student named
+    // on the doc; `update`'s faculty branch used to also block `answers`
+    // from a much earlier design where the student filled it — flipped once
+    // ReviewSubmissionPage.tsx actually let faculty fill it in. `studentId`
+    // stays immutable for the faculty branch regardless. The student can
+    // edit while still a draft OR after a revision was requested (both are
+    // "sent back to them" states); once submitted/approved/rejected it's
+    // frozen for them. Both list queries this needs (My Activity: where
+    // studentId==uid; the Faculty inbox: where facultyId==uid) filter on
+    // exactly the field the read rule checks, so neither hits the list-
+    // query-filter-completeness gotcha documented above for
+    // logTemplates/departments/videoTutorials.
+    //
+    // HOD and Principal added alongside the Principal/HOD panel build:
+    // HOD gets Faculty-level write capability but scoped to their whole
+    // department (not just submissions addressed to them personally) —
+    // "oversee all faculty reviews... within the department" per the build
+    // spec — so their branch checks institutionId+departmentId instead of
+    // facultyId. Principal is explicitly read-only reporting per the spec
+    // ("no write/approval actions are part of this role's function") —
+    // institution-wide, no department scoping, and no update/delete branch
+    // at all. watchDepartmentSubmissions/watchInstitutionSubmissions in
+    // submissions.ts filter on exactly the fields each new branch reads.
+    function submissionEditableByStudent(status) {
+      return status == 'draft' || status == 'revisionRequested';
+    }
+    function isHodForSubmission(data) {
+      return isActive() && hasRole('hod') && sameInstitution(data.institutionId) && sameDepartment(data.departmentId);
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if isPrimaryAdmin()
+        || (isActive() && resource.data.studentId == request.auth.uid)
+        || (isActive() && resource.data.facultyId == request.auth.uid)
+        || isHodForSubmission(resource.data)
+        || (isActive() && hasRole('principal') && sameInstitution(resource.data.institutionId))
+        // Skill Lab Director reviews certificate evidence — which faculty
+        // approved each required skill, and when. Read-only.
+        || (isActive() && isSkillLabDirector());
+
+      allow create: if isActive() && hasRole('student')
+        && request.resource.data.studentId == request.auth.uid;
+
+      allow update: if isPrimaryAdmin()
+        || (isActive() && resource.data.studentId == request.auth.uid
+            && submissionEditableByStudent(resource.data.status))
+        || (isActive() && resource.data.facultyId == request.auth.uid
+            && request.resource.data.studentId == resource.data.studentId)
+        || (isHodForSubmission(resource.data) && request.resource.data.studentId == resource.data.studentId);
+
+      allow delete: if isPrimaryAdmin()
+        || (isActive() && resource.data.studentId == request.auth.uid && resource.data.status == 'draft');
+    }
+
+    // Certificates (new module). A preset of required SSL competencies per
+    // (institutionId, department, mbbsYear), authored by Primary Admin
+    // only. Read relaxed to "any active user" — same list-query-filter-
+    // completeness reason logTemplates/departments/videoTutorials already
+    // use this relaxation: a student's My Portfolio page needs to query by
+    // institutionId/department/mbbsYear, and a required-skill title list
+    // isn't sensitive data on its own.
+    match /certificateSkillPresets/{presetId} {
+      allow read: if isActive();
+      // Both certificate owners manage presets: Primary Admin and the
+      // platform-wide Skill Lab Director.
+      allow write: if isPrimaryAdmin() || (isActive() && isSkillLabDirector());
+    }
+
+    function certificateRequestEditableByStudent(data) {
+      return data.skillLabDirectorDecision == 'rejected' || data.primaryAdminDecision == 'rejected';
+    }
+
+    // One document per (student, department) for life — doc id ===
+    // `${studentId}_${departmentId}` (see CertificateRequest's own comment
+    // in types/index.ts — a student bound to several departments at once
+    // can independently qualify for, and request, a certificate per
+    // department). The path segment is no longer literally the uid, so
+    // every check below compares the real `studentId` field on the
+    // document instead. Skill Lab Director is platform-wide, exactly like
+    // Primary Admin — no sameInstitution/sameDepartment scoping at all.
+    match /certificateRequests/{requestId} {
+      // A student's own requests are keyed `${uid}_${departmentId}` — checked
+      // on the id, not resource.data, so watching a request that doesn't
+      // exist yet (department not requested) is allowed instead of denied.
+      allow read: if isPrimaryAdmin()
+        || isSkillLabDirector()
+        || (isActive() && requestId.matches(request.auth.uid + '_.+'));
+
+      allow create: if isActive() && hasRole('student') && request.resource.data.studentId == request.auth.uid
+        && request.resource.data.skillLabDirectorDecision == 'pending'
+        && request.resource.data.primaryAdminDecision == 'pending';
+
+      allow update: if isPrimaryAdmin()
+        // Student's own resubmit-after-rejection: resets both decisions
+        // back to 'pending' in the same write, only once at least one is
+        // already 'rejected'.
+        || (isActive() && resource.data.studentId == request.auth.uid
+            && certificateRequestEditableByStudent(resource.data)
+            && request.resource.data.skillLabDirectorDecision == 'pending'
+            && request.resource.data.primaryAdminDecision == 'pending')
+        // Skill Lab Director records only their own decision — the
+        // Primary Admin's own field (and studentId) must be untouched by
+        // this branch.
+        || (isSkillLabDirector()
+            && request.resource.data.studentId == resource.data.studentId
+            && request.resource.data.primaryAdminDecision == resource.data.primaryAdminDecision);
+
+      allow delete: if isPrimaryAdmin();
+    }
+
+    // Forms Management (Module 05 — faculty-initiated path), independent
+    // of the submissions pipeline above. Primary-Admin-authored form
+    // TYPES (CBD/Mini-CEX/OSCE) — read relaxed to "any active user" for
+    // the same reason logTemplates/videoTutorials are: a faculty member's
+    // array-contains query against their own institutionId can't be
+    // satisfied by a cross-document scope check, and a form's title/
+    // field structure isn't sensitive data on its own.
+    match /facultyFormTemplates/{templateId} {
+      allow read: if isActive();
+      allow write: if isPrimaryAdmin();
+    }
+
+    // One filled-and-sent form instance. "Majorly these are for the
+    // faculty only" — create is faculty-only (no HOD path the way
+    // submissions got one), one-shot (no update/delete — sending IS
+    // creating the doc, nothing to edit afterward in this pass). Read:
+    // the sending faculty, the receiving student, or Primary Admin. Both
+    // list queries this needs (Faculty's sent history: where
+    // facultyId==uid; the Student's Forms section: where studentId==uid)
+    // filter on exactly the field the read rule checks.
+    match /facultyForms/{formId} {
+      allow read: if isPrimaryAdmin()
+        || (isActive() && resource.data.facultyId == request.auth.uid)
+        || (isActive() && resource.data.studentId == request.auth.uid);
+
+      allow create: if isActive() && hasRole('faculty')
+        && request.resource.data.facultyId == request.auth.uid;
+    }
+
+    // A temporary, scheduled grant of one specific video to a hand-picked
+    // list of students/faculty (Primary Admin's "Batches" panel on the
+    // Video Tutorials page) — independent of that video's own department/
+    // year/audience tags. Primary Admin has full access; a member (listed
+    // in memberIds) can only read it, never write it. The one list query a
+    // member needs (their own batch grants) filters on memberIds via
+    // array-contains == their own uid, exactly the field this rule reads
+    // for that branch, so it satisfies the list-query-filter-completeness
+    // gotcha. No status field is stored or updated server-side — expiry is
+    // computed client-side from startAt/endAt vs. now (videoBatchStatus()
+    // in lib/firestore/videoBatches.ts); a batch past its own endAt is
+    // never auto-deleted, so no update/delete branch is needed for members.
+    match /videoBatches/{batchId} {
+      allow read: if isPrimaryAdmin()
+        || (isActive() && request.auth.uid in resource.data.memberIds);
+      allow create, update, delete: if isPrimaryAdmin();
+    }
+
+    // Everything else (SDL submissions, exports, ...) is added module-by-
+    // module in later phases. Default-deny until then.
+  }
+}

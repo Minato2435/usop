@@ -1,0 +1,383 @@
+@import "tailwindcss";
+
+@theme {
+  /* Ink — the sidebar / command layer */
+  --color-ink: #0b1220;
+  --color-ink-soft: #131c2e;
+  --color-ink-line: #22304a;
+  --color-mist: #93a0b8;
+  --color-frost: #edf0f5;
+
+  /* Paper — the working canvas */
+  --color-paper: #f4f2ec;
+  --color-paper-raised: #ffffff;
+  --color-line: #e3ded1;
+  --color-char: #181c22;
+  --color-char-soft: #6c6f76;
+
+  /* Signal */
+  --color-gold: #b8863b;
+  --color-gold-soft: #f0e2c6;
+  --color-gold-line: #d9be8b;
+  --color-teal: #2f7a6b;
+  --color-teal-soft: #dcece7;
+  --color-clay: #ac5138;
+  --color-clay-soft: #f3ded4;
+
+  /* Used only for the Dashboard's stat-card border/glow. Defaults to the
+     accent gold everywhere, but Midnight overrides it below to a plain
+     neutral line — a solid saturated gold ring plus a warm glow reads as
+     over-elevated/glowing against Midnight's dark canvas, so that one
+     theme dials the highlight back to a quiet hairline instead. */
+  --color-stat-highlight: var(--color-gold);
+
+  /* Cormorant Garamond: headings, page titles, field labels, big stat
+     numerals — keep weight at 600 (semibold) max, never bold, per the
+     brief's request. Lora: body text, table cells, inputs, kickers. */
+  --font-display: "Cormorant Garamond", "Iowan Old Style", serif;
+  --font-sans: "Lora", "Iowan Old Style", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+/* Alternate color themes (Platform Configuration → theme switcher). Every
+   component already consumes these tokens by name (bg-ink, text-gold,
+   var(--color-gold), …), never a literal hex — so redefining the same
+   token names under a data-theme attribute is enough to repaint the whole
+   panel with no other code changes. `html[data-theme=...]` (not a bare
+   attribute selector) so it reliably outweighs @theme's compiled :root
+   rule. No attribute, or data-theme="inkGold", keeps the default palette
+   above. Fonts are intentionally unchanged across themes. --color-clay
+   (destructive/danger) is intentionally kept a similar warm red-orange in
+   both alternates, so delete/danger affordances stay recognizable
+   regardless of theme. */
+
+/* Clinical Teal — cooler, modern-clinical mood: slate-blue-black ink, a
+   crisp cool-white paper (not warm cream), teal as the signature accent
+   instead of gold, a muted blue as the secondary signal. */
+html[data-theme="clinicalTeal"] {
+  --color-ink: #0f1b24;
+  --color-ink-soft: #16232f;
+  --color-ink-line: #24384a;
+  --color-mist: #93a8b5;
+  --color-frost: #eef4f5;
+
+  --color-paper: #f2f6f5;
+  --color-paper-raised: #ffffff;
+  --color-line: #dce6e4;
+  --color-char: #12201e;
+  --color-char-soft: #5c6f6d;
+
+  --color-gold: #1f7a6c;
+  --color-gold-soft: #d8ece7;
+  --color-gold-line: #8fc4b9;
+  --color-teal: #3f6b99;
+  --color-teal-soft: #dce7f2;
+  --color-clay: #b2503f;
+  --color-clay-soft: #f4dcd6;
+}
+
+/* Emerald Ledger — a different classical mood from Ink & Gold: deep
+   forest-green ink, warm parchment paper, emerald as the signature
+   accent, muted amber as the secondary signal. Reads as a scholarly
+   archive/ledger rather than navy-and-brass. */
+html[data-theme="emeraldLedger"] {
+  --color-ink: #14201a;
+  --color-ink-soft: #1c2c23;
+  --color-ink-line: #2e4536;
+  --color-mist: #9db5a5;
+  --color-frost: #edf3ee;
+
+  --color-paper: #f5f1e4;
+  --color-paper-raised: #ffffff;
+  --color-line: #e4dcc4;
+  --color-char: #1e2a20;
+  --color-char-soft: #6b7268;
+
+  --color-gold: #3f7d52;
+  --color-gold-soft: #dceadd;
+  --color-gold-line: #9fc7a9;
+  --color-teal: #a67c3d;
+  --color-teal-soft: #efe3cc;
+  --color-clay: #a6503a;
+  --color-clay-soft: #f1dad1;
+}
+
+/* Monochrome — a stark, editorial black-and-white mood: true near-black
+   ink, a crisp near-white paper, and the "accent" itself is a bold solid
+   black/graphite (not a hue) so primary actions and highlights read as
+   confident dark chips against white rather than disappearing into a
+   colorless palette. Secondary signal is a cool slate gray, kept distinct
+   from the near-black accent. */
+html[data-theme="monochrome"] {
+  --color-ink: #0a0a0a;
+  --color-ink-soft: #171717;
+  --color-ink-line: #2e2e2e;
+  --color-mist: #a3a3a3;
+  --color-frost: #fafafa;
+
+  --color-paper: #f7f7f7;
+  --color-paper-raised: #ffffff;
+  --color-line: #e2e2e2;
+  --color-char: #101010;
+  --color-char-soft: #6b6b6b;
+
+  /* A mid-graphite, not near-black: several places across the app render
+     an ink-colored icon/glyph *on top of* a solid --color-gold chip (the
+     sidebar crest, the video-preview play button) — that convention only
+     works if gold stays meaningfully lighter than ink. An earlier
+     near-black gold (#111111) sat right on top of ink (#0a0a0a) and made
+     those icons disappear. This value keeps the "graphite, not a hue"
+     spirit while staying legible against both ink (as a chip) and paper
+     (as text), the same dual role every other theme's accent plays. */
+  --color-gold: #595959;
+  --color-gold-soft: #e5e5e5;
+  --color-gold-line: #8a8a8a;
+  --color-teal: #4b5563;
+  --color-teal-soft: #e5e7eb;
+  --color-clay: #b2503f;
+  --color-clay-soft: #f4dcd6;
+}
+
+/* Deep Blue — a single-hue white-and-navy mood: a richly saturated indigo
+   ink (clearly blue, not the near-black of Ink & Gold), crisp cool-white
+   paper, and a royal/cobalt blue as the signature accent — the secondary
+   signal stays in the same blue family (a lighter mid-tone) rather than
+   introducing a competing hue, keeping the "white and dark blue" identity
+   clean. Reads as corporate/nautical rather than clinical or classical. */
+html[data-theme="deepBlue"] {
+  --color-ink: #0b1e3d;
+  --color-ink-soft: #142a4d;
+  --color-ink-line: #24406b;
+  --color-mist: #9db0ce;
+  --color-frost: #eef3fa;
+
+  --color-paper: #f5f8fc;
+  --color-paper-raised: #ffffff;
+  --color-line: #dce5f0;
+  --color-char: #101e33;
+  --color-char-soft: #5e6e85;
+
+  --color-gold: #2e5fa3;
+  --color-gold-soft: #dce8f5;
+  --color-gold-line: #8fb2dd;
+  --color-teal: #6c8fbd;
+  --color-teal-soft: #e1eaf4;
+  --color-clay: #a6503a;
+  --color-clay-soft: #f1dad1;
+}
+
+/* Midnight — the one true dark mode: unlike the five themes above (all a
+   dark ink sidebar against a *light* paper canvas), here the canvas itself
+   goes dark too, so the whole interface — not just the sidebar — reads as
+   dark. The accent moved off the flagship amber-gold to a genuine vibrant
+   tangerine-orange — reads as a deliberate dark-mode identity of its own
+   (glowing ember against near-black) rather than just a dimmed daytime
+   gold. Every "soft" tint (used as a light badge background behind
+   colored text in every other theme) is inverted here into a dark, muted
+   version of the same hue instead of a pale one, so badge text stays
+   readable rather than washing out. */
+html[data-theme="midnight"] {
+  --color-ink: #05070c;
+  --color-ink-soft: #0d111a;
+  --color-ink-line: #1c2331;
+  --color-mist: #7c8aa3;
+  --color-frost: #f5f6f8;
+
+  /* Was #12151c/#1a1e28 — noticeably lighter (a medium navy-gray) than
+     the sidebar's near-black ink, so the main canvas read as "grayish"
+     next to it instead of matching. Cards now sit at the requested
+     #0c0c0a — a warm, near-neutral near-black rather than a navy tint —
+     with paper darkened to match that same neutral family (not blue-
+     leaning) so the two stay visually consistent; the lift from paper to
+     paper-raised is intentionally subtle rather than a bright card
+     popping off a dark page. */
+  --color-paper: #08080a;
+  --color-paper-raised: #0c0c0a;
+  --color-line: #262b38;
+  --color-char: #e8e9ed;
+  --color-char-soft: #9ca3b0;
+
+  --color-gold: #e8873e;
+  --color-gold-soft: #3d2817;
+  --color-gold-line: #b5652f;
+  --color-teal: #4fa294;
+  --color-teal-soft: #1b3530;
+  /* Pulled redder than the other themes' clay (which sits closer to
+     orange) specifically because the new accent above IS orange now —
+     keeping clay in the same family would blur the accent/danger
+     distinction this token exists to preserve. */
+  --color-clay: #d64f4f;
+  --color-clay-soft: #3d1a1a;
+
+  --color-stat-highlight: var(--color-line);
+}
+
+/* Classical — a warm bronze-and-charcoal mood, deliberately free of any
+   blue or gray: a near-black charcoal sidebar (not navy), warm off-white
+   parchment paper, and two ochre/bronze accent tones (a darker "active
+   element" bronze plus a cooler tan-bronze secondary) standing in for
+   gold/teal. Values carried over from the reference "Classical" palette
+   (warm off-white bg, charcoal sidebar, amber/ochre accent ramp, a cooler
+   bronze/tan secondary ramp, and a divider derived from the text color at
+   16% opacity) rather than invented fresh. */
+html[data-theme="classical"] {
+  --color-ink: #2d2b2b;
+  --color-ink-soft: #383533;
+  --color-ink-line: #46423e;
+  --color-mist: #a89f92;
+  --color-frost: #f7f3ec;
+
+  --color-paper: #f3f2f2;
+  --color-paper-raised: #ffffff;
+  --color-line: #d3d1cf;
+  --color-char: #201f1d;
+  --color-char-soft: #6d6a63;
+
+  --color-gold: #7d5411;
+  --color-gold-soft: #e9e3da;
+  --color-gold-line: #caa063;
+  --color-teal: #ac803e;
+  --color-teal-soft: #efe4cf;
+  --color-clay: #a6503a;
+  --color-clay-soft: #f1dad1;
+}
+
+/* Spruce & Amber — built from a supplied reference palette doc: a deep
+   spruce-green sidebar (not navy or black, so the rail belongs to the same
+   hue family as the accent), a cool off-white paper, and two signal hues —
+   spruce green for anything working/clickable, amber reserved strictly for
+   "a person needs to act." The reference used two different greens for the
+   sidebar specifically (a duller one for buttons on white, a brighter mint
+   for small icons/text directly on the dark rail, since the duller one
+   didn't read well there) — this app has one --color-gold slot for both
+   roles, so the brighter choice isn't available; --color-gold-line borrows
+   the reference's own "composition ramp" (built for exactly this kind of
+   in-between step) to stay closer to their intent for hover/border accents.
+   Only color moved over — the reference's own typeface (Archivo) and
+   corner-radius system weren't, matching how every theme here is color-only
+   and shares the app's existing Cormorant/Lora/Plex Mono + chamfer system. */
+html[data-theme="spruceAmber"] {
+  --color-ink: #0f211d;
+  --color-ink-soft: #1b322c;
+  --color-ink-line: #2e4a43;
+  --color-mist: #b3c4be;
+  --color-frost: #eef3f0;
+
+  --color-paper: #eaeee9;
+  --color-paper-raised: #ffffff;
+  --color-line: #d6ded6;
+  --color-char: #0d1a17;
+  --color-char-soft: #5f6f6a;
+
+  --color-gold: #0f6b54;
+  --color-gold-soft: #dbeae3;
+  --color-gold-line: #58a891;
+  --color-teal: #9c6109;
+  --color-teal-soft: #f6e9d3;
+  --color-clay: #a6503a;
+  --color-clay-soft: #f1dad1;
+}
+
+/* Clarity — designed from a legibility brief rather than a mood: near-black
+   text (not literal #000, which glares) against a soft warm-neutral paper
+   (not literal #fff, same reason) verifies at ~16.6:1 contrast, well past
+   WCAG AAA's 7:1. One confident deep indigo-blue carries every accent —
+   chosen because it holds up on both the light paper AND the dark sidebar
+   at once (many of this app's warmer bronze/gold accents only really sing
+   on one surface or the other), rather than because blue was the mood.
+   Secondary signal is a clear forest green, deliberately a very different
+   hue from the blue accent so the two are never confused at a glance. */
+html[data-theme="clarity"] {
+  --color-ink: #171b21;
+  --color-ink-soft: #20262e;
+  --color-ink-line: #313944;
+  --color-mist: #a7b0bb;
+  --color-frost: #f5f7fa;
+
+  --color-paper: #f6f6f4;
+  --color-paper-raised: #ffffff;
+  --color-line: #dcddd9;
+  --color-char: #14171a;
+  --color-char-soft: #565b60;
+
+  --color-gold: #1d4e89;
+  --color-gold-soft: #dce7f2;
+  --color-gold-line: #7fa3c7;
+  --color-teal: #2f7d5a;
+  --color-teal-soft: #dcede3;
+  --color-clay: #b3261e;
+  --color-clay-soft: #f6dad7;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-char);
+    font-family: var(--font-sans);
+  }
+}
+
+@layer utilities {
+  /* Signature chamfer — a single cut corner, used sparingly on primary
+     surfaces (stat tiles, primary buttons, the sidebar brand mark) rather
+     than a border-radius, as the shape identity of the admin panel. */
+  .chamfer {
+    clip-path: polygon(
+      0 0,
+      calc(100% - 18px) 0,
+      100% 18px,
+      100% 100%,
+      0 100%
+    );
+  }
+  .chamfer-sm {
+    clip-path: polygon(
+      0 0,
+      calc(100% - 10px) 0,
+      100% 10px,
+      100% 100%,
+      0 100%
+    );
+  }
+
+  .shimmer {
+    /* Token-relative highlight sweep, not a literal color — was a
+       hardcoded cream (#efeae0) that only made sense against a light
+       paper theme; would flash as a bright stripe against Midnight's dark
+       skeletons. paper-raised is the "brighter" surface in every theme
+       (near-white on light themes, a lighter charcoal on Midnight), so it
+       reads as a highlight either way. */
+    background: linear-gradient(
+      100deg,
+      var(--color-line) 30%,
+      var(--color-paper-raised) 45%,
+      var(--color-line) 60%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  .fade-up {
+    animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 140% 0;
+  }
+  100% {
+    background-position: -60% 0;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

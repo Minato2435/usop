@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <template id="__bundler_thumbnail" data-bg-color="#f3f2f2">
+    <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <rect width="120" height="120" fill="#f3f2f2"/>
+      <line x1="30" y1="40" x2="90" y2="40" stroke="#201f1d" stroke-width="2"/>
+      <line x1="30" y1="60" x2="90" y2="60" stroke="#b68235" stroke-width="2"/>
+      <line x1="30" y1="80" x2="68" y2="80" stroke="#201f1d" stroke-width="2"/>
+    </svg>
+  </template>
+  <link rel="stylesheet" href="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/styles.css">
+  <script src="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; background: var(--color-bg); }
+    a { color: var(--color-accent-700); }
+    a:hover { color: var(--color-accent-800); }
+    .kicker { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); line-height:1.45; }
+    .tab { border:none; background:transparent; font-family:var(--font-body); font-size:13.5px; color:var(--color-neutral-700); padding:0 0 10px; cursor:pointer; border-bottom:2px solid transparent; transition:color .12s, border-color .12s; }
+    .tab:hover { color:var(--color-text); }
+    .tab.on { color:var(--color-text); border-bottom-color:var(--color-accent-700); }
+    .tab-n { font-variant-numeric:tabular-nums; color:var(--color-neutral-700); margin-left:6px; font-size:12px; }
+
+    .mhead { display:flex; align-items:baseline; gap:14px; padding:26px 0 10px; }
+    .mhead-rule { flex:1; height:1px; background:var(--color-divider); }
+    .mhead-t { font-family:var(--font-heading); font-size:14px; letter-spacing:.06em; text-transform:uppercase; color:var(--color-neutral-800); }
+    .mhead-n { font-size:12px; color:var(--color-neutral-700); font-variant-numeric:tabular-nums; }
+
+    .entry { border:1px solid var(--color-divider); border-radius:var(--radius-md); background:rgba(255,255,255,.4); margin-bottom:10px; overflow:hidden; transition:border-color .14s, box-shadow .14s, background .14s; }
+    .entry:hover { border-color:#d8d0c4; }
+    .entry.open { background:rgba(255,255,255,.62); border-color:#d3cabc; box-shadow:0 1px 2px rgba(45,43,43,.04), 0 18px 40px -26px rgba(45,43,43,.45); }
+    .erow { width:100%; text-align:left; font-family:var(--font-body); background:transparent; border:none; padding:18px 22px; cursor:pointer; display:grid; grid-template-columns:62px minmax(0,1fr) auto; gap:24px; align-items:center; }
+    .estamp { text-align:center; border-right:1px solid var(--color-neutral-200); padding-right:20px; }
+    .eday { font-family:var(--font-heading); font-size:22px; line-height:1; font-variant-numeric:tabular-nums; }
+    .emon { font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); margin-top:5px; }
+    .eskill { font-family:var(--font-heading); font-size:18.5px; line-height:1.3; }
+    .trail { font-size:12.5px; color:var(--color-neutral-700); margin-top:4px; }
+    .chip { display:inline-flex; align-items:center; gap:7px; padding:5px 13px; border-radius:999px; font-size:12px; white-space:nowrap; }
+
+    .panel { border-top:1px solid var(--color-divider); }
+    .pblock { padding:22px 22px 24px; }
+    .pblock + .pblock { border-top:1px solid var(--color-neutral-200); }
+    .pblock.review { background:rgba(182,130,53,.055); }
+    .pgrid { display:grid; grid-template-columns:132px minmax(0,1fr); gap:30px; align-items:start; }
+    .figs { display:grid; grid-template-columns:repeat(auto-fit, minmax(126px,1fr)); gap:16px 24px; padding-bottom:20px; border-bottom:1px solid rgba(45,43,43,.1); }
+    .fig-n { font-family:var(--font-heading); font-size:20px; line-height:1.2; }
+    .fb-card { border:1px solid rgba(45,43,43,.12); border-radius:var(--radius-sm); background:rgba(255,255,255,.55); padding:14px 16px; }
+    .fb-card p { margin:0; font-size:13.5px; line-height:1.65; }
+    .note-body { font-size:14px; line-height:1.7; color:var(--color-text); }
+    .note-body p { margin:0 0 11px; }
+    .note-body p:last-child { margin-bottom:0; }
+    .att-plate { border:1px solid #ddd6ca; border-radius:var(--radius-sm); overflow:hidden; width:146px; background:rgba(255,255,255,.5); }
+    .plate-img { height:100px; background-color:rgba(45,43,43,.045); background-image:repeating-linear-gradient(45deg, rgba(45,43,43,.06) 0 8px, transparent 8px 16px); display:flex; align-items:center; justify-content:center; color:var(--color-neutral-700); }
+    .plate-cap { font-size:11.5px; color:var(--color-neutral-800); padding:7px 9px; border-top:1px solid #ddd6ca; }
+    .ghost-btn { border:1px solid var(--color-neutral-400); background:transparent; border-radius:var(--radius-sm); font-family:var(--font-body); font-size:12.5px; color:var(--color-text); padding:6px 14px; cursor:pointer; }
+    .ghost-btn:hover { border-color:var(--color-accent-600); color:var(--color-accent-800); }
+    @media (max-width: 900px) {
+      .erow { grid-template-columns:52px minmax(0,1fr); row-gap:14px; }
+      .erow .estatus { grid-column:2; justify-self:start; }
+      .pgrid { grid-template-columns:minmax(0,1fr); gap:12px; }
+    }
+  </style>
+</helmet>
+<div style="display:flex; height:100vh; font-family:var(--font-body); color:var(--color-text); overflow:hidden;">
+
+  <nav style="width:76px; flex-shrink:0; background:var(--color-neutral-900); display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px;">
+    <div style="width:40px; height:40px; border-radius:var(--radius-md); background:var(--color-accent); display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#201f1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+    </div>
+    <button style="width:44px; height:32px; border:none; background:transparent; color:rgba(255,255,255,.5); display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="expand">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <div style="height:1px; background:rgba(255,255,255,.1); width:32px; margin:8px 0;"></div>
+    <sc-for list="{{ navIcons }}" as="icon" hint-placeholder-count="4">
+      <button style="width:44px; height:44px; border:none; border-radius:var(--radius-sm); background:{{ icon.bg }}; color:{{ icon.color }}; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;" aria-label="{{ icon.label }}" title="{{ icon.label }}">
+        <span dangerouslySetInnerHTML="{{ icon.svg }}"></span>
+        <sc-if value="{{ icon.dot }}">
+          <span style="position:absolute; top:8px; right:9px; width:6px; height:6px; border-radius:50%; background:var(--color-accent);"></span>
+        </sc-if>
+      </button>
+    </sc-for>
+    <div style="flex:1;"></div>
+    <div style="width:36px; height:36px; border-radius:50%; background:var(--color-accent-800); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-heading); font-weight:600; font-size:15px;">AK</div>
+    <button style="width:44px; height:40px; border:none; background:transparent; color:rgba(255,255,255,.55); display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:4px;" aria-label="log out">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </nav>
+
+  <main style="flex:1; overflow-y:auto; min-width:0;">
+    <header style="padding:28px 48px 0; border-bottom:1px solid var(--color-divider);">
+      <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;">
+        <div>
+          <div class="kicker" style="color:var(--color-accent-700); margin-bottom:6px;">{{ student.meta }}</div>
+          <h1 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:32px; margin:0;">My Activity</h1>
+          <div style="font-size:13.5px; color:var(--color-neutral-700); margin-top:6px;">Everything you have logged, and what your reviewers sent back.</div>
+        </div>
+        <button class="btn btn-primary" style="background:var(--color-neutral-900); color:#fff; border-color:var(--color-neutral-900); margin-bottom:4px;">New activity</button>
+      </div>
+      <div style="display:flex; gap:28px; margin-top:26px; flex-wrap:wrap;">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+          <button class="tab {{ t.onClass }}" onClick="{{ t.onClick }}">{{ t.label }}<span class="tab-n">{{ t.count }}</span></button>
+        </sc-for>
+      </div>
+    </header>
+
+    <div style="padding:30px 48px 90px; max-width:1060px;">
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:22px 34px; padding-bottom:6px;">
+        <sc-for list="{{ summary }}" as="s" hint-placeholder-count="4">
+          <div>
+            <div style="font-family:var(--font-heading); font-size:30px; line-height:1; font-variant-numeric:tabular-nums; color:{{ s.color }};">{{ s.value }}</div>
+            <div class="kicker" style="margin-top:7px;">{{ s.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+        <section>
+          <div class="mhead">
+            <span class="mhead-t">{{ g.title }}</span>
+            <span class="mhead-rule"></span>
+            <span class="mhead-n">{{ g.count }}</span>
+          </div>
+
+          <sc-for list="{{ g.entries }}" as="e" hint-placeholder-count="3">
+            <article class="entry {{ e.openClass }}">
+              <button class="erow" onClick="{{ e.onToggle }}">
+                <div class="estamp">
+                  <div class="eday">{{ e.day }}</div>
+                  <div class="emon">{{ e.mon }}</div>
+                </div>
+                <div style="min-width:0;">
+                  <div class="eskill">{{ e.skill }}</div>
+                  <div class="trail">{{ e.trail }}</div>
+                  <div style="font-size:12.5px; color:var(--color-neutral-700); margin-top:8px;">{{ e.reviewerLine }}</div>
+                </div>
+                <div class="estatus" style="display:flex; align-items:center; gap:14px;">
+                  <span class="chip" style="border:1px solid {{ e.chipBorder }}; background:{{ e.chipBg }}; color:{{ e.chipColor }};">
+                    <span style="width:6px; height:6px; border-radius:50%; background:{{ e.chipColor }};"></span>{{ e.statusLabel }}
+                  </span>
+                  <span style="color:var(--color-neutral-700); display:flex; transform:{{ e.caretRotate }}; transition:transform .18s;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                  </span>
+                </div>
+              </button>
+
+              <sc-if value="{{ e.open }}" hint-placeholder-val="{{ false }}">
+                <div class="panel">
+                  <sc-if value="{{ e.reviewed }}" hint-placeholder-val="{{ true }}">
+                    <div class="pblock review">
+                      <div class="pgrid">
+                        <div>
+                          <div class="kicker">Review</div>
+                          <div style="font-size:12px; color:var(--color-neutral-700); margin-top:6px; line-height:1.55;">{{ e.reviewedOn }}</div>
+                          <div style="font-size:12px; color:var(--color-neutral-700); margin-top:10px; line-height:1.55;">{{ e.reviewer }}</div>
+                        </div>
+                        <div>
+                          <div class="figs">
+                            <div>
+                              <div class="fig-n" style="font-variant-numeric:tabular-nums;">{{ e.stepsLabel }}</div>
+                              <div class="kicker" style="margin-top:4px;">Steps observed</div>
+                            </div>
+                            <div>
+                              <div class="fig-n">{{ e.competence }}</div>
+                              <div class="kicker" style="margin-top:4px;">Competence</div>
+                            </div>
+                            <div>
+                              <div class="fig-n">{{ e.supervision }}</div>
+                              <div class="kicker" style="margin-top:4px;">Supervision</div>
+                            </div>
+                            <div>
+                              <div class="fig-n">{{ e.complexity }}</div>
+                              <div class="kicker" style="margin-top:4px;">Complexity</div>
+                            </div>
+                          </div>
+                          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px,1fr)); gap:14px; margin-top:20px;">
+                            <div class="fb-card">
+                              <div class="kicker" style="margin-bottom:8px; color:var(--color-accent-800);">Done well</div>
+                              <p>{{ e.strengths }}</p>
+                            </div>
+                            <div class="fb-card">
+                              <div class="kicker" style="margin-bottom:8px;">To work on</div>
+                              <p>{{ e.improve }}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ e.pending }}" hint-placeholder-val="{{ false }}">
+                    <div class="pblock">
+                      <div class="pgrid">
+                        <div class="kicker">Review</div>
+                        <div style="font-size:13.5px; color:var(--color-neutral-700); line-height:1.6;">{{ e.pendingText }}</div>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <div class="pblock">
+                    <div class="pgrid">
+                      <div>
+                        <div class="kicker">Your entry</div>
+                        <div style="font-size:12px; color:var(--color-neutral-700); margin-top:6px; line-height:1.55;">{{ e.submittedOn }}</div>
+                      </div>
+                      <div>
+                        <div class="note-body" dangerouslySetInnerHTML="{{ e.noteHtml }}"></div>
+                        <div style="display:flex; align-items:baseline; gap:12px; margin-top:16px;">
+                          <div class="kicker">Self-rating</div>
+                          <div style="font-family:var(--font-heading); font-size:16px;">{{ e.selfRating }}</div>
+                        </div>
+                        <sc-if value="{{ e.hasPlates }}" hint-placeholder-val="{{ true }}">
+                          <div style="display:flex; flex-wrap:wrap; gap:12px; margin-top:18px;">
+                            <sc-for list="{{ e.plates }}" as="p" hint-placeholder-count="2">
+                              <div class="att-plate">
+                                <div class="plate-img"><span dangerouslySetInnerHTML="{{ p.icon }}"></span></div>
+                                <div class="plate-cap">{{ p.caption }}</div>
+                              </div>
+                            </sc-for>
+                          </div>
+                        </sc-if>
+                        <sc-if value="{{ e.actionable }}" hint-placeholder-val="{{ false }}">
+                          <div style="display:flex; gap:10px; margin-top:20px;">
+                            <button class="ghost-btn">{{ e.actionLabel }}</button>
+                          </div>
+                        </sc-if>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </article>
+          </sc-for>
+        </section>
+      </sc-for>
+
+      <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+        <div style="border-top:1px solid var(--color-divider); padding:48px 0 0; text-align:center;">
+          <div style="font-family:var(--font-heading); font-size:19px;">Nothing here yet</div>
+          <div style="font-size:13.5px; color:var(--color-neutral-700); margin-top:6px;">No activities match this filter.</div>
+        </div>
+      </sc-if>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+const ICON = (path, size) => `<svg width="${size || 18}" height="${size || 18}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+
+const STUDENT = { name: 'Aditya Kulkarni', roll: 'MB2026-114', year: 'Year 4', department: 'Dermatology', institution: 'Riverside College of Medicine' };
+
+const ENTRIES = [
+  {
+    id: 'd1', day: '13', mon: 'Sep', group: 'September 2026', skill: 'Chemical Peel Administration',
+    trail: 'Dermatology Skill Checklist → Therapeutic Procedures',
+    reviewer: null, status: 'draft',
+    submittedOn: 'Draft saved today, 20:11', selfRating: 'Not yet set',
+    noteHtml: '<p>Assisted with a superficial glycolic acid peel in the day-care unit. Notes incomplete — need to add the neutralisation timing and post-peel advice given.</p>',
+    plates: [],
+  },
+  {
+    id: 'e1', day: '12', mon: 'Sep', group: 'September 2026', skill: 'Skin Biopsy',
+    trail: 'Dermatology Skill Checklist → Diagnostic Procedures',
+    reviewer: 'Dr. Ananya Kapoor', status: 'awaiting',
+    submittedOn: 'Submitted today, 09:24', selfRating: 'Competent with supervision',
+    noteHtml: '<p>Performed under supervision in the OPD minor procedure room. 4 mm punch biopsy of a 6 mm pigmented papule on the left forearm, closed with a single interrupted suture.</p><p>Specimen sent for histopathology (ref. HP-2291). Wound care and suture removal at day 7 explained.</p>',
+    plates: [{ caption: 'Pre-procedure site', kind: 'photo' }, { caption: 'Specimen label', kind: 'photo' }, { caption: 'Sketch — lesion map', kind: 'sketch' }],
+  },
+  {
+    id: 'e2', day: '08', mon: 'Sep', group: 'September 2026', skill: 'Cryotherapy',
+    trail: 'Dermatology Skill Checklist → Therapeutic Procedures',
+    reviewer: 'Dr. Rohan Verma', status: 'verified',
+    submittedOn: 'Submitted 8 Sep, 14:10', reviewedOn: 'Signed off 9 Sep, 11:02',
+    selfRating: 'Competent with supervision',
+    steps: '5 / 5', competence: 'With supervision', supervision: 'Direct, observing', complexity: 'Routine',
+    strengths: 'Freeze times and margins were well judged for a seborrhoeic keratosis, and you talked the patient through each cycle before starting.',
+    improve: 'Document the number of freeze–thaw cycles in the note itself, not only verbally. Review blistering aftercare advice.',
+    noteHtml: '<p>Two lesions treated on the dorsum of the hand with liquid nitrogen, double freeze–thaw cycle. Patient counselled on expected blistering.</p>',
+    plates: [{ caption: 'Treated site', kind: 'photo' }],
+  },
+  {
+    id: 'e3', day: '02', mon: 'Sep', group: 'September 2026', skill: 'Dermoscopy Examination',
+    trail: 'Dermatology Skill Checklist → Diagnostic Procedures',
+    reviewer: 'Dr. Ananya Kapoor', status: 'changes',
+    submittedOn: 'Submitted 2 Sep, 16:48', reviewedOn: 'Returned 3 Sep, 09:35',
+    selfRating: 'Not yet competent',
+    steps: '3 / 5', competence: 'Not yet', supervision: 'Direct, hands-on', complexity: 'Moderate',
+    strengths: 'Good systematic capture of all three lesions, and your pattern descriptions used the right vocabulary.',
+    improve: 'The second case is a globular pattern, not reticular — re-read the pattern analysis chapter and resubmit with corrected descriptions.',
+    noteHtml: '<p>Examined three pigmented lesions in the OPD using polarised dermoscopy, documenting pattern analysis for each.</p>',
+    plates: [{ caption: 'Capture 1', kind: 'photo' }, { caption: 'Capture 2', kind: 'photo' }],
+  },
+  {
+    id: 'e4', day: '27', mon: 'Aug', group: 'August 2026', skill: 'Informed Consent Documentation',
+    trail: 'Dermatology Skill Checklist → Patient Communication',
+    reviewer: 'Dr. Farah Sheikh', status: 'verified',
+    submittedOn: 'Submitted 27 Aug, 11:20', reviewedOn: 'Signed off 27 Aug, 18:44',
+    selfRating: 'Independently competent',
+    steps: '5 / 5', competence: 'Independent', supervision: 'Available on call', complexity: 'Routine',
+    strengths: 'Clear, unhurried explanation of risks in the patient’s own language, and you checked understanding before signing.',
+    improve: 'Nothing substantive. Keep using the teach-back method on every consent.',
+    noteHtml: '<p>Took written consent for an excisional biopsy, including discussion of scarring, infection risk and histopathology turnaround.</p>',
+    plates: [],
+  },
+];
+
+const STATUS = {
+  draft: { label: 'Draft', color: 'var(--color-neutral-800)', border: 'var(--color-neutral-400)', bg: 'transparent' },
+  awaiting: { label: 'Awaiting review', color: 'var(--color-neutral-800)', border: 'var(--color-neutral-400)', bg: 'rgba(45,43,43,.04)' },
+  verified: { label: 'Verified', color: 'var(--color-accent-800)', border: 'var(--color-accent-400)', bg: 'var(--color-accent-100)' },
+  changes: { label: 'Changes requested', color: 'var(--color-accent-800)', border: 'var(--color-accent-500)', bg: 'transparent' },
+};
+
+const TABS = [
+  { id: 'all', label: 'All' },
+  { id: 'draft', label: 'Drafts' },
+  { id: 'awaiting', label: 'Awaiting review' },
+  { id: 'verified', label: 'Verified' },
+  { id: 'changes', label: 'Changes requested' },
+];
+
+class Component extends DCLogic {
+  state = { tab: 'all', openId: 'e2' };
+
+  renderVals() {
+    const st = this.state;
+    const photoIcon = { __html: ICON('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>', 21) };
+    const sketchIcon = { __html: ICON('<path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/>', 21) };
+
+    const count = id => id === 'all' ? ENTRIES.length : ENTRIES.filter(e => e.status === id).length;
+    const shown = st.tab === 'all' ? ENTRIES : ENTRIES.filter(e => e.status === st.tab);
+
+    const shape = (e) => {
+      const s = STATUS[e.status];
+      const open = st.openId === e.id;
+      return {
+        key: e.id, day: e.day, mon: e.mon, skill: e.skill, trail: e.trail,
+        statusLabel: s.label, chipColor: s.color, chipBorder: s.border, chipBg: s.bg,
+        reviewerLine: e.status === 'draft' ? 'Not sent yet'
+          : e.status === 'awaiting' ? `Sent to ${e.reviewer}`
+          : `Reviewed by ${e.reviewer}`,
+        open, openClass: open ? 'open' : '', caretRotate: open ? 'rotate(180deg)' : 'rotate(0deg)',
+        onToggle: () => this.setState({ openId: open ? null : e.id }),
+        reviewed: e.status === 'verified' || e.status === 'changes',
+        pending: e.status === 'awaiting' || e.status === 'draft',
+        pendingText: e.status === 'draft'
+          ? 'This activity has not been sent. Finish the entry and choose a reviewer to submit it.'
+          : `Waiting on ${e.reviewer}. You will be notified when the DOPS form is completed.`,
+        reviewer: e.reviewer || '',
+        reviewedOn: e.reviewedOn || '',
+        stepsLabel: e.steps || '—', competence: e.competence || '—',
+        supervision: e.supervision || '—', complexity: e.complexity || '—',
+        strengths: e.strengths || '', improve: e.improve || '',
+        submittedOn: e.submittedOn, selfRating: e.selfRating,
+        noteHtml: { __html: e.noteHtml },
+        hasPlates: e.plates.length > 0,
+        plates: e.plates.map((p, i) => ({ key: i, caption: p.caption, icon: p.kind === 'sketch' ? sketchIcon : photoIcon })),
+        actionable: e.status === 'draft' || e.status === 'changes',
+        actionLabel: e.status === 'draft' ? 'Continue this draft' : 'Revise and resubmit',
+      };
+    };
+
+    const order = [];
+    shown.forEach(e => { if (!order.includes(e.group)) order.push(e.group); });
+    const groups = order.map(title => {
+      const list = shown.filter(e => e.group === title);
+      return { key: title, title, count: `${list.length} ${list.length === 1 ? 'entry' : 'entries'}`, entries: list.map(shape) };
+    });
+
+    const navIconDefs = [
+      { label: 'Dashboard', path: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>' },
+      { label: 'My Activity', path: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>', active: true },
+      { label: 'Videos', path: '<rect x="2" y="6" width="15" height="12" rx="2"/><polygon points="22 8 17 12 22 16 22 8"/>' },
+      { label: 'Settings', path: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>' },
+    ];
+
+    return {
+      student: { meta: `${STUDENT.roll} · ${STUDENT.year} · ${STUDENT.department}` },
+      navIcons: navIconDefs.map(d => ({
+        label: d.label, svg: { __html: ICON(d.path) }, dot: !!d.active,
+        bg: d.active ? 'var(--color-accent-100)' : 'transparent',
+        color: d.active ? 'var(--color-accent-800)' : 'rgba(255,255,255,.55)',
+      })),
+      tabs: TABS.map(t => ({
+        key: t.id, label: t.label, count: count(t.id),
+        onClass: st.tab === t.id ? 'on' : '',
+        onClick: () => this.setState({ tab: t.id }),
+      })),
+      summary: [
+        { key: 'total', value: count('all'), label: 'Activities logged', color: 'var(--color-text)' },
+        { key: 'ver', value: count('verified'), label: 'Verified', color: 'var(--color-accent-700)' },
+        { key: 'await', value: count('awaiting'), label: 'Awaiting review', color: 'var(--color-text)' },
+        { key: 'chg', value: count('changes') + count('draft'), label: 'Needs your action', color: 'var(--color-accent-800)' },
+      ],
+      groups,
+      empty: shown.length === 0,
+    };
+  }
+}
+</script>
+</body>
+</html>

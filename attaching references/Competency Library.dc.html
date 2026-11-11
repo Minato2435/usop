@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/styles.css">
+  <script src="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; background: var(--color-bg); }
+    a { color: var(--color-accent-700); text-decoration: none; }
+    a:hover { color: var(--color-accent-800); }
+    .crow { cursor: pointer; }
+    .crow:hover { background: var(--color-neutral-100); }
+    .crow:hover .open-hint { opacity: 1; transform: translateX(0); }
+    .dept-item:hover { background: var(--color-neutral-200); }
+    .icon-btn { background:none; border:none; color:var(--color-neutral-500); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:6px; border-radius:var(--radius-sm); }
+    .icon-btn:hover { color:var(--color-accent-800); background:var(--color-accent-100); }
+  </style>
+</helmet>
+<div style="display:flex; height:100vh; font-family:var(--font-body); color:var(--color-text); overflow:hidden;">
+
+  <nav style="width:76px; flex-shrink:0; background:var(--color-neutral-900); display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px;">
+    <div style="width:40px; height:40px; border-radius:var(--radius-md); background:var(--color-accent); display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#201f1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+    </div>
+    <div style="height:1px; background:rgba(255,255,255,.1); width:32px; margin:8px 0;"></div>
+    <sc-for list="{{ navIcons }}" as="icon" hint-placeholder-count="7">
+      <button style="width:44px; height:44px; border:none; border-radius:var(--radius-sm); background:{{ icon.bg }}; color:{{ icon.color }}; display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="{{ icon.label }}" title="{{ icon.label }}">
+        <span dangerouslySetInnerHTML="{{ icon.svg }}"></span>
+      </button>
+    </sc-for>
+    <div style="flex:1;"></div>
+    <div style="width:36px; height:36px; border-radius:50%; background:var(--color-accent-800); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-heading); font-weight:600; font-size:15px;">P</div>
+  </nav>
+
+  <aside style="width:236px; flex-shrink:0; border-right:1px solid var(--color-divider); background:var(--color-neutral-100); overflow-y:auto; padding:26px 0 40px;">
+    <div style="padding:0 20px 12px; font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-neutral-600);">Departments</div>
+    <sc-for list="{{ deptList }}" as="d" hint-placeholder-count="9">
+      <button class="dept-item" onClick="{{ d.onClick }}" style="display:flex; align-items:center; gap:10px; width:100%; text-align:left; cursor:pointer; font-family:var(--font-body); font-size:13.5px; padding:9px 20px; border:none; border-left:3px solid {{ d.rail }}; background:{{ d.bg }}; color:{{ d.color }};">
+        <span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ d.name }}</span>
+        <span style="font-size:11.5px; font-variant-numeric:tabular-nums; color:var(--color-neutral-600);">{{ d.count }}</span>
+      </button>
+    </sc-for>
+
+    <div style="height:1px; background:var(--color-divider); margin:20px 20px;"></div>
+
+    <div style="padding:0 20px 10px; font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-neutral-600);">Level</div>
+    <sc-for list="{{ levelFilters }}" as="l" hint-placeholder-count="5">
+      <button class="dept-item" onClick="{{ l.onClick }}" style="display:flex; align-items:center; gap:10px; width:100%; text-align:left; cursor:pointer; font-family:var(--font-body); font-size:13.5px; padding:8px 20px; border:none; border-left:3px solid {{ l.rail }}; background:{{ l.bg }}; color:{{ l.color }};">
+        <span style="width:20px; height:20px; flex-shrink:0; border-radius:50%; border:1px solid {{ l.badgeBorder }}; background:{{ l.badgeBg }}; color:{{ l.badgeColor }}; font-family:var(--font-heading); font-size:11px; display:flex; align-items:center; justify-content:center;">{{ l.key }}</span>
+        <span style="flex:1; min-width:0;">{{ l.label }}</span>
+      </button>
+    </sc-for>
+  </aside>
+
+  <main style="flex:1; overflow-y:auto; min-width:0;">
+    <header style="padding:28px 36px 20px; border-bottom:1px solid var(--color-divider);">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:24px; flex-wrap:wrap;">
+        <div style="min-width:0;">
+          <div style="font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--color-accent-700); margin-bottom:6px;">Assessment library</div>
+          <h1 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:32px; margin:0;">{{ pageTitle }}</h1>
+          <div style="font-size:13.5px; color:var(--color-neutral-700); margin-top:6px;">{{ pageSubtitle }}</div>
+        </div>
+        <button class="btn btn-primary" style="flex-shrink:0; background:var(--color-neutral-900); color:#fff; border-color:var(--color-neutral-900); margin-top:6px;">New competency</button>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:20px;">
+        <div style="position:relative; flex:1 1 260px; min-width:200px;">
+          <svg style="position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--color-neutral-500);" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="input" style="width:100%; padding-left:34px;" type="text" placeholder="Search skill, reference or setting&hellip;" value="{{ query }}" onChange="{{ onQuery }}"/>
+        </div>
+        <sc-for list="{{ statusTabs }}" as="t" hint-placeholder-count="3">
+          <button onClick="{{ t.onClick }}" style="cursor:pointer; font-family:var(--font-body); font-size:13px; padding:8px 15px; border-radius:var(--radius-sm); border:1px solid {{ t.border }}; background:{{ t.bg }}; color:{{ t.color }};">{{ t.label }}</button>
+        </sc-for>
+        <div style="width:1px; height:26px; background:var(--color-divider);"></div>
+        <sc-for list="{{ sortOptions }}" as="o" hint-placeholder-count="2">
+          <button onClick="{{ o.onClick }}" style="cursor:pointer; font-family:var(--font-body); font-size:12.5px; padding:8px 13px; border-radius:var(--radius-sm); border:1px solid {{ o.border }}; background:{{ o.bg }}; color:{{ o.color }};">{{ o.label }}</button>
+        </sc-for>
+      </div>
+    </header>
+
+    <div style="display:flex; align-items:center; gap:22px; padding:14px 36px; border-bottom:1px solid var(--color-divider); background:var(--color-neutral-100);">
+      <sc-for list="{{ summary }}" as="s" hint-placeholder-count="4">
+        <div>
+          <div style="font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--color-neutral-600); white-space:nowrap;">{{ s.label }}</div>
+          <div style="font-family:var(--font-heading); font-size:19px; line-height:1.15; margin-top:3px; font-variant-numeric:tabular-nums; color:{{ s.color }};">{{ s.value }}</div>
+        </div>
+      </sc-for>
+      <div style="flex:1;"></div>
+      <span style="font-size:12.5px; color:var(--color-neutral-600);">{{ resultCount }}</span>
+    </div>
+
+    <div style="padding:0 0 70px;">
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+        <div>
+          <div style="display:flex; align-items:center; gap:14px; padding:22px 36px 10px;">
+            <h2 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:17px; margin:0; letter-spacing:.02em;">{{ g.title }}</h2>
+            <span style="font-size:11.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--color-neutral-600); white-space:nowrap;">{{ g.count }}</span>
+            <div style="flex:1; height:1px; background:var(--color-divider);"></div>
+          </div>
+
+          <sc-for list="{{ g.items }}" as="c" hint-placeholder-count="4">
+            <div class="crow" onClick="{{ c.onOpen }}" style="display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; padding:15px 36px; border-bottom:1px solid var(--color-neutral-200); border-left:3px solid {{ c.rail }};">
+              <span style="width:34px; height:34px; flex-shrink:0; border-radius:50%; border:1px solid {{ c.levelBorder }}; background:{{ c.levelBg }}; color:{{ c.levelColor }}; font-family:var(--font-heading); font-size:14px; display:flex; align-items:center; justify-content:center;" title="{{ c.levelTitle }}">{{ c.level }}</span>
+
+              <div style="flex:1 1 300px; min-width:240px;">
+                <div style="display:flex; align-items:baseline; gap:9px; flex-wrap:wrap;">
+                  <span style="font-family:var(--font-heading); font-size:17.5px; line-height:1.25; text-wrap:pretty;">{{ c.skill }}</span>
+                  <sc-if value="{{ c.isDraft }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--color-neutral-700); border:1px solid var(--color-neutral-400); border-radius:999px; padding:2px 8px; white-space:nowrap;">Draft</span>
+                  </sc-if>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:5px; font-size:12px; color:var(--color-neutral-600);">
+                  <span>{{ c.code }}</span>
+                  <span>{{ c.setting }}</span>
+                  <span>{{ c.stepLine }}</span>
+                </div>
+              </div>
+
+              <div style="flex:0 1 auto; min-width:96px; display:flex; flex-direction:column; gap:5px;">
+                <sc-for list="{{ c.domains }}" as="d" hint-placeholder-count="2">
+                  <span style="font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--color-neutral-700); white-space:nowrap;">{{ d }}</span>
+                </sc-for>
+              </div>
+
+              <div style="flex:0 1 132px; min-width:112px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px;">
+                  <span style="font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-600);">Assessed</span>
+                  <span style="font-family:var(--font-heading); font-size:14px; font-variant-numeric:tabular-nums;">{{ c.assessedLabel }}</span>
+                </div>
+                <div style="height:4px; border-radius:999px; background:var(--color-neutral-200); margin-top:6px; overflow:hidden;">
+                  <div style="height:100%; width:{{ c.assessedBar }}; background:{{ c.assessedColor }}; border-radius:999px;"></div>
+                </div>
+                <div style="font-size:11px; color:var(--color-neutral-600); margin-top:5px;">{{ c.passLine }}</div>
+              </div>
+
+              <div style="flex:0 0 auto; display:flex; align-items:center; gap:4px;">
+                <span class="open-hint" style="font-size:12px; color:var(--color-accent-800); opacity:0; transform:translateX(-6px); transition:opacity .16s ease, transform .16s ease; white-space:nowrap;">Open form</span>
+                <button class="icon-btn" aria-label="Open competency" onClick="{{ c.onOpen }}">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+                <button class="icon-btn" aria-label="More actions" onClick="{{ c.onMore }}">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+                </button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+
+      <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:70px 36px; text-align:center;">
+          <div style="font-family:var(--font-heading); font-size:21px;">No competencies match these filters</div>
+          <div style="font-size:13.5px; color:var(--color-neutral-600); margin-top:8px;">Clear the search or pick a different department.</div>
+          <button class="btn btn-ghost" style="margin-top:18px; font-size:13px;" onClick="{{ clearFilters }}">Clear filters</button>
+        </div>
+      </sc-if>
+    </div>
+  </main>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+const ICONS = [
+  ['Institutions','<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-4 7 4v13M9 21v-6h6v6"/></svg>'],
+  ['Departments','<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>'],
+  ['Competencies','<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'],
+  ['Log templates','<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>'],
+  ['Users','<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-8 0v2"/><circle cx="12" cy="7" r="4"/></svg>'],
+  ['Reports','<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'],
+  ['Settings','<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.8 1.17V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 7 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 2.6 15H2.5a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9"/></svg>']
+];
+
+const LEVELS = { O: 'Observed', A: 'Assisted', P: 'Performed under supervision', I: 'Independently performed' };
+
+// dept, skill, code, level, setting, group, steps, domains, assessed, cohort, pass, status
+const DATA = [
+  ['Gynecology','Visual Inspection of Cervix with Acetic Acid (VIA)','GMER 2019, Table 11','O','Skills Lab – Cervical Model','Screening & Diagnosis',12,['Psychomotor','Cognitive'],86,120,91,'published'],
+  ['Gynecology','Per Speculum & Per Vaginal Examination','GMER 2019, Table 11','P','Skills Lab → Ward','Clinical Examination',14,['Psychomotor','Affective'],104,120,88,'published'],
+  ['Gynecology','Normal Vaginal Delivery – Conduct','GMER 2019, Table 12','A','Labour Room','Procedures',18,['Psychomotor','Communication'],41,120,74,'published'],
+  ['Gynecology','Antenatal Counselling & Risk Stratification','GMER 2019, Table 9','I','Outpatient Station','Counselling',9,['Communication','Affective'],67,120,93,'draft'],
+  ['Ophthalmology','Visual Acuity Testing','GMER 2019, Table 11','I','Skills Lab / Outpatient – Snellen Chart','Clinical Examination',11,['Cognitive','Psychomotor'],118,120,96,'published'],
+  ['Ophthalmology','Direct Ophthalmoscopy','GMER 2019, Table 11','P','Skills Lab – Model Eye','Clinical Examination',13,['Psychomotor'],72,120,79,'published'],
+  ['Ophthalmology','Instillation of Eye Drops & Eye Patching','GMER 2019, Table 8','I','Outpatient Station','Procedures',8,['Psychomotor','Communication'],95,120,94,'published'],
+  ['Ophthalmology','Corneal Foreign Body Removal','GMER 2019, Table 12','O','Minor OT','Procedures',10,['Psychomotor','Cognitive'],23,120,68,'draft'],
+  ['General Medicine','Cardiovascular System Examination','GMER 2019, Table 10','I','Ward','Clinical Examination',16,['Psychomotor','Cognitive'],112,120,90,'published'],
+  ['General Medicine','Basic Life Support (Adult)','GMER 2019, Table 12','P','Skills Lab – Manikin','Emergency',15,['Psychomotor'],120,120,97,'published'],
+  ['General Medicine','Peripheral Venous Cannulation','GMER 2019, Table 11','I','Skills Lab → Ward','Procedures',12,['Psychomotor'],108,120,92,'published'],
+  ['General Surgery','Surgical Scrubbing, Gowning & Gloving','GMER 2019, Table 8','I','OT Scrub Area','Asepsis',10,['Psychomotor'],119,120,98,'published'],
+  ['General Surgery','Suturing of a Simple Skin Wound','GMER 2019, Table 11','P','Skills Lab – Suture Pad','Procedures',13,['Psychomotor','Cognitive'],88,120,85,'published'],
+  ['Pediatrics','Neonatal Resuscitation – Initial Steps','GMER 2019, Table 12','A','Skills Lab – Neonatal Manikin','Emergency',17,['Psychomotor','Cognitive'],54,120,77,'published'],
+  ['Pediatrics','Growth Chart Plotting & Interpretation','GMER 2019, Table 9','I','Outpatient Station','Screening & Diagnosis',9,['Cognitive','Communication'],101,120,95,'published'],
+  ['Orthopedics','Above-Elbow Plaster Application','GMER 2019, Table 11','P','Plaster Room','Procedures',12,['Psychomotor'],63,120,81,'draft'],
+  ['Community Medicine','Hand Hygiene – Six Steps','GMER 2019, Table 8','I','Skills Lab','Asepsis',7,['Psychomotor'],120,120,99,'published']
+];
+
+const DEPT_ORDER = ['Gynecology','Ophthalmology','General Medicine','General Surgery','Pediatrics','Orthopedics','Community Medicine'];
+const STATUS_TABS = [['all','All'],['published','Published'],['draft','Drafts']];
+const SORTS = [['group','Group by theme'],['assessed','Most assessed']];
+
+class Component extends DCLogic {
+  state = { dept: 'all', level: 'all', status: 'all', sort: 'group', query: '' };
+
+  filtered() {
+    const s = this.state;
+    const q = s.query.trim().toLowerCase();
+    return DATA.filter(r =>
+      (s.dept === 'all' || r[0] === s.dept) &&
+      (s.level === 'all' || r[3] === s.level) &&
+      (s.status === 'all' || r[11] === s.status) &&
+      (!q || (r[1] + ' ' + r[2] + ' ' + r[4]).toLowerCase().includes(q))
+    );
+  }
+
+  renderVals() {
+    const s = this.state;
+    const acc = 'var(--color-accent-700)';
+    const rows = this.filtered();
+
+    const navIcons = ICONS.map(([label, svg], i) => ({
+      label, svg: { __html: svg },
+      bg: i === 2 ? 'rgba(255,255,255,.12)' : 'transparent',
+      color: i === 2 ? '#fff' : 'rgba(255,255,255,.55)'
+    }));
+
+    const mkSide = (on) => ({
+      bg: on ? '#fff' : 'transparent',
+      rail: on ? acc : 'transparent',
+      color: on ? 'var(--color-text)' : 'var(--color-neutral-700)'
+    });
+
+    const deptList = [{ name: 'All departments', key: 'all', count: DATA.length }]
+      .concat(DEPT_ORDER.map(d => ({ name: d, key: d, count: DATA.filter(r => r[0] === d).length })))
+      .map(d => ({ ...d, ...mkSide(s.dept === d.key), onClick: () => this.setState({ dept: d.key }) }));
+
+    const levelFilters = Object.keys(LEVELS).map(k => {
+      const on = s.level === k;
+      return {
+        key: k, label: LEVELS[k],
+        ...mkSide(on),
+        badgeBg: on ? acc : 'transparent',
+        badgeBorder: on ? acc : 'var(--color-neutral-400)',
+        badgeColor: on ? '#fff' : 'var(--color-neutral-700)',
+        onClick: () => this.setState({ level: on ? 'all' : k })
+      };
+    });
+
+    const pick = (on) => ({
+      bg: on ? 'var(--color-neutral-900)' : '#fff',
+      border: on ? 'var(--color-neutral-900)' : 'var(--color-neutral-400)',
+      color: on ? '#fff' : 'var(--color-neutral-700)'
+    });
+
+    const statusTabs = STATUS_TABS.map(([key, label]) => ({
+      label, ...pick(s.status === key), onClick: () => this.setState({ status: key })
+    }));
+    const sortOptions = SORTS.map(([key, label]) => ({
+      label, ...pick(s.sort === key), onClick: () => this.setState({ sort: key })
+    }));
+
+    const totalSteps = rows.reduce((n, r) => n + r[6], 0);
+    const totalAssessed = rows.reduce((n, r) => n + r[8], 0);
+    const totalCohort = rows.reduce((n, r) => n + r[9], 0);
+    const avgPass = rows.length ? Math.round(rows.reduce((n, r) => n + r[10], 0) / rows.length) : 0;
+    const drafts = rows.filter(r => r[11] === 'draft').length;
+
+    const summary = [
+      { label: 'Competencies', value: rows.length, color: 'var(--color-text)' },
+      { label: 'Checklist steps', value: totalSteps, color: 'var(--color-text)' },
+      { label: 'Coverage', value: totalCohort ? Math.round((totalAssessed / totalCohort) * 100) + '%' : '—', color: 'var(--color-text)' },
+      { label: 'Mean pass rate', value: avgPass + '%', color: acc },
+      { label: 'Drafts', value: drafts, color: drafts ? acc : 'var(--color-neutral-500)' }
+    ];
+
+    const toItem = (r) => {
+      const [dept, skill, code, level, setting, group, steps, domains, assessed, cohort, pass, status] = r;
+      const cov = Math.round((assessed / cohort) * 100);
+      return {
+        skill, code, setting, domains,
+        level, levelTitle: LEVELS[level],
+        levelBg: status === 'draft' ? 'transparent' : acc,
+        levelBorder: status === 'draft' ? 'var(--color-neutral-400)' : acc,
+        levelColor: status === 'draft' ? 'var(--color-neutral-700)' : '#fff',
+        isDraft: status === 'draft',
+        rail: status === 'draft' ? 'var(--color-neutral-300)' : 'transparent',
+        stepLine: steps + ' steps',
+        assessedLabel: assessed + '/' + cohort,
+        assessedBar: cov + '%',
+        assessedColor: cov >= 80 ? acc : 'var(--color-neutral-700)',
+        passLine: pass + '% pass rate',
+        onOpen: () => { window.location.href = 'Assessment Form.dc.html'; },
+        onMore: (e) => { e.stopPropagation(); }
+      };
+    };
+
+    let groups;
+    if (s.sort === 'assessed') {
+      const sorted = rows.slice().sort((a, b) => b[8] - a[8]);
+      groups = [{ title: 'Most assessed first', count: sorted.length + ' competencies', items: sorted.map(toItem) }];
+    } else {
+      const keys = [];
+      rows.forEach(r => { if (!keys.includes(r[5])) keys.push(r[5]); });
+      groups = keys.map(k => {
+        const items = rows.filter(r => r[5] === k);
+        return {
+          title: k,
+          count: items.length + (items.length === 1 ? ' competency' : ' competencies'),
+          items: items.map(toItem)
+        };
+      });
+    }
+
+    const deptName = s.dept === 'all' ? 'All departments' : s.dept;
+    const lvl = s.level === 'all' ? null : LEVELS[s.level];
+
+    return {
+      navIcons, deptList, levelFilters, statusTabs, sortOptions, summary, groups,
+      pageTitle: s.dept === 'all' ? 'Competencies' : s.dept + ' competencies',
+      pageSubtitle: 'DOPS checklists across ' + deptName.toLowerCase() + (lvl ? ' at level: ' + lvl.toLowerCase() : '') + '. Open one to fill the assessment form.',
+      query: s.query,
+      onQuery: e => this.setState({ query: e.target.value }),
+      resultCount: rows.length + ' of ' + DATA.length + ' shown',
+      isEmpty: rows.length === 0,
+      clearFilters: () => this.setState({ dept: 'all', level: 'all', status: 'all', query: '' })
+    };
+  }
+}
+
+</script>
+</body>
+</html>

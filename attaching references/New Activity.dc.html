@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <template id="__bundler_thumbnail" data-bg-color="#f3f2f2">
+    <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <rect width="120" height="120" fill="#f3f2f2"/>
+      <circle cx="60" cy="52" r="20" fill="none" stroke="#b68235" stroke-width="2"/>
+      <path d="M52 52h16M60 44v16" stroke="#b68235" stroke-width="2"/>
+      <line x1="30" y1="88" x2="90" y2="88" stroke="#201f1d" stroke-width="1.5"/>
+    </svg>
+  </template>
+  <link rel="stylesheet" href="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/styles.css">
+  <script src="_ds/classical-3da6bc71-1d38-43b6-b719-8ad8d2ed9491/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+  <style>
+    body { margin: 0; background: var(--color-bg); }
+    .page-field { background: transparent; }
+    a { color: var(--color-accent-700); }
+    a:hover { color: var(--color-accent-800); }
+    .sheet { width:100%; max-width:1000px; background:transparent; border:none; padding:0; }
+    .mini-btn { display:inline-flex; align-items:center; gap:8px; padding:7px 14px; border:1px solid #ddd6ca; background:transparent; border-radius:var(--radius-sm); font-family:var(--font-body); font-size:13px; color:var(--color-text); cursor:pointer; transition:border-color .12s, background .12s, color .12s; }
+    .mini-btn:hover { border-color:var(--color-accent-500); background:var(--color-accent-100); color:var(--color-accent-800); }
+    .mini-btn.on { border-color:var(--color-accent-700); background:var(--color-accent-100); color:var(--color-accent-800); }
+    .thumb { position:relative; width:104px; height:78px; border:1px solid var(--color-neutral-300); border-radius:var(--radius-sm); overflow:hidden; background:var(--color-neutral-100); }
+    .thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    .thumb-x { position:absolute; top:4px; right:4px; width:20px; height:20px; border-radius:50%; border:none; background:rgba(32,31,29,.72); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; line-height:1; }
+    .swatch { width:22px; height:22px; border-radius:50%; cursor:pointer; border:2px solid transparent; }
+    .swatch.sel { border-color:var(--color-accent-700); }
+    .sketch-wrap { border:1px solid #ddd6ca; border-radius:var(--radius-md); overflow:hidden; margin-top:14px; }
+    .sketch-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 12px; background:rgba(45,43,43,.035); border-bottom:1px solid #ddd6ca; }
+    .sketch-canvas { display:block; width:100%; height:320px; background:#fffdf8; cursor:crosshair; touch-action:none; }
+    .frow { display:grid; grid-template-columns:140px minmax(0,1fr); gap:36px; padding:30px 0; border-top:1px solid var(--color-divider); align-items:start; }
+    .frow:first-child { border-top:none; }
+    .fnum { font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:30px; line-height:1; color:var(--color-accent-400); }
+    .fkicker { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--color-neutral-600); margin-top:8px; line-height:1.4; }
+    .ftitle { font-family:var(--font-heading); font-size:20px; line-height:1.25; }
+    .fhelp { font-size:12.5px; color:var(--color-neutral-600); margin-top:4px; }
+    .step-locked { opacity:.4; pointer-events:none; }
+    .cascade-row { display:flex; align-items:center; gap:14px; padding:11px 0; border-bottom:1px solid var(--color-neutral-200); }
+    .cascade-row:last-child { border-bottom:none; }
+    .cascade-label { width:118px; flex-shrink:0; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-600); }
+    .trail-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:999px; border:1px solid var(--color-accent-400); background:var(--color-accent-100); color:var(--color-accent-800); font-size:12.5px; }
+    .trail-arrow { color:var(--color-neutral-400); font-size:12px; }
+    .checklist-row { display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid var(--color-neutral-200); }
+    .checklist-row:last-child { border-bottom:none; }
+    .chk-box { flex-shrink:0; width:20px; height:20px; border-radius:5px; border:1.5px solid var(--color-neutral-400); background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:1px; transition:background .12s, border-color .12s; }
+    .chk-box.checked { background:var(--color-accent-700); border-color:var(--color-accent-700); }
+    .rating-opt { padding:6px 13px; border-radius:999px; border:1px solid var(--color-neutral-300); background:#fff; font-size:12.5px; cursor:pointer; color:var(--color-neutral-700); transition:all .12s; }
+    .rating-opt.sel { background:var(--color-neutral-900); border-color:var(--color-neutral-900); color:#fff; }
+    .ql-toolbar.ql-snow { border:1px solid #ddd6ca; border-bottom:none; border-radius:var(--radius-md) var(--radius-md) 0 0; background:rgba(45,43,43,.035); padding:8px 10px; font-family:var(--font-body); }
+    .ql-container.ql-snow { border:1px solid #ddd6ca; border-radius:0 0 var(--radius-md) var(--radius-md); background:rgba(255,255,255,.45); font-family:var(--font-body); font-size:14.5px; }
+    .ql-editor { min-height:170px; padding:18px 20px; line-height:1.65; color:var(--color-text); }
+    .ql-editor.ql-blank:before { color:var(--color-neutral-500); font-style:normal; left:20px; right:20px; }
+    .ql-editor a { color:var(--color-accent-700); }
+    .ql-snow .ql-stroke { stroke:var(--color-neutral-700); }
+    .ql-snow .ql-fill { fill:var(--color-neutral-700); }
+    .ql-snow .ql-picker { color:var(--color-neutral-700); }
+    .ql-snow .ql-picker-options { border-color:var(--color-neutral-300); border-radius:var(--radius-sm); }
+    .ql-snow button:hover, .ql-snow button.ql-active { background:var(--color-accent-100); border-radius:var(--radius-sm); }
+    .ql-snow button:hover .ql-stroke, .ql-snow button.ql-active .ql-stroke, .ql-snow .ql-picker-label:hover .ql-stroke { stroke:var(--color-accent-800); }
+    .ql-snow button:hover .ql-fill, .ql-snow button.ql-active .ql-fill { fill:var(--color-accent-800); }
+    .ql-snow .ql-picker-label:hover, .ql-snow .ql-picker-item:hover, .ql-snow .ql-picker-item.ql-selected { color:var(--color-accent-800); }
+    .ql-snow .ql-tooltip { border-color:var(--color-neutral-300); border-radius:var(--radius-sm); box-shadow:0 4px 14px rgba(32,31,29,.12); font-family:var(--font-body); }
+    .ql-snow .ql-tooltip input[type=text] { border-color:var(--color-neutral-300); border-radius:var(--radius-sm); font-family:var(--font-body); }
+    select.input, .input { font-family: var(--font-body); }
+    .fade-in { animation: fadeIn .35s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+  </style>
+</helmet>
+<div style="display:flex; height:100vh; font-family:var(--font-body); color:var(--color-text); overflow:hidden;">
+
+  <nav style="width:76px; flex-shrink:0; background:var(--color-neutral-900); display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px;">
+    <div style="width:40px; height:40px; border-radius:var(--radius-md); background:var(--color-accent); display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#201f1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+    </div>
+    <button style="width:44px; height:32px; border:none; background:transparent; color:rgba(255,255,255,.5); display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="expand">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <div style="height:1px; background:rgba(255,255,255,.1); width:32px; margin:8px 0;"></div>
+    <sc-for list="{{ navIcons }}" as="icon" hint-placeholder-count="4">
+      <button style="width:44px; height:44px; border:none; border-radius:var(--radius-sm); background:{{ icon.bg }}; color:{{ icon.color }}; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;" aria-label="{{ icon.label }}" title="{{ icon.label }}">
+        <span dangerouslySetInnerHTML="{{ icon.svg }}"></span>
+        <sc-if value="{{ icon.dot }}">
+          <span style="position:absolute; top:8px; right:9px; width:6px; height:6px; border-radius:50%; background:var(--color-accent);"></span>
+        </sc-if>
+      </button>
+    </sc-for>
+    <div style="flex:1;"></div>
+    <div style="width:36px; height:36px; border-radius:50%; background:var(--color-accent-800); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-heading); font-weight:600; font-size:15px;">S</div>
+    <button style="width:44px; height:40px; border:none; background:transparent; color:rgba(255,255,255,.55); display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:4px;" aria-label="log out">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </nav>
+
+  <main style="flex:1; overflow-y:auto; min-width:0;">
+    <header style="padding:28px 44px 24px; border-bottom:1px solid var(--color-divider);">
+      <div style="font-size:13px; color:var(--color-neutral-600); margin-bottom:12px;">
+        <a href="#" onClick="{{ stop }}" style="text-decoration:none;">My Activity</a>
+        <span style="margin:0 6px; color:var(--color-neutral-500);">/</span>
+        <span style="color:var(--color-text);">New Activity</span>
+      </div>
+      <h1 style="font-family:var(--font-heading); font-weight:var(--font-heading-weight); font-size:32px; margin:0;">New Activity</h1>
+      <div style="font-size:13.5px; color:var(--color-neutral-700); margin-top:6px;">Log a supervised skill from {{ student.department }} and send it to a faculty member for review.</div>
+    </header>
+
+    <div class="page-field" style="padding:34px 44px 90px; display:flex; justify-content:center; min-height:100%;">
+    <div class="sheet">
+
+      <section class="frow">
+        <div>
+          <div class="fnum">01</div>
+          <div class="fkicker">Select log</div>
+        </div>
+        <div>
+          <div class="ftitle" style="margin-bottom:14px;">{{ student.department }} SSL logs</div>
+          <select class="input" value="{{ selectedLogId }}" onChange="{{ onSelectLog }}">
+            <option value="">Choose a log&hellip;</option>
+            <sc-for list="{{ logOptions }}" as="lo" hint-placeholder-count="2">
+              <option value="{{ lo.id }}">{{ lo.name }}</option>
+            </sc-for>
+          </select>
+        </div>
+      </section>
+
+      <section class="frow {{ cascadeLockedClass }}">
+        <div>
+          <div class="fnum">02</div>
+          <div class="fkicker">Narrow to a skill</div>
+        </div>
+        <div>
+        <div class="ftitle">{{ cascadeTitle }}</div>
+        <div class="fhelp" style="margin-bottom:14px;">Each choice reveals the next level, until a specific skill is reached.</div>
+        <sc-if value="{{ showCascade }}" hint-placeholder-val="{{ false }}">
+          <div>
+            <sc-for list="{{ cascadeLevels }}" as="lvl" hint-placeholder-count="2">
+              <div class="cascade-row">
+                <div class="cascade-label">{{ lvl.label }}</div>
+                <select class="input" style="flex:1;" value="{{ lvl.value }}" onChange="{{ lvl.onChange }}">
+                  <option value="">Choose&hellip;</option>
+                  <sc-for list="{{ lvl.options }}" as="opt" hint-placeholder-count="2">
+                    <option value="{{ opt.id }}">{{ opt.name }}</option>
+                  </sc-for>
+                </select>
+              </div>
+            </sc-for>
+            <sc-if value="{{ hasTrail }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:16px; padding-top:14px; border-top:1px solid var(--color-neutral-200);">
+                <sc-for list="{{ trail }}" as="tr" hint-placeholder-count="3">
+                  <span class="trail-chip">{{ tr.name }}</span>
+                  <sc-if value="{{ tr.hasNext }}" hint-placeholder-val="{{ true }}">
+                    <span class="trail-arrow">&rarr;</span>
+                  </sc-if>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noCascade }}" hint-placeholder-val="{{ true }}">
+          <select class="input" disabled="{{ true }}"><option>Choose a log above first&hellip;</option></select>
+        </sc-if>
+        </div>
+      </section>
+
+      <section class="frow {{ facultyLockedClass }}">
+        <div>
+          <div class="fnum">03</div>
+          <div class="fkicker">Send to faculty</div>
+        </div>
+        <div>
+          <div class="ftitle" style="margin-bottom:14px;">Reviewer in {{ student.department }}</div>
+          <select class="input" value="{{ selectedFacultyId }}" onChange="{{ onSelectFaculty }}" disabled="{{ facultyDisabled }}">
+            <option value="">Choose a faculty member&hellip;</option>
+            <sc-for list="{{ facultyOptions }}" as="f" hint-placeholder-count="3">
+              <option value="{{ f.id }}">{{ f.name }} &middot; {{ f.title }}</option>
+            </sc-for>
+          </select>
+        </div>
+      </section>
+
+      <section class="frow {{ checklistLockedClass }}">
+        <div>
+          <div class="fnum">04</div>
+          <div class="fkicker">Evaluation checklist</div>
+        </div>
+        <div>
+        <div class="ftitle">{{ checklistTitle }}</div>
+        <div class="fhelp">Complete each item honestly &mdash; your reviewer will verify this in person.</div>
+        <div style="margin-top:10px;">
+          <sc-for list="{{ checklistRows }}" as="c" hint-placeholder-count="5">
+            <div class="checklist-row">
+              <button class="chk-box {{ c.checkedClass }}" onClick="{{ c.onToggle }}" aria-label="toggle checklist item">
+                <sc-if value="{{ c.checked }}" hint-placeholder-val="{{ false }}">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </sc-if>
+              </button>
+              <div style="font-size:14px; color:var(--color-text); line-height:1.5; padding-top:1px;">{{ c.label }}</div>
+            </div>
+          </sc-for>
+          <div style="padding:14px 0 0;">
+            <div style="font-size:14px; margin-bottom:9px;">Overall competence</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <sc-for list="{{ ratingOptions }}" as="r" hint-placeholder-count="3">
+                <button class="rating-opt {{ r.selClass }}" onClick="{{ r.onClick }}">{{ r.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        </div>
+      </section>
+
+      <section class="frow">
+        <div>
+          <div class="fnum">05</div>
+          <div class="fkicker">Notes</div>
+        </div>
+        <div>
+        <div class="ftitle" style="margin-bottom:14px;">Additional description</div>
+        <div ref="{{ setToolbarRef }}">
+          <span class="ql-formats">
+            <select class="ql-header"><option value=""></option><option value="2"></option><option value="3"></option></select>
+            <select class="ql-size"><option value=""></option><option value="small"></option><option value="large"></option></select>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-bold"></button>
+            <button class="ql-italic"></button>
+            <button class="ql-underline"></button>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-list" value="bullet"></button>
+            <button class="ql-list" value="ordered"></button>
+            <button class="ql-blockquote"></button>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-link"></button>
+            <button class="ql-clean"></button>
+          </span>
+        </div>
+        <div ref="{{ setEditorRef }}"></div>
+        <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:12px; color:var(--color-neutral-600);">
+          <span>Formatting, lists and links are preserved in the faculty&rsquo;s review view.</span>
+          <span style="font-variant-numeric:tabular-nums;">{{ noteCount }}</span>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; margin-top:16px; flex-wrap:wrap;">
+          <label class="mini-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+            Attach image
+            <input type="file" accept="image/*" multiple="{{ true }}" onChange="{{ onAttachImages }}" style="display:none;"/>
+          </label>
+          <button class="mini-btn {{ sketchBtnClass }}" onClick="{{ toggleSketch }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+            {{ sketchLabel }}
+          </button>
+          <span style="font-size:12px; color:var(--color-neutral-600);">{{ attachSummary }}</span>
+        </div>
+
+        <sc-if value="{{ sketchOpen }}" hint-placeholder-val="{{ false }}">
+          <div class="sketch-wrap">
+            <div class="sketch-bar">
+              <span style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-600); margin-right:2px;">Sketch</span>
+              <sc-for list="{{ penColors }}" as="p" hint-placeholder-count="4">
+                <button class="swatch {{ p.selClass }}" style="background:{{ p.color }};" onClick="{{ p.onClick }}" aria-label="pen colour"></button>
+              </sc-for>
+              <span style="width:1px; height:20px; background:var(--color-neutral-300);"></span>
+              <sc-for list="{{ penSizes }}" as="s" hint-placeholder-count="3">
+                <button class="mini-btn {{ s.selClass }}" style="padding:4px 11px; font-size:12px;" onClick="{{ s.onClick }}">{{ s.label }}</button>
+              </sc-for>
+              <span style="width:1px; height:20px; background:var(--color-neutral-300);"></span>
+              <button class="mini-btn {{ eraserClass }}" style="padding:4px 11px; font-size:12px;" onClick="{{ toggleEraser }}">Eraser</button>
+              <div style="flex:1;"></div>
+              <button class="mini-btn" style="padding:4px 11px; font-size:12px;" onClick="{{ clearSketch }}">Clear</button>
+              <button class="btn btn-primary" style="padding:5px 14px; font-size:12.5px; background:var(--color-neutral-900); color:#fff; border-color:var(--color-neutral-900);" onClick="{{ insertSketch }}">Add drawing</button>
+            </div>
+            <canvas class="sketch-canvas" ref="{{ setCanvasRef }}"></canvas>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasAttachments }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;">
+            <sc-for list="{{ attachments }}" as="a" hint-placeholder-count="0">
+              <div class="thumb">
+                <img alt="attachment" ref="{{ a.setImg }}"/>
+                <button class="thumb-x" onClick="{{ a.onRemove }}" aria-label="remove attachment">&times;</button>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        </div>
+      </section>
+
+      <div style="display:flex; align-items:center; justify-content:flex-end; gap:12px; padding:22px 0 4px; border-top:1px solid var(--color-divider);">
+        <div style="font-size:12.5px; color:var(--color-neutral-600); flex:1;">{{ submitHint }}</div>
+        <button class="btn btn-secondary">Save draft</button>
+        <button class="btn btn-primary" style="background:var(--color-neutral-900); color:#fff; border-color:var(--color-neutral-900);" onClick="{{ submit }}" disabled="{{ submitDisabled }}">Send for review</button>
+      </div>
+
+    </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const ICON = (path) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+
+const STUDENT = { name: 'Aditya Kulkarni', department: 'Dermatology', institution: 'Riverside College of Medicine' };
+
+const FACULTY = [
+  { id: 'fac1', name: 'Dr. Ananya Kapoor', title: 'Associate Professor' },
+  { id: 'fac2', name: 'Dr. Rohan Verma', title: 'Assistant Professor' },
+  { id: 'fac3', name: 'Dr. Farah Sheikh', title: 'Head of Department' },
+];
+
+const LOGS = [
+  {
+    id: 'log1', name: 'Dermatology Skill Checklist',
+    children: [
+      { id: 'l1a', name: 'Diagnostic Procedures', children: [
+        { id: 'l1a1', name: 'Skin Biopsy' },
+        { id: 'l1a2', name: 'Dermoscopy Examination' },
+        { id: 'l1a3', name: 'Patch Testing' },
+      ]},
+      { id: 'l1b', name: 'Therapeutic Procedures', children: [
+        { id: 'l1b1', name: 'Cryotherapy' },
+        { id: 'l1b2', name: 'Chemical Peel Administration' },
+        { id: 'l1b3', name: 'Incision & Drainage' },
+      ]},
+      { id: 'l1c', name: 'Patient Communication', children: [
+        { id: 'l1c1', name: 'Informed Consent Documentation' },
+      ]},
+    ],
+  },
+  {
+    id: 'log2', name: 'Cosmetic Procedures Log',
+    children: [
+      { id: 'l2a', name: 'Injectables', children: [
+        { id: 'l2a1', name: 'Botulinum Toxin Injection' },
+        { id: 'l2a2', name: 'Dermal Filler Administration' },
+      ]},
+      { id: 'l2b', name: 'Laser & Light Therapy', children: [
+        { id: 'l2b1', name: 'Laser Hair Removal Assist' },
+        { id: 'l2b2', name: 'IPL Photofacial Assist' },
+      ]},
+    ],
+  },
+];
+
+const CHECKLIST_BASE = [
+  'Obtained and documented informed consent',
+  'Prepared the site and instruments correctly',
+  'Followed proper aseptic / sterile technique',
+  'Performed the procedure with correct technique',
+  'Gave appropriate post-procedure care instructions',
+];
+const RATINGS = ['Not yet competent', 'Competent with supervision', 'Independently competent'];
+
+const findNode = (list, id) => list.find(n => n.id === id);
+
+class Component extends DCLogic {
+  state = {
+    selectedLogId: '', path: [], selectedFacultyId: '',
+    checked: {}, rating: '', noteLen: 0,
+    attachments: [], sketchOpen: false, penColor: '#201f1d', penSize: 3, eraser: false,
+  };
+
+  canvasEl = null;
+  setCanvasRef = (el) => {
+    if (!el || el === this.canvasEl) return;
+    this.canvasEl = el;
+    const ctx = el.getContext('2d');
+    const sizeCanvas = () => {
+      const rect = el.getBoundingClientRect();
+      if (!rect.width) { requestAnimationFrame(sizeCanvas); return; }
+      const dpr = window.devicePixelRatio || 1;
+      const prev = el.width ? el.toDataURL('image/png') : null;
+      el.width = Math.round(rect.width * dpr);
+      el.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = '#fffdf8';
+      ctx.fillRect(0, 0, rect.width, rect.height);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      if (prev) { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height); img.src = prev; }
+    };
+    this._sizeCanvas = sizeCanvas;
+    sizeCanvas();
+    if (window.ResizeObserver) { this._ro = new ResizeObserver(() => { if (this.canvasEl === el) sizeCanvas(); }); this._ro.observe(el); }
+    let drawing = false;
+    const pos = (e) => {
+      const b = el.getBoundingClientRect();
+      return { x: e.clientX - b.left, y: e.clientY - b.top };
+    };
+    el.addEventListener('pointerdown', (e) => {
+      drawing = true; el.setPointerCapture(e.pointerId);
+      const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y);
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!drawing) return;
+      const p = pos(e);
+      ctx.strokeStyle = this.state.eraser ? '#fffdf8' : this.state.penColor;
+      ctx.lineWidth = this.state.eraser ? this.state.penSize * 5 : this.state.penSize;
+      ctx.lineTo(p.x, p.y); ctx.stroke();
+    });
+    const stop = () => { drawing = false; };
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointerleave', stop);
+  };
+
+  clearCanvas() {
+    const el = this.canvasEl;
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    const rect = el.getBoundingClientRect();
+    ctx.fillStyle = '#fffdf8';
+    ctx.fillRect(0, 0, rect.width, rect.height);
+  }
+
+  addAttachment(name, src) {
+    this.setState(s => ({ attachments: [...s.attachments, { id: 'a' + Date.now() + Math.random().toString(36).slice(2, 6), name, src }] }));
+    if (this.quill) {
+      const sel = this.quill.getSelection();
+      const idx = sel ? sel.index : Math.max(0, this.quill.getLength() - 1);
+      this.quill.insertEmbed(idx, 'image', src, 'user');
+      this.quill.setSelection(idx + 1, 0);
+    }
+  }
+
+  editorEl = null;
+  toolbarEl = null;
+  quill = null;
+
+  setEditorRef = (el) => { this.editorEl = el; this.tryInitQuill(); };
+  setToolbarRef = (el) => { this.toolbarEl = el; this.tryInitQuill(); };
+
+  componentDidMount() { this.tryInitQuill(); }
+  componentWillUnmount() { clearTimeout(this._qt); if (this._ro) this._ro.disconnect(); }
+
+  tryInitQuill() {
+    if (this.quill || !this.editorEl || !this.toolbarEl) return;
+    if (!window.Quill) { clearTimeout(this._qt); this._qt = setTimeout(() => this.tryInitQuill(), 120); return; }
+    this.quill = new window.Quill(this.editorEl, {
+      theme: 'snow',
+      placeholder: 'Describe what you did, what you observed, and anything your reviewer should know…',
+      modules: { toolbar: this.toolbarEl },
+    });
+    this.quill.on('text-change', () => {
+      const len = Math.max(0, this.quill.getLength() - 1);
+      if (len !== this.state.noteLen) this.setState({ noteLen: len });
+    });
+  }
+
+  resolvePath() {
+    const st = this.state;
+    const log = findNode(LOGS, st.selectedLogId);
+    if (!log) return { log: null, nodes: [] };
+    const nodes = [log];
+    let cur = log;
+    for (const id of st.path) {
+      if (!cur.children) break;
+      const next = findNode(cur.children, id);
+      if (!next) break;
+      nodes.push(next);
+      cur = next;
+    }
+    return { log, nodes };
+  }
+
+  onSelectLog(e) {
+    this.setState({ selectedLogId: e.target.value, path: [], selectedFacultyId: '', checked: {}, rating: '' });
+  }
+
+  onLevelChange(depth, id) {
+    this.setState(s => ({ path: [...s.path.slice(0, depth), id], selectedFacultyId: '', checked: {}, rating: '' }));
+  }
+
+  toggleCheck(key) {
+    this.setState(s => ({ checked: { ...s.checked, [key]: !s.checked[key] } }));
+  }
+
+  renderVals() {
+    const st = this.state;
+    const { log, nodes } = this.resolvePath();
+    const last = nodes[nodes.length - 1];
+    const skillResolved = !!last && !(last.children && last.children.length);
+
+    const cascadeLevels = [];
+    if (log) {
+      let cur = log;
+      let depth = 0;
+      while (cur.children && cur.children.length) {
+        const value = st.path[depth] || '';
+        cascadeLevels.push({
+          key: 'lvl' + depth,
+          label: depth === 0 ? 'Category' : `Level ${depth + 1}`,
+          value,
+          options: cur.children.map(c => ({ id: c.id, name: c.name })),
+          onChange: (e) => this.onLevelChange(depth, e.target.value),
+        });
+        const next = findNode(cur.children, value);
+        if (!next) break;
+        cur = next;
+        depth++;
+      }
+    }
+
+    const trail = nodes.slice(1).map((n, i) => ({ key: n.id, name: n.name, hasNext: i < nodes.length - 2 }));
+
+    const checklistRows = skillResolved ? CHECKLIST_BASE.map((label, i) => {
+      const key = 'c' + i;
+      const checked = !!st.checked[key];
+      return {
+        key, label, checked, checkedClass: checked ? 'checked' : '',
+        onToggle: () => this.toggleCheck(key),
+      };
+    }) : [];
+
+    const ratingOptions = RATINGS.map(r => ({
+      key: r, label: r, selClass: st.rating === r ? 'sel' : '',
+      onClick: () => this.setState({ rating: r }),
+    }));
+
+    const allChecked = checklistRows.length > 0 && checklistRows.every(c => c.checked);
+    const submitDisabled = !st.selectedFacultyId || !allChecked || !st.rating;
+    const submitHint = !st.selectedFacultyId ? 'Choose a faculty member to continue.'
+      : !allChecked ? 'Complete every checklist item to continue.'
+      : !st.rating ? 'Select an overall competence rating.'
+      : 'Ready to send.';
+
+    const navIconDefs = [
+      { label: 'Dashboard', path: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>' },
+      { label: 'My Activity', path: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>', active: true },
+      { label: 'Videos', path: '<rect x="2" y="6" width="15" height="12" rx="2"/><polygon points="22 8 17 12 22 16 22 8"/>' },
+      { label: 'Settings', path: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>' },
+    ];
+
+    return {
+      student: STUDENT,
+      stop: e => e.stopPropagation(),
+      preventDefault: e => e.preventDefault(),
+      navIcons: navIconDefs.map(d => ({
+        label: d.label, svg: { __html: ICON(d.path) }, dot: !!d.active,
+        bg: d.active ? 'var(--color-accent-100)' : 'transparent',
+        color: d.active ? 'var(--color-accent-800)' : 'rgba(255,255,255,.55)',
+      })),
+      logOptions: LOGS.map(l => ({ id: l.id, name: l.name })),
+      selectedLogId: st.selectedLogId,
+      onSelectLog: e => this.onSelectLog(e),
+      selectedLogName: log ? log.name : '',
+      showCascade: !!log,
+      noCascade: !log,
+      cascadeLockedClass: log ? '' : 'step-locked',
+      cascadeTitle: log ? log.name : 'Choose a log to see its categories',
+      cascadeLevels,
+      hasTrail: trail.length > 0,
+      trail,
+      skillResolved,
+      skillName: skillResolved ? last.name : '',
+      facultyOptions: FACULTY,
+      facultyDisabled: !skillResolved,
+      facultyLockedClass: skillResolved ? '' : 'step-locked',
+      selectedFacultyId: st.selectedFacultyId,
+      onSelectFaculty: e => this.setState({ selectedFacultyId: e.target.value }),
+      checklistTitle: skillResolved ? last.name : 'Resolve a specific skill to see its checklist',
+      checklistLockedClass: skillResolved ? '' : 'step-locked',
+      checklistRows: skillResolved ? checklistRows : CHECKLIST_BASE.map((label, i) => ({ key: 'c' + i, label, checked: false, checkedClass: '', onToggle: () => {} })),
+      ratingOptions: skillResolved ? ratingOptions : RATINGS.map(r => ({ key: r, label: r, selClass: '', onClick: () => {} })),
+      setEditorRef: this.setEditorRef,
+      setToolbarRef: this.setToolbarRef,
+      noteCount: `${st.noteLen} characters`,
+
+      setCanvasRef: this.setCanvasRef,
+      sketchOpen: st.sketchOpen,
+      sketchLabel: st.sketchOpen ? 'Close sketch pad' : 'Draw a sketch',
+      sketchBtnClass: st.sketchOpen ? 'on' : '',
+      toggleSketch: () => this.setState(s => ({ sketchOpen: !s.sketchOpen })),
+      penColors: ['#201f1d', '#7d5411', '#ac803e', '#b3261e'].map(c => ({
+        key: c, color: c, selClass: st.penColor === c && !st.eraser ? 'sel' : '',
+        onClick: () => this.setState({ penColor: c, eraser: false }),
+      })),
+      penSizes: [{ label: 'S', v: 2 }, { label: 'M', v: 3.5 }, { label: 'L', v: 7 }].map(s => ({
+        key: s.label, label: s.label, selClass: st.penSize === s.v ? 'on' : '',
+        onClick: () => this.setState({ penSize: s.v }),
+      })),
+      eraserClass: st.eraser ? 'on' : '',
+      toggleEraser: () => this.setState(s => ({ eraser: !s.eraser })),
+      clearSketch: () => this.clearCanvas(),
+      insertSketch: () => {
+        if (!this.canvasEl) return;
+        this.addAttachment('Sketch', this.canvasEl.toDataURL('image/png'));
+        this.clearCanvas();
+        this.setState({ sketchOpen: false });
+      },
+      onAttachImages: (e) => {
+        const files = Array.from(e.target.files || []);
+        files.forEach(f => {
+          const reader = new FileReader();
+          reader.onload = () => this.addAttachment(f.name, reader.result);
+          reader.readAsDataURL(f);
+        });
+        e.target.value = '';
+      },
+      attachments: st.attachments.map(a => ({
+        key: a.id, name: a.name,
+        setImg: (el) => { if (el) el.src = a.src; },
+        onRemove: () => this.setState(s => ({ attachments: s.attachments.filter(x => x.id !== a.id) })),
+      })),
+      hasAttachments: st.attachments.length > 0,
+      attachSummary: st.attachments.length === 0 ? 'Photos and sketches appear inside the note.' : `${st.attachments.length} attachment${st.attachments.length === 1 ? '' : 's'}`,
+      submitDisabled, submitHint,
+      submit: () => { if (!submitDisabled) window.alert('Activity sent to faculty for review.'); },
+    };
+  }
+}
+</script>
+</body>
+</html>
