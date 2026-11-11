@@ -38,6 +38,10 @@ export function describeAuthError(err: unknown): string {
         return 'That code has expired. Send a new one.'
       case 'auth/quota-exceeded':
         return 'The daily SMS limit has been reached. Please try again tomorrow or sign in with email.'
+      case 'auth/invalid-app-credential':
+        return window.location.hostname === 'localhost'
+          ? 'Real numbers can’t receive an OTP on localhost (a Firebase rule). Use a test number here, or the live site.'
+          : 'The security check failed. Reload the page and try again.'
       case 'auth/captcha-check-failed':
         return 'The security check failed. Reload the page and try again.'
       case 'auth/operation-not-allowed':
