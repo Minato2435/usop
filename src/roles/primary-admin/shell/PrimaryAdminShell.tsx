@@ -3,11 +3,13 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../../auth/AuthContext'
 import { Icon, type IconName } from './Icon'
 import { ThemeToggle } from './ThemeToggle'
+import { usePendingRegistrationCount } from '../../../lib/accounts'
 
 interface NavItem {
   label: string
   to: string
   icon: IconName
+  badge?: number
 }
 
 interface NavGroup {
@@ -22,6 +24,7 @@ const NAV: NavGroup[] = [
     items: [
       { label: 'Institutions', to: '/admin/institutions', icon: 'institutions' },
       { label: 'Users', to: '/admin/users', icon: 'users' },
+      { label: 'Registrations', to: '/admin/registrations', icon: 'inbox' },
       { label: 'Promote students', to: '/admin/promote-students', icon: 'promote' },
     ],
   },
@@ -84,6 +87,11 @@ export function PrimaryAdminShell({
   // Labels stay visible on mobile regardless of the desktop collapsed state,
   // since the mobile drawer always renders at full width.
   const showLabels = mobileOpen || !collapsed
+  const pendingRegistrations = usePendingRegistrationCount(appUser?.role === 'primaryAdmin' ? 'all' : null)
+  const nav = NAV.map((g) => ({
+    ...g,
+    items: g.items.map((i) => (i.to === '/admin/registrations' ? { ...i, badge: pendingRegistrations } : i)),
+  }))
 
   return (
     <div className="h-screen flex overflow-hidden" style={{ backgroundColor: 'var(--color-paper)' }}>
@@ -154,7 +162,7 @@ export function PrimaryAdminShell({
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-3 py-3 border-t" style={{ borderColor: 'var(--color-ink-line)' }}>
-          {NAV.map((group) => (
+          {nav.map((group) => (
             <div key={group.label} className="mb-4">
               {showLabels && (
                 <div
@@ -174,7 +182,7 @@ export function PrimaryAdminShell({
                       <Link
                         to={item.to}
                         title={!showLabels ? item.label : undefined}
-                        className="group flex items-center gap-3 rounded-[3px] px-2 py-2 text-[13.5px] transition-colors duration-150"
+                        className="group relative flex items-center gap-3 rounded-[3px] px-2 py-2 text-[13.5px] transition-colors duration-150"
                         style={{
                           backgroundColor: active ? 'var(--color-ink-soft)' : 'transparent',
                           color: active ? 'var(--color-frost)' : 'var(--color-mist)',
@@ -185,7 +193,16 @@ export function PrimaryAdminShell({
                           className="h-[18px] w-[18px] shrink-0"
                         />
                         {showLabels && <span className="truncate">{item.label}</span>}
-                        {active && (
+                        {item.badge ? (
+                          showLabels ? (
+                            <span className="ml-auto shrink-0 min-w-[20px] rounded-full px-1.5 text-center text-[10.5px] font-semibold tabular-nums" style={{ backgroundColor: 'var(--color-gold)', color: 'var(--color-ink)' }}>
+                              {item.badge}
+                            </span>
+                          ) : (
+                            <span className="absolute top-1 right-1 h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--color-gold)' }} />
+                          )
+                        ) : null}
+                        {active && !item.badge && (
                           <span
                             className="ml-auto h-1.5 w-1.5 shrink-0"
                             style={{ backgroundColor: 'var(--color-gold)' }}

@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import type { Role } from '../types'
 
 export function RequireRole({ roles, children }: { roles: Role[]; children: ReactNode }) {
-  const { firebaseUser, appUser, loading, profileError, signOut } = useAuth()
+  const { firebaseUser, appUser, loading, profileError, profileMissing, signOut } = useAuth()
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-slate-500 text-sm">Loading…</div>
@@ -12,6 +12,11 @@ export function RequireRole({ roles, children }: { roles: Role[]; children: Reac
 
   if (!firebaseUser) {
     return <Navigate to="/login" replace />
+  }
+
+  // No profile yet: a registration in progress or waiting for approval.
+  if (!appUser && profileMissing) {
+    return <Navigate to="/register" replace />
   }
 
   if (!appUser) {

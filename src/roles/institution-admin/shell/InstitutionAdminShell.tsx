@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../../auth/AuthContext'
 import { Icon, type IconName } from '../../primary-admin/shell/Icon'
 import { ThemeToggle } from '../../primary-admin/shell/ThemeToggle'
+import { usePendingRegistrationCount } from '../../../lib/accounts'
 
 // Deliberately reuses the Primary Admin panel's Icon set, ui.tsx kit, and
 // ThemeToggle rather than duplicating them — they're genuinely role-agnostic
@@ -25,6 +26,7 @@ interface NavItem {
   label: string
   to: string
   icon: IconName
+  badge?: number
 }
 
 const NAV: NavItem[] = [
@@ -35,6 +37,7 @@ const NAV: NavItem[] = [
   { label: 'Video tutorials', to: '/institution-admin/video-tutorials', icon: 'video' },
   { label: 'Resources', to: '/institution-admin/resources', icon: 'resources' },
   { label: 'Users', to: '/institution-admin/users', icon: 'users' },
+  { label: 'Registrations', to: '/institution-admin/registrations', icon: 'inbox' },
   { label: 'Promote students', to: '/institution-admin/promote-students', icon: 'promote' },
 ]
 
@@ -72,6 +75,8 @@ export function InstitutionAdminShell({
 
   const initial = appUser?.name?.trim()?.[0]?.toUpperCase() ?? '·'
   const showLabels = mobileOpen || !collapsed
+  const pendingRegistrations = usePendingRegistrationCount(appUser?.role === 'institutionAdmin' ? { institutionId: appUser.institutionId } : null)
+  const nav = NAV.map((i) => (i.to === '/institution-admin/registrations' ? { ...i, badge: pendingRegistrations } : i))
 
   return (
     <div className="h-screen flex overflow-hidden" style={{ backgroundColor: 'var(--color-paper)' }}>
@@ -139,22 +144,31 @@ export function InstitutionAdminShell({
 
         <nav className="flex-1 overflow-y-auto px-3 py-3 border-t" style={{ borderColor: 'var(--color-ink-line)' }}>
           <ul className="flex flex-col gap-0.5">
-            {NAV.map((item) => {
+            {nav.map((item) => {
               const active = location.pathname === item.to || (item.to !== '/institution-admin' && location.pathname.startsWith(item.to))
               return (
                 <li key={item.to}>
                   <Link
                     to={item.to}
                     title={!showLabels ? item.label : undefined}
-                    className="group flex items-center gap-3 rounded-[3px] px-2 py-2 text-[13.5px] transition-colors duration-150"
+                    className="group relative flex items-center gap-3 rounded-[3px] px-2 py-2 text-[13.5px] transition-colors duration-150"
                     style={{
                       backgroundColor: active ? 'var(--color-ink-soft)' : 'transparent',
                       color: active ? 'var(--color-frost)' : 'var(--color-mist)',
                     }}
                   >
                     <Icon name={item.icon} className="h-[18px] w-[18px] shrink-0" />
-                    {showLabels && <span className="truncate">{item.label}</span>}
-                    {active && (
+                        {showLabels && <span className="truncate">{item.label}</span>}
+                    {item.badge ? (
+                      showLabels ? (
+                        <span className="ml-auto shrink-0 min-w-[20px] rounded-full px-1.5 text-center text-[10.5px] font-semibold tabular-nums" style={{ backgroundColor: 'var(--color-gold)', color: 'var(--color-ink)' }}>
+                          {item.badge}
+                        </span>
+                      ) : (
+                        <span className="absolute top-1 right-1 h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--color-gold)' }} />
+                      )
+                    ) : null}
+                    {active && !item.badge && (
                       <span className="ml-auto h-1.5 w-1.5 shrink-0" style={{ backgroundColor: 'var(--color-gold)' }} />
                     )}
                   </Link>

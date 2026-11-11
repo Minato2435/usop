@@ -4,6 +4,8 @@ import { InstitutionAdminVideoEditorPage } from '../roles/institution-admin/Vide
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from '../auth/AuthContext'
 import { LoginPage } from '../auth/LoginPage'
+import { RegisterPage } from '../auth/RegisterPage'
+import { InstitutionAdminRegistrationsPage, PrimaryAdminRegistrationsPage } from '../components/registrationRolePages'
 import { RequireRole, roleHomePath } from './RequireRole'
 import { ThemeSync } from './ThemeSync'
 import { DarkModeProvider } from './DarkModeContext'
@@ -69,12 +71,13 @@ import { SkillLabDirectorReviewRequestPage } from '../roles/skill-lab-director/R
 import { CertificateRequestReviewPage } from '../components/CertificateRequestReviewPage'
 
 function RootRedirect() {
-  const { appUser, firebaseUser, loading } = useAuth()
+  const { appUser, firebaseUser, loading, profileMissing } = useAuth()
   if (loading) return null
   if (!firebaseUser) return <Navigate to="/login" replace />
   // Signed in with no resolvable profile yet: send to any role-guarded route
   // so RequireRole can surface the actual profile error instead of bouncing
   // silently back to /login.
+  if (!appUser && profileMissing) return <Navigate to="/register" replace />
   if (!appUser) return <Navigate to="/admin" replace />
   return <Navigate to={roleHomePath(appUser.role)} replace />
 }
@@ -88,12 +91,29 @@ export function AppRouter() {
         <Routes>
           <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
           <Route
             path="/admin"
             element={
               <RequireRole roles={['primaryAdmin']}>
                 <PrimaryAdminDashboard />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/admin/registrations"
+            element={
+              <RequireRole roles={['primaryAdmin']}>
+                <PrimaryAdminRegistrationsPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/institution-admin/registrations"
+            element={
+              <RequireRole roles={['institutionAdmin']}>
+                <InstitutionAdminRegistrationsPage />
               </RequireRole>
             }
           />

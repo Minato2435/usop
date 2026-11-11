@@ -79,6 +79,32 @@ export interface AppUser {
   yearHistory?: YearChange[]
 }
 
+// The profile fields an admin sets for an account (everything on AppUser
+// except identity/status bookkeeping). Sent to the server functions.
+export type AccountProfile = Pick<
+  AppUser,
+  'role' | 'name' | 'email' | 'phone' | 'institutionId' | 'departmentId' | 'mbbsYear' | 'associatedMbbsYears' | 'rollNumber' | 'assignedHOD'
+>
+
+export type RegistrationStatus = 'pending' | 'approved' | 'rejected'
+
+// registrationRequests/{uid} — a self-registration waiting for approval.
+// Written only by the server functions (functions/index.js). `approver` is
+// 'institution' for Principal/HOD/Faculty/Student (their college's admin,
+// Primary Admin as backup) and 'primary' for Institution Admin / Skill Lab
+// Director. No users/{uid} profile exists until it's approved.
+export interface RegistrationRequest extends AccountProfile {
+  uid: string
+  approver: 'institution' | 'primary'
+  status: RegistrationStatus
+  submittedAt: number
+  firstSubmittedAt: number
+  reason: string | null
+  decidedAt: number | null
+  decidedById: string | null
+  decidedByName: string | null
+}
+
 // One promotion (or its undo) of one student. `batchId` groups every
 // student moved in the same action, so the whole batch can be undone.
 export interface YearChange {

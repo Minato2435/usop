@@ -89,6 +89,19 @@ service cloud.firestore {
         || (hasRole('institutionAdmin') && sameInstitution(resource.data.institutionId));
     }
 
+    // registrationRequests/{uid} — self-registrations waiting for approval.
+    // Written only by the server functions (Admin SDK), never by a client.
+    // The registrant reads their own; Primary Admin reads all; a college's
+    // Institution Admin reads the ones they approve (Principal/HOD/Faculty/
+    // Student of their college) — watchRegistrationRequests filters on
+    // exactly institutionId + approver.
+    match /registrationRequests/{uid} {
+      allow read: if request.auth.uid == uid
+        || isPrimaryAdmin()
+        || (isActive() && hasRole('institutionAdmin') && sameInstitution(resource.data.institutionId) && resource.data.approver == 'institution');
+      allow write: if false;
+    }
+
     // institutions/{institutionId} — primary admin manages; members of an
     // institution can read their own institution's document.
     match /institutions/{institutionId} {

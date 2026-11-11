@@ -2096,21 +2096,47 @@ A file library on the same publishing model as Video Tutorials.
   and type. **Both `firestore.rules` and `storage.rules` need deploying.**
 - Icon `resources` was added to `Icon.tsx`. Every role's sidebar has a Resources link.
 
-## Mobile number + OTP login
+## Accounts: server functions, mobile + OTP login, self-registration
 
-`src/auth/LoginPage.tsx` has two tabs: **Email & password** and **Mobile & OTP** (+91 only).
-Phone provider is enabled in the console, the project is on Blaze, SMS region policy = India,
-test number `+91 99999 00001` / `123456` (no real SMS).
-- Accounts are created by admins with an email, so a phone only works once it's **linked** to
-  that same Auth account. "Set up mobile login" on the Mobile tab: email + password + number →
-  OTP → `linkWithCredential` (or `updatePhoneNumber` if a number was already linked). No admin
-  side — linking another user's phone needs the Admin SDK / Cloud Functions, which this project
-  doesn't have.
-- Signing in with an unlinked number makes Firebase create an empty account;
-  `getAdditionalUserInfo().isNewUser` catches it, the account is deleted at once and the user is
-  told the number isn't registered.
-- `hold` state stops `/login` from redirecting while a multi-step flow is mid-way (the user is
-  signed in during setup). Each send gets a fresh invisible `RecaptchaVerifier` in a new child
-  element (a used verifier can't be reused).
-- The linked Auth phone is separate from `AppUser.phone` (the admin-entered contact number);
-  nothing syncs them.
+**Cloud Functions** (`functions/index.js`, plain ESM JS, Node 22, region `asia-south1`; client
+binding `functions` in `lib/firebase.ts`, wrappers in `lib/accounts.ts`). This replaced the old
+"second Firebase App" trick for creating users — anything touching *someone else's* login goes
+through the server, which re-checks the caller like `firestore.rules` does (Primary Admin: anyone
+but another Primary Admin; Institution Admin: Principal/HOD/Faculty/Student of their own college):
+- `adminCreateUser` / `adminUpdateUser` / `adminDeleteUser` — the login gets email + password +
+  `+91` mobile together, so mobile + OTP works from day one. Edit can change email, mobile and set
+  a new password; delete removes the login, the profile and any registration request (activities
+  stay). `UserFormModal` uses these (email editable, "New password (optional)", "Delete user").
+  Uniqueness of email/mobile is enforced by Auth; registration number by a server query.
+- `adminSyncPhones` (Primary Admin) attaches each profile's `phone` to its login —
+  `scripts/attachMobileNumbers.mjs` runs it once for accounts made before the functions existed.
+- Self-registration: `registrationOptions` (colleges + enabled departments, since a registrant
+  has no profile and the rules wouldn't let them read those), `submitRegistration`,
+  `cancelRegistration`, `decideRegistration`.
+
+**Login** (`auth/LoginPage.tsx`): tabs Mobile & OTP (default) / Email & password, +91 only.
+Signing in with an unknown number deletes the empty login Firebase makes
+(`getAdditionalUserInfo().isNewUser`) and offers "Create an account". Each send gets a fresh
+invisible `RecaptchaVerifier` in a new child element. Console: Phone provider on, Blaze, SMS region
+= India, 1,000 SMS/day cap, test number `+91 99999 00001` / `123456`.
+
+**Self-registration** — `registrationRequests/{uid}` (`RegistrationRequest` type), written only by
+the server:
+- Create an account → OTP (creates the login) → `/register` (`auth/RegisterPage.tsx`): role,
+  name, email + password (so email login works too), college; student year + reg. no.; faculty
+  years + department; HOD department. Then "Waiting for approval" / "Rejected — reason, edit and
+  send again" / withdraw (deletes the login).
+- No `users/{uid}` profile exists until approved, so nothing else is reachable. `AuthContext`
+  exposes `profileMissing`; `RequireRole` and `RootRedirect` send such users to `/register`.
+- `approver`: `'institution'` for Principal/HOD/Faculty/Student (their college's admin; Primary
+  Admin as backup), `'primary'` for Institution Admin / Skill Lab Director.
+- Approvers: `/admin/registrations`, `/institution-admin/registrations`
+  (`components/RegistrationRequestsPage.tsx`) with Waiting/Approved/Rejected tabs, a review modal
+  that can correct details (Primary may change the college/any role; a college admin only college
+  roles), warnings (reg. no. taken, department already has an HOD, college already has a
+  Principal/Institution Admin), Approve or Reject with a reason. Sidebar badge =
+  `usePendingRegistrationCount`.
+- Rules: `registrationRequests` read = owner / Primary Admin / the college's Institution Admin for
+  `approver == 'institution'` (query filters `institutionId` + `approver`); no client writes.
+
+Deploy: `firebase deploy --only functions,firestore:rules`.

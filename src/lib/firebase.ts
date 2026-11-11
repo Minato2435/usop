@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
 import { initializeFirestore, connectFirestoreEmulator } from 'firebase/firestore'
 import { getStorage, connectStorageEmulator } from 'firebase/storage'
+import { getFunctions } from 'firebase/functions'
 
 // Exported so a second, named Firebase App instance can be spun up
 // on-demand (see createUserAccount in lib/firestore/users.ts) — the one
@@ -24,6 +25,8 @@ export const db = initializeFirestore(app, {
   experimentalAutoDetectLongPolling: true,
 })
 export const storage = getStorage(app)
+// Server functions (functions/index.js) run in Mumbai — must match setGlobalOptions there.
+export const functions = getFunctions(app, 'asia-south1')
 
 if (import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true') {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })

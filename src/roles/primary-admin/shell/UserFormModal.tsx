@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Modal, Field, PrimaryButton, GhostButton, inputClass, Badge } from './ui'
 import { Icon } from './Icon'
-import { createUserAccount, updateUserProfile } from '../../../lib/firestore/users'
+import { accountErrorMessage, adminCreateUser, adminDeleteUser, adminUpdateUser } from '../../../lib/accounts'
 import { watchInstitutionDepartmentOverrides } from '../../../lib/firestore/departments'
 import { enabledDepartmentsForYear } from '../../../lib/enabledDepartments'
 import { MBBS_YEARS } from '../../../lib/academicStructure'
@@ -48,13 +48,11 @@ function generatePassword(): string {
 const INDIAN_MOBILE_RE = /^[6-9]\d{9}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-// Doubles as both "New user" and "Edit user" — the two forms share every
-// field except email/password (Auth account creation vs. an existing
-// account's identity, which this app can't safely rewrite from the client
-// — see updateUserProfile's own comment). Passing `editingUser` switches
-// the mode: pre-fills every field, hides the password section, disables
-// email, and submits through updateUserProfile instead of
-// createUserAccount.
+// Doubles as both "New user" and "Edit user". Both save through the server
+// functions (lib/accounts.ts), which keep the login account in step with
+// the profile: the mobile number is attached to the login (so mobile + OTP
+// sign-in works straight away), and editing can change the email, the
+// mobile number or set a new password. Edit mode also offers Delete.
 export function UserFormModal({
   institutions,
   departments,
@@ -103,6 +101,8 @@ export function UserFormModal({
   const [assignedHOD, setAssignedHOD] = useState(editingUser?.assignedHOD ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   // Every other user, so editing someone doesn't flag their own
   // unchanged email/phone/roll number as "already taken."
@@ -153,7 +153,7 @@ export function UserFormModal({
   }, [otherUsers, institutionId, studentDepartments])
 
   const normalizedEmail = email.trim().toLowerCase()
-  const emailTaken = !isEditing && normalizedEmail !== '' && otherUsers.some((u) => u.email.trim().toLowerCase() === normalizedEmail)
+  const emailTaken = normalizedEmail !== '' && otherUsers.some((u) => u.email.trim().toLowerCase() === normalizedEmail)
   const phoneTaken = phone.length === 10 && otherUsers.some((u) => u.phone === phone)
   const rollTaken =
     rollNumber.trim() !== '' && otherUsers.some((u) => u.rollNumber?.trim().toLowerCase() === rollNumber.trim().toLowerCase())
@@ -174,7 +174,7 @@ export function UserFormModal({
     !emailTaken &&
     INDIAN_MOBILE_RE.test(phone) &&
     !phoneTaken &&
-    (isEditing || password.length >= 6) &&
+    (isEditing ? password === '' || password.length >= 6 : password.length >= 6) &&
     (isPlatformWideRole(role) || institutionId !== '') &&
     (role !== 'hod' && role !== 'faculty' ? true : departmentId !== '') &&
     (role !== 'student' || (rollNumber.trim() !== '' && !rollTaken)) &&
@@ -188,6 +188,7 @@ export function UserFormModal({
       const profile = {
         role,
         name: name.trim(),
+        email: normalizedEmail,
         phone,
         institutionId: isPlatformWideRole(role) ? null : institutionId,
         departmentId: role === 'hod' || role === 'faculty' ? departmentId : null,
@@ -197,19 +198,29 @@ export function UserFormModal({
         assignedHOD: role === 'student' && assignedHOD ? assignedHOD : null,
       }
       if (isEditing) {
-        await updateUserProfile(editingUser.uid, profile)
+        await adminUpdateUser({ uid: editingUser.uid, profile, ...(password ? { password } : {}) })
       } else {
-        await createUserAccount({ ...profile, email: normalizedEmail }, password)
+        await adminCreateUser({ profile, password })
       }
       onSaved()
     } catch (e) {
-      const code = (e as { code?: string })?.code
-      if (code === 'auth/email-already-in-use') setError('That email is already in use by another account.')
-      else if (code === 'auth/invalid-email') setError('That email address looks invalid.')
-      else if (code === 'auth/weak-password') setError('Password is too weak — use at least 6 characters.')
-      else setError(`Something went wrong ${isEditing ? 'saving' : 'creating'} this account. Please try again.`)
+      setError(accountErrorMessage(e, `Something went wrong ${isEditing ? 'saving' : 'creating'} this account. Please try again.`))
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!editingUser || deleting) return
+    setDeleting(true)
+    setError(null)
+    try {
+      await adminDeleteUser({ uid: editingUser.uid })
+      onSaved()
+    } catch (e) {
+      setError(accountErrorMessage(e, 'Couldn’t delete this account. Please try again.'))
+      setDeleting(false)
+      setConfirmDelete(false)
     }
   }
 
@@ -236,23 +247,13 @@ export function UserFormModal({
         <Field label="Email">
           <input
             type="email"
-            disabled={isEditing}
             className={inputClass}
-            style={{
-              borderColor: emailTaken ? 'var(--color-clay)' : 'var(--color-line)',
-              opacity: isEditing ? 0.6 : 1,
-            }}
+            style={{ borderColor: emailTaken ? 'var(--color-clay)' : 'var(--color-line)' }}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="name@institution.edu"
           />
-          {isEditing ? (
-            <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-char-soft)' }}>
-              Email can't be changed here.
-            </p>
-          ) : (
-            emailTaken && <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-clay)' }}>Already in use by another account.</p>
-          )}
+          {emailTaken && <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-clay)' }}>Already in use by another account.</p>}
         </Field>
 
         <Field label="Mobile number">
@@ -277,11 +278,17 @@ export function UserFormModal({
               Enter a valid 10-digit Indian mobile number.
             </p>
           )}
-          {phoneTaken && <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-clay)' }}>Already in use by another account.</p>}
+          {phoneTaken ? (
+            <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-clay)' }}>Already in use by another account.</p>
+          ) : (
+            <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-char-soft)' }}>
+              They can sign in with this number and an OTP.
+            </p>
+          )}
         </Field>
 
-        {!isEditing && (
-          <Field label="Password">
+        {
+          <Field label={isEditing ? 'New password (optional)' : 'Password'}>
             <div className="flex items-center gap-2">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -289,7 +296,7 @@ export function UserFormModal({
                 style={{ borderColor: 'var(--color-line)' }}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
+                placeholder={isEditing ? 'Leave blank to keep the current one' : 'At least 6 characters'}
               />
               <button
                 type="button"
@@ -313,7 +320,7 @@ export function UserFormModal({
               Generate a strong password
             </button>
           </Field>
-        )}
+        }
 
         <div className="sm:col-span-2 mt-2 mb-1">
           <div className="text-[10.5px] font-semibold uppercase tracking-[0.14em] mb-3" style={{ color: 'var(--color-gold)' }}>
@@ -556,7 +563,28 @@ export function UserFormModal({
         </div>
       )}
 
-      <div className="flex justify-end gap-2 mt-2">
+      <div className="flex flex-wrap items-center justify-end gap-2 mt-2">
+        {isEditing && (
+          <div className="mr-auto flex items-center gap-2">
+            {confirmDelete ? (
+              <>
+                <span className="text-[12px]" style={{ color: 'var(--color-clay)' }}>
+                  Delete {editingUser.name}’s login and profile? Their activities stay.
+                </span>
+                <GhostButton tone="danger" onClick={handleDelete} disabled={deleting}>
+                  {deleting ? 'Deleting…' : 'Yes, delete'}
+                </GhostButton>
+                <GhostButton onClick={() => setConfirmDelete(false)} disabled={deleting}>
+                  Keep
+                </GhostButton>
+              </>
+            ) : (
+              <button type="button" onClick={() => setConfirmDelete(true)} className="text-[12.5px] font-medium" style={{ color: 'var(--color-clay)' }}>
+                Delete user
+              </button>
+            )}
+          </div>
+        )}
         <GhostButton onClick={onClose}>Cancel</GhostButton>
         <PrimaryButton onClick={handleSubmit} disabled={!isValid || saving}>
           {saving ? 'Saving…' : isEditing ? 'Save changes' : 'Create user'}

@@ -1,7 +1,5 @@
-import { collection, doc, getDoc, onSnapshot, query, setDoc, updateDoc, where, writeBatch, type Unsubscribe } from 'firebase/firestore'
-import { deleteApp, initializeApp } from 'firebase/app'
-import { createUserWithEmailAndPassword, getAuth, signOut } from 'firebase/auth'
-import { db, firebaseConfig } from '../firebase'
+import { collection, doc, getDoc, onSnapshot, query, updateDoc, where, writeBatch, type Unsubscribe } from 'firebase/firestore'
+import { db } from '../firebase'
 import { watchDepartment } from './departments'
 import type { AppUser, MbbsYear, YearChange } from '../../types'
 
@@ -192,44 +190,8 @@ export async function undoPromotion(students: AppUser[], batchId: string): Promi
   return ops.length
 }
 
-// Provisioning a user for someone else means creating THEIR Firebase Auth
-// account — but createUserWithEmailAndPassword signs in as whoever it just
-// created, which would kick the admin out of their own session if run on
-// the app's shared `auth` instance. A second, separately-named Firebase App
-// (its own isolated Auth instance, same project config) sidesteps that:
-// create the account there, capture the uid, sign that instance back out,
-// then tear the temporary app down — the admin's real session never moves.
-// No Cloud Function needed for this specific step.
-export async function createUserAccount(
-  input: Omit<AppUser, 'uid' | 'active' | 'rejected'>,
-  password: string,
-): Promise<string> {
-  const secondaryApp = initializeApp(firebaseConfig, `user-provisioning-${Date.now()}`)
-  try {
-    const secondaryAuth = getAuth(secondaryApp)
-    const credential = await createUserWithEmailAndPassword(secondaryAuth, input.email, password)
-    const uid = credential.user.uid
-    await signOut(secondaryAuth)
-
-    const profile: Omit<AppUser, 'uid'> = { ...input, active: true, rejected: false }
-    await setDoc(userDocRef(uid), profile)
-    return uid
-  } finally {
-    await deleteApp(secondaryApp)
-  }
-}
-
-// Edits the Firestore profile only — email and password aren't editable
-// here. Changing a Firebase Auth account's email/password from an admin
-// session (for a DIFFERENT user) needs either that user's own re-auth or
-// the Admin SDK/a Cloud Function, neither of which this app has; faking
-// either client-side would silently desync Auth from the profile doc.
-export async function updateUserProfile(
-  uid: string,
-  updates: Partial<Omit<AppUser, 'uid' | 'email' | 'active' | 'rejected'>>,
-): Promise<void> {
-  await updateDoc(userDocRef(uid), updates)
-}
+// Creating, editing (incl. email/mobile/password) and deleting accounts goes
+// through the server functions — see lib/accounts.ts.
 
 export function watchAppUser(
   uid: string,

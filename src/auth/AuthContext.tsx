@@ -15,6 +15,9 @@ interface AuthState {
   appUser: AppUser | null
   loading: boolean
   profileError: string | null
+  // Signed in, but no users/{uid} profile — a self-registration that isn't
+  // approved yet (or was never sent). RequireRole sends them to /register.
+  profileMissing: boolean
   signOut: () => Promise<void>
 }
 
@@ -25,11 +28,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [appUser, setAppUser] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [profileError, setProfileError] = useState<string | null>(null)
+  const [profileMissing, setProfileMissing] = useState(false)
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user)
       setProfileError(null)
+      setProfileMissing(false)
       if (!user) {
         setAppUser(null)
         setLoading(false)
@@ -44,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       firebaseUser.uid,
       (user) => {
         setAppUser(user)
+        setProfileMissing(!user)
         setLoading(false)
         if (!user) {
           setProfileError(
@@ -65,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     appUser,
     loading,
     profileError,
+    profileMissing,
     signOut: () => firebaseSignOut(auth),
   }
 
