@@ -83,21 +83,37 @@ export function ExportActivitiesButton({
 
   const deptName = (id: string) => allDepartments.find((d) => d.id === id)?.name ?? 'Department'
   const sent = useMemo(() => (submissions ?? []).filter((s) => s.status !== 'draft'), [submissions])
+  // Years the student has sent activities in (more than one after a
+  // promotion). 0 = all years.
+  const years = useMemo(() => Array.from(new Set(sent.map((s) => s.mbbsYear).filter(Boolean))).sort((a, b) => a - b), [sent])
+  const [year, setYear] = useState<number>(0)
+  const inYear = useMemo(() => sent.filter((s) => !year || s.mbbsYear === year), [sent, year])
   const departmentOptions = useMemo(() => {
-    const ids = Array.from(new Set(sent.map((s) => s.departmentId)))
+    const ids = Array.from(new Set(inYear.map((s) => s.departmentId)))
     return ids.map((id) => ({ id, name: deptName(id) })).sort((a, b) => a.name.localeCompare(b.name))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sent, allDepartments])
+  }, [inYear, allDepartments])
 
   const selected = useMemo(
     () =>
-      sent
+      inYear
         .filter((s) => (scope === 'approved' ? s.status === 'approved' : true))
         .filter((s) => !departmentId || s.departmentId === departmentId)
         .filter((s) => (!fromDate || (s.activityDate || '') >= fromDate) && (!toDate || (s.activityDate || '') <= toDate))
         .sort((a, b) => (a.activityDate || '').localeCompare(b.activityDate || '') || (a.submittedAt ?? 0) - (b.submittedAt ?? 0)),
-    [sent, scope, departmentId, fromDate, toDate],
+    [inYear, scope, departmentId, fromDate, toDate],
   )
+  // The year printed on the PDF: the chosen one, else the only year in the
+  // export, else the student's current year.
+  const selectedYears = Array.from(new Set(selected.map((s) => s.mbbsYear))).sort((a, b) => a - b)
+  const exportYear = year || (selectedYears.length === 1 ? selectedYears[0] : null)
+  const yearLabel = exportYear
+    ? `MBBS Year ${exportYear}`
+    : selectedYears.length > 1
+      ? `MBBS Years ${selectedYears.join(', ')}`
+      : appUser?.mbbsYear
+        ? `MBBS Year ${appUser.mbbsYear}`
+        : ''
 
   const busy = progress !== null
 
@@ -156,7 +172,7 @@ export function ExportActivitiesButton({
       const scopeLabel = [
         scope === 'approved' ? 'Approved activities' : 'All activities sent for review',
         departmentId ? deptName(departmentId) : 'All departments',
-        appUser.mbbsYear ? `MBBS Year ${appUser.mbbsYear}` : '',
+        yearLabel,
         fromDate || toDate ? `${fromDate ? formatIso(fromDate) : 'start'} to ${toDate ? formatIso(toDate) : 'today'}` : '',
       ]
         .filter(Boolean)
@@ -178,7 +194,7 @@ export function ExportActivitiesButton({
         student: {
           name: appUser.name,
           rollNumber: appUser.rollNumber ?? '',
-          mbbsYear: appUser.mbbsYear ?? null,
+          mbbsYear: exportYear ?? appUser.mbbsYear ?? null,
           email: appUser.email ?? '',
           phone: appUser.phone ?? '',
         },
@@ -187,7 +203,7 @@ export function ExportActivitiesButton({
         generatedAt: Date.now(),
       })
 
-      const slug = [appUser.rollNumber || appUser.name, departmentId ? deptName(departmentId) : '', scope === 'approved' ? 'Approved' : 'All']
+      const slug = [appUser.rollNumber || appUser.name, year ? `Year-${year}` : '', departmentId ? deptName(departmentId) : '', scope === 'approved' ? 'Approved' : 'All']
         .filter(Boolean)
         .join('-')
         .replace(/[^A-Za-z0-9]+/g, '-')
@@ -254,14 +270,45 @@ export function ExportActivitiesButton({
             })}
           </div>
 
+          {years.length > 1 && (
+            <>
+              <div className="text-[10.5px] font-semibold uppercase tracking-[0.09em] mb-2" style={{ color: 'var(--color-char-soft)' }}>
+                Year
+              </div>
+              <div className="flex flex-wrap gap-2 mb-5">
+                {[...years, 0].map((y) => {
+                  const active = year === y
+                  return (
+                    <button
+                      key={y}
+                      onClick={() => {
+                        setYear(y)
+                        setDepartmentId('')
+                      }}
+                      disabled={busy}
+                      className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-medium transition-colors"
+                      style={{
+                        borderColor: active ? 'var(--color-gold)' : 'var(--color-line)',
+                        backgroundColor: active ? 'color-mix(in srgb, var(--color-gold) 8%, var(--color-paper-raised) 92%)' : 'var(--color-paper-raised)',
+                        color: active ? 'var(--color-char)' : 'var(--color-char-soft)',
+                      }}
+                    >
+                      {y ? `Year ${y}` : 'All years'}
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
           <div className="text-[10.5px] font-semibold uppercase tracking-[0.09em] mb-2" style={{ color: 'var(--color-char-soft)' }}>
             Include
           </div>
           <div className="grid grid-cols-2 gap-2 mb-5">
             {(
               [
-                ['approved', 'Approved only', `${sent.filter((s) => s.status === 'approved').length} activities`],
-                ['sent', 'Everything sent', `${sent.length} activities, any status`],
+                ['approved', 'Approved only', `${inYear.filter((s) => s.status === 'approved').length} activities`],
+                ['sent', 'Everything sent', `${inYear.length} activities, any status`],
               ] as const
             ).map(([key, label, hint]) => {
               const active = scope === key

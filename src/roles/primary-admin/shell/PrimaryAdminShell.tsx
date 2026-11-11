@@ -22,6 +22,7 @@ const NAV: NavGroup[] = [
     items: [
       { label: 'Institutions', to: '/admin/institutions', icon: 'institutions' },
       { label: 'Users', to: '/admin/users', icon: 'users' },
+      { label: 'Promote students', to: '/admin/promote-students', icon: 'promote' },
     ],
   },
   {

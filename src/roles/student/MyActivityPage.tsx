@@ -13,7 +13,7 @@ import { watchTemplate } from '../../lib/firestore/logTemplates'
 import { getAppUser } from '../../lib/firestore/users'
 import { sanitizeRichText } from '../../lib/sanitizeHtml'
 import { ExportActivitiesButton } from './ExportActivities'
-import type { CompetencyLevel, FormSchema, Submission, SubmissionStatus } from '../../types'
+import type { CompetencyLevel, FormSchema, MbbsYear, Submission, SubmissionStatus } from '../../types'
 
 // Adapted from the "My Activity.dc.html" design reference — its month-
 // grouped, expand-in-place accordion of entries (date stamp, skill title,
@@ -73,6 +73,10 @@ export function StudentMyActivityPage() {
   const navigate = useNavigate()
   const [submissions, setSubmissions] = useState<Submission[] | null>(null)
   const [filter, setFilter] = useState<SubmissionStatus | 'all'>('all')
+  // Year view: every year the student has activities in, plus their current
+  // year. Opens on the current year once there is more than one; null =
+  // not chosen yet (follow that default).
+  const [yearChoice, setYearChoice] = useState<MbbsYear | 'all' | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
@@ -113,16 +117,26 @@ export function StudentMyActivityPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submissions])
 
+  const currentYear = appUser?.mbbsYear ?? null
+  const years = useMemo(() => {
+    const set = new Set<MbbsYear>((submissions ?? []).map((s) => s.mbbsYear).filter(Boolean))
+    if (currentYear) set.add(currentYear)
+    return [...set].sort((a, b) => a - b)
+  }, [submissions, currentYear])
+  const multiYear = years.length > 1
+  const yearView: MbbsYear | 'all' = multiYear ? (yearChoice ?? currentYear ?? 'all') : 'all'
+  const scoped = useMemo(() => (submissions ?? []).filter((s) => yearView === 'all' || s.mbbsYear === yearView), [submissions, yearView])
+
   const counts = useMemo(() => {
     const c: Record<SubmissionStatus | 'all', number> = { all: 0, draft: 0, submitted: 0, approved: 0, revisionRequested: 0, rejected: 0 }
-    for (const s of submissions ?? []) {
+    for (const s of scoped) {
       c.all++
       c[s.status]++
     }
     return c
-  }, [submissions])
+  }, [scoped])
 
-  const filtered = useMemo(() => (submissions ?? []).filter((s) => filter === 'all' || s.status === filter), [submissions, filter])
+  const filtered = useMemo(() => scoped.filter((s) => filter === 'all' || s.status === filter), [scoped, filter])
   const groups = useMemo(() => {
     const sorted = [...filtered].sort((a, b) => (b.activityDate || '').localeCompare(a.activityDate || '') || b.updatedAt - a.updatedAt)
     const order: string[] = []
@@ -169,9 +183,28 @@ export function StudentMyActivityPage() {
         </div>
       }
     >
-      <p className="text-[13px] mb-6 -mt-2" style={{ color: 'var(--color-char-soft)' }}>
-        Everything you have logged, and what your reviewers sent back.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 -mt-2">
+        <p className="text-[13px]" style={{ color: 'var(--color-char-soft)' }}>
+          Everything you have logged, and what your reviewers sent back.
+        </p>
+        {multiYear && (
+          <div className="inline-flex rounded-full border p-0.5" style={{ borderColor: 'var(--color-line)', backgroundColor: 'var(--color-paper-raised)' }}>
+            {[...years.map((y) => ({ key: y as MbbsYear | 'all', label: `Year ${y}${y === currentYear ? ' · now' : ''}` })), { key: 'all' as const, label: 'All years' }].map((opt) => {
+              const active = yearView === opt.key
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => setYearChoice(opt.key)}
+                  className="px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors"
+                  style={{ backgroundColor: active ? 'var(--color-ink)' : 'transparent', color: active ? 'var(--color-frost)' : 'var(--color-char-soft)' }}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       <div
         className="grid grid-cols-2 sm:grid-cols-4 border rounded-[6px] overflow-hidden mb-7 divide-x divide-y sm:divide-y-0 divide-[var(--color-line)]"

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 import { StudentShell } from './shell/StudentShell'
 import { Card, GhostButton, PrimaryButton, Skeleton, inputClass } from './shell/ui'
+import { Icon } from '../primary-admin/shell/Icon'
 import { RichTextEditor } from '../../components/RichTextEditor'
 import { sanitizeRichText } from '../../lib/sanitizeHtml'
 import { useStudentDepartments } from '../../lib/enabledDepartments'
@@ -159,7 +160,25 @@ export function StudentActivitiesPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const institutionId = appUser?.institutionId ?? null
-  const mbbsYear = appUser?.mbbsYear ?? null
+
+  // --- resume an existing draft / revision-requested submission -----------
+  const submissionId = searchParams.get('submissionId')
+  const [existing, setExisting] = useState<Submission | null | undefined>(undefined)
+  useEffect(() => {
+    if (!submissionId) {
+      setExisting(undefined)
+      return
+    }
+    return watchSubmission(submissionId, setExisting)
+  }, [submissionId])
+
+  // The year this activity belongs to. A new activity uses the student's
+  // current year; a resumed one keeps the year it was logged in — after a
+  // promotion (Year 1 → Year 2) a Year 1 revision still has to load the
+  // Year 1 departments and skills, not the new year's.
+  const profileYear = appUser?.mbbsYear ?? null
+  const mbbsYear = submissionId ? (existing?.mbbsYear ?? null) : profileYear
+  const fromEarlierYear = !!submissionId && !!existing && !!profileYear && existing.mbbsYear !== profileYear
 
   // --- department (a per-activity choice, not a fixed profile field) ----
   // A student is bound by year only: their departments are every
@@ -333,17 +352,6 @@ export function StudentActivitiesPage() {
   // Free the local previews of never-saved images when leaving the page.
   useEffect(() => () => imagesRef.current.forEach(revokeDraft), [])
 
-  // --- resume an existing draft / revision-requested submission -----------
-  const submissionId = searchParams.get('submissionId')
-  const [existing, setExisting] = useState<Submission | null | undefined>(undefined)
-  useEffect(() => {
-    if (!submissionId) {
-      setExisting(undefined)
-      return
-    }
-    return watchSubmission(submissionId, setExisting)
-  }, [submissionId])
-
   const [hydrated, setHydrated] = useState(!submissionId)
   // Department has to be restored *before* the rest can hydrate — the
   // template/tree fetch below only runs once `department` resolves, which
@@ -394,6 +402,11 @@ export function StudentActivitiesPage() {
         attemptType,
         description: description ? sanitizeRichText(description) : null,
         images: uploaded,
+        // Copied onto the activity so reviewers still see who it is after
+        // the student moves to another year (staff can only read the
+        // profiles of students in their own year).
+        studentName: appUser.name,
+        studentRollNumber: appUser.rollNumber ?? null,
       }
       // 2) the activity doc, pointing at the uploaded files
       if (savedId) {
@@ -511,6 +524,18 @@ export function StudentActivitiesPage() {
           </div>
         ) : (
           <>
+            {fromEarlierYear && existing && (
+              <div
+                className="mb-4 rounded-[12px] border px-4 py-3 text-[13px] flex items-start gap-2.5"
+                style={{ borderColor: 'var(--color-gold-line)', backgroundColor: 'var(--color-gold-soft)', color: 'var(--color-char)' }}
+              >
+                <Icon name="clock" className="h-4 w-4 mt-0.5 shrink-0" style={{ color: 'var(--color-gold)' }} />
+                <span>
+                  This is a <strong>Year {existing.mbbsYear}</strong> activity, logged before you moved to Year {profileYear}. It keeps its Year{' '}
+                  {existing.mbbsYear} department and skill, and goes back to the same reviewer.
+                </span>
+              </div>
+            )}
             <FRow n="01" index={0} active={!departmentId} kicker="Choose department" title="Which department is this for?">
               {departmentsLoading ? (
                 <Skeleton className="h-11 rounded-[8px]" />
@@ -528,7 +553,9 @@ export function StudentActivitiesPage() {
                   <option value="" disabled>
                     Choose a department…
                   </option>
-                  {myDepartments.map((d) => (
+                  {/* A resumed activity's own department stays listed even if
+                      it has since been switched off for the college. */}
+                  {[...myDepartments, ...(department && !myDepartments.some((d) => d.id === department.id) ? [department] : [])].map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.name}
                     </option>

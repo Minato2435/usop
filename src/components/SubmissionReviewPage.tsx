@@ -12,7 +12,7 @@ import { watchSubmission, facultyDecideSubmission } from '../lib/firestore/submi
 import { sanitizeRichText } from '../lib/sanitizeHtml'
 import { watchFormSchema } from '../lib/firestore/formSchemas'
 import { watchTemplate } from '../lib/firestore/logTemplates'
-import { getAppUser } from '../lib/firestore/users'
+import { getAppUserOrNull } from '../lib/firestore/users'
 import type { AppUser, CompetencyLevel, FieldAnswerValue, FormSchema, LogTemplate, Submission } from '../types'
 
 // The faculty review flow (Fill DOPS Form, prefilled signatures, decision
@@ -97,12 +97,16 @@ export function SubmissionReviewPage({
     return watchTemplate(submission.templateId, setTemplate)
   }, [submission])
 
-  const [student, setStudent] = useState<AppUser | null | undefined>(undefined)
+  // The student's profile, or — when it can't be read (a student promoted
+  // to another year is outside this reviewer's year) — the name and register
+  // number copied onto the activity itself.
+  const [student, setStudent] = useState<Pick<AppUser, 'name' | 'rollNumber'> | null | undefined>(undefined)
   useEffect(() => {
     if (!submission) return
     let cancelled = false
-    getAppUser(submission.studentId).then((u) => {
-      if (!cancelled) setStudent(u)
+    getAppUserOrNull(submission.studentId).then((u) => {
+      if (cancelled) return
+      setStudent(u ?? (submission.studentName ? { name: submission.studentName, rollNumber: submission.studentRollNumber ?? null } : null))
     })
     return () => {
       cancelled = true
@@ -217,7 +221,7 @@ export function SubmissionReviewPage({
               </div>
               <div className="min-w-0">
                 <div className="font-display text-[22px] leading-tight" style={{ color: 'var(--color-char)' }}>
-                  {student?.name}
+                  {student?.name ?? 'Student'}
                 </div>
                 <div className="text-[12px] mt-1" style={{ color: 'var(--color-char-soft)' }}>
                   {[

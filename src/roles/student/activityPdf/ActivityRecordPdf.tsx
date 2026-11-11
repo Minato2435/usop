@@ -308,7 +308,7 @@ function ActivityPage({ a, index, total, college, student }: { a: ExportActivity
       <View wrap={false} style={{ flexDirection: 'row', marginTop: 8 }}>
         {(
           [
-            ['Activity date', fmtDate(sub.activityDate)],
+            [sub.mbbsYear ? `Activity date · Year ${sub.mbbsYear}` : 'Activity date', fmtDate(sub.activityDate)],
             ['Attempt', sub.attemptType ? ATTEMPT[sub.attemptType] : '—'],
             ['Submitted', fmtMs(sub.submittedAt)],
             ['Reviewed', decided ? fmtMs(sub.reviewedAt) : '—'],

@@ -48,6 +48,8 @@ import { InstitutionAdminCompetenciesPage } from '../roles/institution-admin/Com
 import { InstitutionAdminCompetencyEditorPage } from '../roles/institution-admin/CompetencyEditorPage'
 import { InstitutionAdminVideoTutorialsPage } from '../roles/institution-admin/VideoTutorialsPage'
 import { InstitutionAdminUsersPage } from '../roles/institution-admin/UsersPage'
+import { InstitutionAdminPromoteStudentsPage } from '../roles/institution-admin/PromoteStudentsPage'
+import { PrimaryAdminPromoteStudentsPage } from '../roles/primary-admin/PromoteStudentsPage'
 import { PrimaryAdminCertificateManagementPage } from '../roles/primary-admin/CertificateManagementPage'
 import { PrimaryAdminShell } from '../roles/primary-admin/shell/PrimaryAdminShell'
 import { StudentMyPortfolioPage } from '../roles/student/MyPortfolioPage'
@@ -123,6 +125,14 @@ export function AppRouter() {
             element={
               <RequireRole roles={['primaryAdmin']}>
                 <PrimaryAdminUsersPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/admin/promote-students"
+            element={
+              <RequireRole roles={['primaryAdmin']}>
+                <PrimaryAdminPromoteStudentsPage />
               </RequireRole>
             }
           />
@@ -339,6 +349,14 @@ export function AppRouter() {
             element={
               <RequireRole roles={['institutionAdmin']}>
                 <InstitutionAdminUsersPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/institution-admin/promote-students"
+            element={
+              <RequireRole roles={['institutionAdmin']}>
+                <InstitutionAdminPromoteStudentsPage />
               </RequireRole>
             }
           />

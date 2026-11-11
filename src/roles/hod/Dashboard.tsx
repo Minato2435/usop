@@ -104,7 +104,7 @@ export function HodDashboard() {
                     {s.nodeTitle}
                   </div>
                   <div className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--color-char-soft)' }}>
-                    {studentNames[s.studentId] ?? '…'} · sent to {facultyNames[s.facultyId] ?? '…'}
+                    {studentNames[s.studentId] ?? s.studentName ?? '…'} · sent to {facultyNames[s.facultyId] ?? '…'}
                   </div>
                 </div>
                 <span className="text-[11px] shrink-0 font-mono" style={{ color: 'var(--color-char-soft)' }}>
@@ -137,7 +137,7 @@ export function HodDashboard() {
                       {s.nodeTitle}
                     </div>
                     <div className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--color-char-soft)' }}>
-                      {studentNames[s.studentId] ?? '…'}
+                      {studentNames[s.studentId] ?? s.studentName ?? '…'}
                     </div>
                   </div>
                   <StatusPill status={s.status} resubmitted={s.resubmittedAfterRevision} />

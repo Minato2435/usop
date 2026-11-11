@@ -79,6 +79,32 @@ export function HodStudentsPage() {
     })
   }, [students, search, yearFilter, sortOrder, activityCounts])
 
+  // Students who logged activities in this department but are no longer in
+  // its year — promoted to the next year (or moved). Their profiles aren't
+  // readable any more, so the name comes from the activities themselves.
+  const pastStudents = useMemo(() => {
+    if (users === null) return []
+    const current = new Set(students.map((s) => s.uid))
+    const map = new Map<string, { uid: string; name: string; rollNumber: string | null; year: MbbsYear; total: number; pending: number; last: number }>()
+    for (const s of submissions) {
+      if (current.has(s.studentId) || s.status === 'draft') continue
+      const row = map.get(s.studentId) ?? { uid: s.studentId, name: '', rollNumber: null, year: s.mbbsYear, total: 0, pending: 0, last: 0 }
+      row.total++
+      if (s.status === 'submitted') row.pending++
+      if (s.studentName && s.updatedAt >= row.last) {
+        row.name = s.studentName
+        row.rollNumber = s.studentRollNumber ?? null
+        row.last = s.updatedAt
+      }
+      map.set(s.studentId, row)
+    }
+    const term = search.trim().toLowerCase()
+    return [...map.values()]
+      .map((r) => ({ ...r, name: r.name || 'Former student' }))
+      .filter((r) => term === '' || r.name.toLowerCase().includes(term) || (r.rollNumber ?? '').toLowerCase().includes(term))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [users, students, submissions, search])
+
   const loading = users === null
 
   return (
@@ -208,6 +234,66 @@ export function HodStudentsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {!loading && pastStudents.length > 0 && (
+        <section className="mt-10">
+          <div className="flex items-baseline gap-3 mb-3">
+            <h2 className="font-display text-[20px]" style={{ color: 'var(--color-char)' }}>
+              Past students
+            </h2>
+            <span className="text-[12.5px]" style={{ color: 'var(--color-char-soft)' }}>
+              Moved on to another year — their activities here stay on record and can still be reviewed.
+            </span>
+          </div>
+          <div
+            className="rounded-[10px] overflow-hidden border"
+            style={{ backgroundColor: 'var(--color-paper)', borderColor: 'color-mix(in srgb, var(--color-char-soft) 28%, var(--color-line) 72%)' }}
+          >
+            <div className="overflow-x-auto">
+              <div className="min-w-[560px]">
+                <div
+                  className="flex items-center gap-4 px-5 py-3 border-b text-[10.5px] font-semibold uppercase tracking-[0.08em]"
+                  style={{ borderColor: 'color-mix(in srgb, var(--color-char-soft) 28%, var(--color-line) 72%)', color: 'var(--color-char-soft)' }}
+                >
+                  <div className="flex-[2] min-w-[200px]">Name</div>
+                  <div className="w-[150px] shrink-0">Registration ID</div>
+                  <div className="w-[170px] shrink-0">Activities here</div>
+                </div>
+                {pastStudents.map((p) => (
+                  <div
+                    key={p.uid}
+                    className="flex items-center gap-4 px-5 py-3 border-b last:border-0"
+                    style={{ borderColor: 'color-mix(in srgb, var(--color-char-soft) 16%, var(--color-line) 84%)' }}
+                  >
+                    <div className="flex-[2] min-w-[200px] flex items-center gap-3">
+                      <span
+                        className="shrink-0 h-8 w-8 rounded-full border flex items-center justify-center font-display text-[13px]"
+                        style={{ borderColor: 'var(--color-line)', color: 'var(--color-char-soft)' }}
+                      >
+                        {initials(p.name)}
+                      </span>
+                      <span className="font-display text-[15px] truncate" style={{ color: 'var(--color-char)' }}>
+                        {p.name}
+                      </span>
+                    </div>
+                    <div className="w-[150px] shrink-0 font-mono text-[12.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
+                      {p.rollNumber ?? '—'}
+                    </div>
+                    <div className="w-[170px] shrink-0 text-[12.5px]" style={{ color: 'var(--color-char)' }}>
+                      {p.total} logged in Year {p.year}
+                      {p.pending > 0 && (
+                        <span className="ml-1.5" style={{ color: 'var(--color-gold)' }}>
+                          · {p.pending} pending
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
       )}
     </HodShell>
   )

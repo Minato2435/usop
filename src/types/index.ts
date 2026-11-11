@@ -74,6 +74,20 @@ export interface AppUser {
   associatedMbbsYears: MbbsYear[] | null // faculty only
   rollNumber: string | null // students only
   assignedHOD: string | null // students only - uid of HOD
+  // Students only: every year change made from the Promote students page,
+  // oldest first. Absent until the student's first promotion.
+  yearHistory?: YearChange[]
+}
+
+// One promotion (or its undo) of one student. `batchId` groups every
+// student moved in the same action, so the whole batch can be undone.
+export interface YearChange {
+  batchId: string
+  from: MbbsYear
+  to: MbbsYear
+  at: number
+  byId: string
+  byName: string
 }
 
 // --- Dynamic Form Engine (Phase 2) ---
@@ -506,6 +520,12 @@ export interface Submission {
   reviewedById?: string | null
   reviewedByName?: string | null
   reviewedByRole?: 'faculty' | 'hod' | null
+  // The student's name and register number, copied on every save. After a
+  // student is promoted to the next year, Year N staff can no longer read
+  // their profile (profile reads are year-scoped), so reviewers fall back to
+  // these. Absent on activities saved before this existed.
+  studentName?: string | null
+  studentRollNumber?: string | null
   submittedAt: number | null // set when status first becomes 'submitted'
   reviewedAt: number | null // set when faculty first records a decision
   createdAt: number

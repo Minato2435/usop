@@ -307,6 +307,10 @@ service cloud.firestore {
         || (isActive() && resource.data.facultyId == request.auth.uid)
         || isHodForSubmission(resource.data)
         || (isActive() && hasRole('principal') && sameInstitution(resource.data.institutionId))
+        // Institution Admin, read-only: the Promote students page counts each
+        // student's unfinished activities before moving them up a year.
+        // watchInstitutionSubmissions filters institutionId, the field read here.
+        || (isActive() && hasRole('institutionAdmin') && sameInstitution(resource.data.institutionId))
         // Skill Lab Director reviews certificate evidence — which faculty
         // approved each required skill, and when. Read-only.
         || (isActive() && isSkillLabDirector());

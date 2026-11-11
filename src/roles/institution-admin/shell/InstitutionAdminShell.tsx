@@ -34,6 +34,7 @@ const NAV: NavItem[] = [
   { label: 'Log templates', to: '/institution-admin/log-templates', icon: 'templates' },
   { label: 'Video tutorials', to: '/institution-admin/video-tutorials', icon: 'video' },
   { label: 'Users', to: '/institution-admin/users', icon: 'users' },
+  { label: 'Promote students', to: '/institution-admin/promote-students', icon: 'promote' },
 ]
 
 const STORAGE_KEY = 'usop.instAdmin.sidebarCollapsed'

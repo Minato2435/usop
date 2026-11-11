@@ -4,7 +4,8 @@ import { useAuth } from '../../auth/AuthContext'
 import { FacultyShell } from './shell/FacultyShell'
 import { Card, Skeleton, StatusPill } from './shell/ui'
 import { watchFacultyInbox } from '../../lib/firestore/submissions'
-import { getAppUser } from '../../lib/firestore/users'
+import { getAppUserOrNull } from '../../lib/firestore/users'
+import { submissionStudent } from '../../lib/submissionStudent'
 import type { AppUser, Submission, SubmissionStatus } from '../../types'
 
 const FILTERS: { key: SubmissionStatus | 'all'; label: string }[] = [
@@ -31,7 +32,7 @@ export function FacultyInboxPage() {
     const missing = studentIds.filter((id) => !studentsById[id])
     if (missing.length === 0) return
     let cancelled = false
-    Promise.all(missing.map((id) => getAppUser(id))).then((users) => {
+    Promise.all(missing.map((id) => getAppUserOrNull(id))).then((users) => {
       if (cancelled) return
       setStudentsById((prev) => {
         const next = { ...prev }
@@ -95,7 +96,7 @@ export function FacultyInboxPage() {
       ) : (
         <div className="flex flex-col gap-2.5">
           {filtered.map((s, i) => {
-            const student = studentsById[s.studentId]
+            const student = submissionStudent(s, studentsById[s.studentId])
             return (
               <Link
                 key={s.id}

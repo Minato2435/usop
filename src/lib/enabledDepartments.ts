@@ -50,5 +50,5 @@ export function useStudentDepartments(institutionId: string | null, mbbsYear: Mb
   )
   const loading = catalog === null || own === null || overrides === null
 
-  return { departments, allDepartments, loading }
+  return { departments, allDepartments, overrides: overrides ?? [], loading }
 }

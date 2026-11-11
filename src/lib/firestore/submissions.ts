@@ -61,11 +61,19 @@ export function watchDepartmentSubmissions(
 // every department of their institution, for the monitoring/reporting
 // dashboard. Filters on institutionId, matching the single field
 // firestore.rules' Principal branch reads.
-export function watchInstitutionSubmissions(institutionId: string, onChange: (submissions: Submission[]) => void): Unsubscribe {
+export function watchInstitutionSubmissions(
+  institutionId: string,
+  onChange: (submissions: Submission[]) => void,
+  onError?: (error: unknown) => void,
+): Unsubscribe {
   const q = query(submissionsRef, where('institutionId', '==', institutionId), orderBy('updatedAt', 'desc'))
-  return onSnapshot(q, (snap) => {
-    onChange(snap.docs.map((d) => toSubmission(d.id, d.data())))
-  })
+  return onSnapshot(
+    q,
+    (snap) => {
+      onChange(snap.docs.map((d) => toSubmission(d.id, d.data())))
+    },
+    (error) => onError?.(error),
+  )
 }
 
 export function watchSubmission(id: string, onChange: (submission: Submission | null) => void): Unsubscribe {
@@ -117,7 +125,21 @@ export async function createDraftSubmission(
 export async function updateDraftSubmission(
   id: string,
   patch: Partial<
-    Pick<Submission, 'facultyId' | 'answers' | 'templateId' | 'nodeId' | 'nodeTitle' | 'formSchemaId' | 'description' | 'images' | 'activityDate' | 'attemptType'>
+    Pick<
+      Submission,
+      | 'facultyId'
+      | 'answers'
+      | 'templateId'
+      | 'nodeId'
+      | 'nodeTitle'
+      | 'formSchemaId'
+      | 'description'
+      | 'images'
+      | 'activityDate'
+      | 'attemptType'
+      | 'studentName'
+      | 'studentRollNumber'
+    >
   >,
 ): Promise<void> {
   await updateDoc(doc(submissionsRef, id), { ...patch, updatedAt: Date.now() })

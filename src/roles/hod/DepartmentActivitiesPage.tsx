@@ -6,6 +6,7 @@ import { Card, Skeleton, StatusPill, statusRailColor } from './shell/ui'
 import { Icon } from '../primary-admin/shell/Icon'
 import { watchDepartmentSubmissions } from '../../lib/firestore/submissions'
 import { watchDepartmentUsers } from '../../lib/firestore/users'
+import { submissionStudent } from '../../lib/submissionStudent'
 import type { AppUser, Submission, SubmissionStatus } from '../../types'
 
 const FILTERS: { key: SubmissionStatus | 'all'; label: string }[] = [
@@ -137,7 +138,7 @@ export function HodDepartmentActivitiesPage() {
     const byStatus = (submissions ?? []).filter((s) => filter === 'all' ? s.status !== 'draft' : s.status === filter)
     const bySearch = term
       ? byStatus.filter((s) => {
-          const student = usersById[s.studentId]?.name?.toLowerCase() ?? ''
+          const student = submissionStudent(s, usersById[s.studentId])?.name.toLowerCase() ?? ''
           return student.includes(term) || s.nodeTitle.toLowerCase().includes(term)
         })
       : byStatus
@@ -176,7 +177,7 @@ export function HodDepartmentActivitiesPage() {
       ) : (
         <div className="flex flex-col gap-2.5">
           {filtered.map((s, i) => {
-            const student = usersById[s.studentId]
+            const student = submissionStudent(s, usersById[s.studentId])
             const faculty = usersById[s.facultyId]
             return (
               <Link

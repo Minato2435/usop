@@ -3,7 +3,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { StudentShell } from './shell/StudentShell'
 import { Card, Skeleton } from './shell/ui'
 import { Icon } from '../primary-admin/shell/Icon'
-import { useStudentDepartments } from '../../lib/enabledDepartments'
+import { enabledDepartmentsForYear, useStudentDepartments } from '../../lib/enabledDepartments'
 import { watchStudentSubmissions } from '../../lib/firestore/submissions'
 import { getInstitution } from '../../lib/firestore/institutions'
 import { watchTemplate } from '../../lib/firestore/logTemplates'
@@ -16,7 +16,7 @@ import {
   certificateRequestStatus,
   certificateNumber,
 } from '../../lib/firestore/certificates'
-import type { AppUser, CertificateDecision, CertificateRequest, CertificateSkillPreset, Department, Submission } from '../../types'
+import type { AppUser, CertificateDecision, CertificateRequest, CertificateSkillPreset, Department, MbbsYear, Submission } from '../../types'
 
 const BORDER = 'color-mix(in srgb, var(--color-char-soft) 28%, var(--color-line) 72%)'
 const ROW_LINE = 'color-mix(in srgb, var(--color-char-soft) 14%, var(--color-line) 86%)'
@@ -44,13 +44,42 @@ function formatDate(ms: number): string {
 // A skill counts once faculty has APPROVED at least one activity against it.
 export function StudentMyPortfolioPage() {
   const { appUser } = useAuth()
-  const { departments: myDepartments, loading: departmentsLoading } = useStudentDepartments(appUser?.institutionId ?? null, appUser?.mbbsYear ?? null)
+  const {
+    departments: myDepartments,
+    allDepartments,
+    overrides,
+    loading: departmentsLoading,
+  } = useStudentDepartments(appUser?.institutionId ?? null, appUser?.mbbsYear ?? null)
 
   const [submissions, setSubmissions] = useState<Submission[] | null>(null)
   useEffect(() => {
     if (!appUser) return
     return watchStudentSubmissions(appUser.uid, setSubmissions)
   }, [appUser])
+
+  // Earlier years (after a promotion): every year the student was in before
+  // — from their promotion history and from the activities they logged —
+  // each with that year's departments, so Year 1 progress and certificates
+  // stay visible in Year 2. A department switched off later still shows if
+  // the student logged activities in it.
+  const pastYears = useMemo(() => {
+    const current = appUser?.mbbsYear ?? null
+    const institutionId = appUser?.institutionId ?? null
+    if (!institutionId) return []
+    const years = new Set<MbbsYear>()
+    for (const h of appUser?.yearHistory ?? []) years.add(h.from)
+    for (const s of submissions ?? []) if (s.mbbsYear) years.add(s.mbbsYear)
+    if (current) years.delete(current)
+    return [...years]
+      .sort((a, b) => b - a)
+      .map((year) => {
+        const enabled = enabledDepartmentsForYear(allDepartments, overrides, institutionId, year)
+        const usedIds = new Set((submissions ?? []).filter((s) => s.mbbsYear === year).map((s) => s.departmentId))
+        const extra = allDepartments.filter((d) => usedIds.has(d.id) && !enabled.some((e) => e.id === d.id))
+        return { year, departments: [...enabled, ...extra].sort((a, b) => a.name.localeCompare(b.name)) }
+      })
+      .filter((y) => y.departments.length > 0)
+  }, [appUser?.mbbsYear, appUser?.institutionId, appUser?.yearHistory, submissions, allDepartments, overrides])
 
   const [collegeName, setCollegeName] = useState<string | null>(null)
   useEffect(() => {
@@ -95,21 +124,55 @@ export function StudentMyPortfolioPage() {
           </p>
         </Card>
       ) : (
-        <div className="flex flex-col gap-[22px] mt-7">
-          {myDepartments.map((d, i) => (
-            <DepartmentCard
-              key={d.id}
-              department={d}
-              appUser={appUser!}
-              collegeName={collegeName}
-              submissions={submissions}
-              index={i}
-              onState={reportState}
-            />
-          ))}
-        </div>
+        <>
+          {pastYears.length > 0 && <YearHeading label={`Year ${appUser?.mbbsYear} · current year`} />}
+          <div className="flex flex-col gap-[22px] mt-7">
+            {myDepartments.map((d, i) => (
+              <DepartmentCard
+                key={d.id}
+                department={d}
+                appUser={appUser!}
+                collegeName={collegeName}
+                submissions={submissions}
+                index={i}
+                onState={reportState}
+              />
+            ))}
+          </div>
+        </>
       )}
+
+      {!loading &&
+        pastYears.map((py) => (
+          <section key={py.year}>
+            <YearHeading label={`Year ${py.year} · completed`} />
+            <div className="flex flex-col gap-[22px] mt-7">
+              {py.departments.map((d, i) => (
+                <DepartmentCard
+                  key={d.id}
+                  department={d}
+                  appUser={appUser!}
+                  collegeName={collegeName}
+                  submissions={submissions}
+                  index={i}
+                  onState={reportState}
+                />
+              ))}
+            </div>
+          </section>
+        ))}
     </StudentShell>
+  )
+}
+
+function YearHeading({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 mt-9">
+      <span className="font-display text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--color-char)' }}>
+        {label}
+      </span>
+      <span className="flex-1 h-px" style={{ backgroundColor: 'var(--color-line)' }} />
+    </div>
   )
 }
 
@@ -130,9 +193,11 @@ function DepartmentCard({
 }) {
   const [preset, setPreset] = useState<CertificateSkillPreset | null | undefined>(undefined)
   useEffect(() => {
-    if (!appUser.institutionId || !appUser.mbbsYear) return
-    return watchCertificateSkillPreset(appUser.institutionId, department.name, appUser.mbbsYear, setPreset)
-  }, [appUser.institutionId, appUser.mbbsYear, department.name])
+    // The department's own year, not the student's current one — after a
+    // promotion the Year 1 cards still follow the Year 1 presets.
+    if (!appUser.institutionId) return
+    return watchCertificateSkillPreset(appUser.institutionId, department.name, department.mbbsYear, setPreset)
+  }, [appUser.institutionId, department.mbbsYear, department.name])
 
   const [request, setRequest] = useState<CertificateRequest | null | undefined>(undefined)
   useEffect(() => watchMyCertificateRequest(appUser.uid, department.id, setRequest), [appUser.uid, department.id])
@@ -183,7 +248,7 @@ function DepartmentCard({
           institutionId: appUser.institutionId!,
           departmentId: department.id,
           department: department.name,
-          mbbsYear: appUser.mbbsYear!,
+          mbbsYear: department.mbbsYear,
           presetId: preset.id,
           requiredSkills: preset.requiredSkills,
         })

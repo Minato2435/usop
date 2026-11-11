@@ -2000,3 +2000,48 @@ earlier version was one flowing page whose tables split across pages without the
 titles.
 Shared palette/labels/building blocks live in `pdfTheme.tsx` (both PDFs import it). File name:
 `USOP-Activity-Summary-<roll>-….pdf`.
+
+## Year promotion (Year N → Year N+1)
+
+Students are bound by year, so moving up a year changes which departments, skills, faculty and
+HOD apply to them. **Activities never change**: every `Submission` keeps the `mbbsYear` it was
+logged in, so Year N work stays with Year N reviewers and in the student's Year N history.
+
+- **Promote students page** (`src/components/PromoteStudentsPage.tsx`, Shell-parametrised like
+  `SubmissionReviewPage`): `/institution-admin/promote-students` (locked to the admin's college) and
+  `/admin/promote-students` (Primary Admin picks a college). Step 01 picks the move (Year 1→2,
+  2→3, 3→4; Year 4 doesn't move). Step 02 lists that year's students, all ticked; untick anyone
+  repeating the year (later roster changes never re-tick them). Step 03 shows unfinished Year N
+  work for the chosen students (waiting / revision / drafts), which is informational only, and
+  then an inline confirm. "Recent promotions" lists batches with **Undo**.
+- **Data**: `promoteStudents()` / `undoPromotion()` in `lib/firestore/users.ts` (batched writes,
+  450 per batch). Each student gets a `YearChange` (`batchId, from, to, at, byId, byName`) appended
+  to `AppUser.yearHistory`. Undo moves back only students whose *latest* change is that batch and
+  who are still in its `to` year, and removes that entry. No approval step: Principal is
+  read-only per the spec, and admins already hold the exam results. The users write rule already
+  allowed both admins; no rules change was needed for the promotion itself.
+- **Why reviewers needed a fallback**: profile reads for staff are year-scoped
+  (`staffSeesStudentYear`), so a promoted student's profile is unreadable to their old Year N
+  faculty and HOD. Fixes:
+  - `Submission.studentName` / `studentRollNumber` are copied on every student save.
+    `scripts/backfillSubmissionStudentNames.mjs` fills in older activities.
+  - `getAppUserOrNull()` returns null instead of throwing. Before this, `SubmissionReviewPage`
+    stayed on "Loading…" forever, and one failed lookup in Faculty's inbox blocked every name.
+  - `lib/submissionStudent.ts` gives the profile first, then the copied name.
+  - HOD Students page has a **Past students** list, derived from the department's activities by
+    students no longer in its roster.
+- **Student side**:
+  - `ActivitiesPage` resumes an activity in the activity's **own** year (`existing.mbbsYear`), so a
+    Year 1 revision still loads Year 1 departments and skills; it shows a "This is a Year 1
+    activity" note. New activities use the current year.
+  - My Activity has a year switcher (shown only once there are 2+ years; opens on the current
+    year).
+  - My Portfolio shows the current year, then a "Year N · completed" section per earlier year
+    (from `yearHistory` and the activities). Presets and certificate requests use
+    `department.mbbsYear`, not the student's current year.
+  - Export has a Year choice. The PDF prints the exported year, and each Full-record activity
+    page shows "Activity date · Year N".
+- **Rules**: `submissions` read gained a read-only Institution Admin branch (same institution), so
+  the Promote page can count unfinished work. Until it's deployed the page says it couldn't check,
+  and promoting still works.
+- Built on git branch `year-promotion`; the pre-feature code is tagged `v1-before-promotion`.

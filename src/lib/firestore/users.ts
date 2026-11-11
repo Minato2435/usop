@@ -1,9 +1,9 @@
-import { collection, doc, getDoc, onSnapshot, query, setDoc, updateDoc, where, type Unsubscribe } from 'firebase/firestore'
+import { collection, doc, getDoc, onSnapshot, query, setDoc, updateDoc, where, writeBatch, type Unsubscribe } from 'firebase/firestore'
 import { deleteApp, initializeApp } from 'firebase/app'
 import { createUserWithEmailAndPassword, getAuth, signOut } from 'firebase/auth'
 import { db, firebaseConfig } from '../firebase'
 import { watchDepartment } from './departments'
-import type { AppUser } from '../../types'
+import type { AppUser, MbbsYear, YearChange } from '../../types'
 
 const usersRef = collection(db, 'users')
 
@@ -131,6 +131,65 @@ export function userDocRef(uid: string) {
 export async function getAppUser(uid: string): Promise<AppUser | null> {
   const snap = await getDoc(userDocRef(uid))
   return snap.exists() ? ({ uid: snap.id, ...snap.data() } as AppUser) : null
+}
+
+// Same as getAppUser, but resolves to null when the profile can't be read.
+// Staff can only read the profiles of students in their own year, so after
+// a student is promoted their old reviewers get a permission error here —
+// callers then fall back to the name copied onto the activity.
+export async function getAppUserOrNull(uid: string): Promise<AppUser | null> {
+  try {
+    return await getAppUser(uid)
+  } catch {
+    return null
+  }
+}
+
+// --- Year promotion ---------------------------------------------------------
+// Primary Admin, or an Institution Admin for their own college (the users
+// write rule already allows both). One batch id per action, recorded in
+// each student's yearHistory so the whole action can be undone.
+
+const BATCH_LIMIT = 450
+
+async function commitInChunks(ops: { uid: string; data: Record<string, unknown> }[]): Promise<void> {
+  for (let i = 0; i < ops.length; i += BATCH_LIMIT) {
+    const batch = writeBatch(db)
+    for (const op of ops.slice(i, i + BATCH_LIMIT)) batch.update(userDocRef(op.uid), op.data)
+    await batch.commit()
+  }
+}
+
+export async function promoteStudents(
+  students: AppUser[],
+  from: MbbsYear,
+  to: MbbsYear,
+  by: { uid: string; name: string },
+): Promise<string> {
+  const batchId = `promo-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+  const at = Date.now()
+  const ops = students
+    .filter((s) => s.role === 'student' && s.mbbsYear === from)
+    .map((s) => {
+      const change: YearChange = { batchId, from, to, at, byId: by.uid, byName: by.name }
+      return { uid: s.uid, data: { mbbsYear: to, yearHistory: [...(s.yearHistory ?? []), change] } }
+    })
+  await commitInChunks(ops)
+  return batchId
+}
+
+// Moves back every student whose most recent change is this batch and who
+// is still in the year that batch moved them to. Anyone promoted again (or
+// moved by hand) since is left alone. Returns how many were moved back.
+export async function undoPromotion(students: AppUser[], batchId: string): Promise<number> {
+  const ops = students.flatMap((s) => {
+    const history = s.yearHistory ?? []
+    const last = history[history.length - 1]
+    if (!last || last.batchId !== batchId || s.mbbsYear !== last.to) return []
+    return [{ uid: s.uid, data: { mbbsYear: last.from, yearHistory: history.slice(0, -1) } }]
+  })
+  await commitInChunks(ops)
+  return ops.length
 }
 
 // Provisioning a user for someone else means creating THEIR Firebase Auth
