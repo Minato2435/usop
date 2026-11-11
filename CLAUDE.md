@@ -2126,10 +2126,10 @@ element; resend after 30 s). Console: Phone provider on, Blaze, SMS region
 **Self-registration** — `registrationRequests/{uid}` (`RegistrationRequest` type), written only by
 the server:
 - Create an account → `/register` (`auth/RegisterPage.tsx`) opens the form straight away, even
-  signed out. Section 01 verifies the mobile inside the form (Send OTP → code → ✓ Verified; that
-  creates the login; "Use a different number" withdraws it). Then role, name, email + password
-  (so email login works too), college; student year + reg. no.; faculty years + department; HOD
-  department. "Send for approval" stays disabled until the number is verified. The typed `Draft`
+  signed out. Order: 01 About you (role, name, email + password — so email login works too),
+  02 Your college (state, college; student year + reg. no.; faculty years + department; HOD
+  department), 03 Verify your mobile number (Send OTP → code → ✓ Verified; that creates the
+  login; "Use a different number" withdraws it). "Send for approval" stays disabled until the number is verified. The typed `Draft`
   lives in `RegisterPage` (not the form) so it survives the reload when the OTP signs them in.
   `registrationOptions` is public for this reason. Then "Waiting for approval" / "Rejected — reason, edit and
   send again" / withdraw (deletes the login).

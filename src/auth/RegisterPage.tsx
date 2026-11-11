@@ -356,7 +356,7 @@ function RegistrationForm({
     (role !== 'student' || rollNumber.trim() !== '') &&
     (role !== 'faculty' || associatedYears.length > 0)
 
-  const submitHint = !verified ? 'Verify your mobile number to continue.' : !detailsValid ? 'Fill in every field above.' : null
+  const submitHint = !detailsValid ? 'Fill in every field above.' : !verified ? 'Verify your mobile number to continue.' : null
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -399,7 +399,162 @@ function RegistrationForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      {sectionTitle('01', 'Your mobile number')}
+      {sectionTitle('01', 'About you')}
+      <Field label="I am a">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {REGISTER_ROLES.map((r) => {
+            const active = role === r.role
+            return (
+              <button
+                key={r.role}
+                type="button"
+                onClick={() => set('role', r.role)}
+                className="rounded-[10px] border px-3 py-2 text-left transition-colors"
+                style={{
+                  borderColor: active ? 'var(--color-gold)' : 'var(--color-line)',
+                  backgroundColor: active ? 'var(--color-gold-soft)' : 'var(--color-paper-raised)',
+                }}
+              >
+                <div className="text-[13px] font-medium" style={{ color: 'var(--color-char)' }}>
+                  {r.label}
+                </div>
+                <div className="text-[10.5px]" style={{ color: 'var(--color-char-soft)' }}>
+                  {r.hint}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </Field>
+
+      <Field label="Full name" htmlFor="reg-name">
+        <input id="reg-name" value={name} onChange={(e) => set('name', e.target.value)} placeholder="As on your college records" className={inputCls} style={inputStyle} />
+      </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Email" htmlFor="reg-email" hint="You can also sign in with this email.">
+          <input id="reg-email" type="email" autoComplete="email" value={email} onChange={(e) => set('email', e.target.value)} className={inputCls} style={inputStyle} />
+        </Field>
+        <Field
+          label={needsPassword ? 'Password' : 'New password (optional)'}
+          htmlFor="reg-password"
+          hint={needsPassword ? 'At least 6 characters.' : 'Leave blank to keep your current one.'}
+        >
+          <div className="relative">
+            <input
+              id="reg-password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => set('password', e.target.value)}
+              className={`${inputCls} pr-14`}
+              style={inputStyle}
+            />
+            <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[11.5px]" style={{ color: 'var(--color-char-soft)' }}>
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
+        </Field>
+      </div>
+
+      {sectionTitle('02', 'Your college')}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="State" htmlFor="reg-state">
+          <select id="reg-state" value={stateFilter} onChange={(e) => set('stateFilter', e.target.value)} className={selectCls} style={inputStyle} disabled={!options}>
+            <option value="">All states</option>
+            {states.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="College" htmlFor="reg-college">
+          <select id="reg-college" value={institutionId} onChange={(e) => set('institutionId', e.target.value)} className={selectCls} style={inputStyle} disabled={!options}>
+            <option value="">{options ? 'Select your college' : 'Loading…'}</option>
+            {colleges.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+                {c.city ? ` — ${c.city}` : ''}
+              </option>
+            ))}
+            {institutionId && !colleges.some((c) => c.id === institutionId) && (
+              <option value={institutionId}>{options?.institutions.find((c) => c.id === institutionId)?.name ?? 'Selected college'}</option>
+            )}
+          </select>
+        </Field>
+      </div>
+
+      {role === 'student' && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="MBBS year" htmlFor="reg-year">
+            <select id="reg-year" value={mbbsYear} onChange={(e) => set('mbbsYear', Number(e.target.value) as MbbsYear)} className={selectCls} style={inputStyle}>
+              {YEARS.map((y) => (
+                <option key={y} value={y}>
+                  Year {y}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Registration number" htmlFor="reg-roll">
+            <input id="reg-roll" value={rollNumber} onChange={(e) => set('rollNumber', e.target.value)} placeholder="e.g. MBBS2026-0142" className={inputCls} style={inputStyle} />
+          </Field>
+        </div>
+      )}
+
+      {role === 'faculty' && (
+        <Field label="MBBS years you teach">
+          <div className="flex flex-wrap gap-2">
+            {YEARS.map((y) => {
+              const active = associatedYears.includes(y)
+              return (
+                <button
+                  key={y}
+                  type="button"
+                  onClick={() => set('associatedYears', active ? associatedYears.filter((v) => v !== y) : [...associatedYears, y].sort())}
+                  className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-medium"
+                  style={{
+                    borderColor: active ? 'var(--color-gold)' : 'var(--color-line)',
+                    backgroundColor: active ? 'var(--color-gold-soft)' : 'transparent',
+                    color: active ? 'var(--color-gold)' : 'var(--color-char-soft)',
+                  }}
+                >
+                  Year {y}
+                </button>
+              )
+            })}
+          </div>
+        </Field>
+      )}
+
+      {needsDept && (
+        <Field label="Department" htmlFor="reg-dept">
+          <select
+            id="reg-dept"
+            value={departmentId}
+            onChange={(e) => set('departmentId', e.target.value)}
+            className={selectCls}
+            style={inputStyle}
+            disabled={!institutionId || (role === 'faculty' && associatedYears.length === 0)}
+          >
+            <option value="">
+              {!institutionId
+                ? 'Select your college first'
+                : role === 'faculty' && associatedYears.length === 0
+                  ? 'Select your years first'
+                  : deptOptions.length === 0
+                    ? 'No departments available'
+                    : 'Select your department'}
+            </option>
+            {deptOptions.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name} — Year {d.mbbsYear}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
+
+      {sectionTitle('03', 'Verify your mobile number')}
       {verified ? (
         <div className="flex items-center justify-between gap-3 rounded-[10px] border px-3.5 py-2.5" style={{ borderColor: 'var(--color-teal)', backgroundColor: 'var(--color-teal-soft)' }}>
           <div>
@@ -506,161 +661,6 @@ function RegistrationForm({
           )}
           <ErrorLine error={otpError} />
         </div>
-      )}
-
-      {sectionTitle('02', 'About you')}
-      <Field label="I am a">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {REGISTER_ROLES.map((r) => {
-            const active = role === r.role
-            return (
-              <button
-                key={r.role}
-                type="button"
-                onClick={() => set('role', r.role)}
-                className="rounded-[10px] border px-3 py-2 text-left transition-colors"
-                style={{
-                  borderColor: active ? 'var(--color-gold)' : 'var(--color-line)',
-                  backgroundColor: active ? 'var(--color-gold-soft)' : 'var(--color-paper-raised)',
-                }}
-              >
-                <div className="text-[13px] font-medium" style={{ color: 'var(--color-char)' }}>
-                  {r.label}
-                </div>
-                <div className="text-[10.5px]" style={{ color: 'var(--color-char-soft)' }}>
-                  {r.hint}
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      </Field>
-
-      <Field label="Full name" htmlFor="reg-name">
-        <input id="reg-name" value={name} onChange={(e) => set('name', e.target.value)} placeholder="As on your college records" className={inputCls} style={inputStyle} />
-      </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Email" htmlFor="reg-email" hint="You can also sign in with this email.">
-          <input id="reg-email" type="email" autoComplete="email" value={email} onChange={(e) => set('email', e.target.value)} className={inputCls} style={inputStyle} />
-        </Field>
-        <Field
-          label={needsPassword ? 'Password' : 'New password (optional)'}
-          htmlFor="reg-password"
-          hint={needsPassword ? 'At least 6 characters.' : 'Leave blank to keep your current one.'}
-        >
-          <div className="relative">
-            <input
-              id="reg-password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => set('password', e.target.value)}
-              className={`${inputCls} pr-14`}
-              style={inputStyle}
-            />
-            <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[11.5px]" style={{ color: 'var(--color-char-soft)' }}>
-              {showPassword ? 'Hide' : 'Show'}
-            </button>
-          </div>
-        </Field>
-      </div>
-
-      {sectionTitle('03', 'Your college')}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="State" htmlFor="reg-state">
-          <select id="reg-state" value={stateFilter} onChange={(e) => set('stateFilter', e.target.value)} className={selectCls} style={inputStyle} disabled={!options}>
-            <option value="">All states</option>
-            {states.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="College" htmlFor="reg-college">
-          <select id="reg-college" value={institutionId} onChange={(e) => set('institutionId', e.target.value)} className={selectCls} style={inputStyle} disabled={!options}>
-            <option value="">{options ? 'Select your college' : 'Loading…'}</option>
-            {colleges.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-                {c.city ? ` — ${c.city}` : ''}
-              </option>
-            ))}
-            {institutionId && !colleges.some((c) => c.id === institutionId) && (
-              <option value={institutionId}>{options?.institutions.find((c) => c.id === institutionId)?.name ?? 'Selected college'}</option>
-            )}
-          </select>
-        </Field>
-      </div>
-
-      {role === 'student' && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="MBBS year" htmlFor="reg-year">
-            <select id="reg-year" value={mbbsYear} onChange={(e) => set('mbbsYear', Number(e.target.value) as MbbsYear)} className={selectCls} style={inputStyle}>
-              {YEARS.map((y) => (
-                <option key={y} value={y}>
-                  Year {y}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Registration number" htmlFor="reg-roll">
-            <input id="reg-roll" value={rollNumber} onChange={(e) => set('rollNumber', e.target.value)} placeholder="e.g. MBBS2026-0142" className={inputCls} style={inputStyle} />
-          </Field>
-        </div>
-      )}
-
-      {role === 'faculty' && (
-        <Field label="MBBS years you teach">
-          <div className="flex flex-wrap gap-2">
-            {YEARS.map((y) => {
-              const active = associatedYears.includes(y)
-              return (
-                <button
-                  key={y}
-                  type="button"
-                  onClick={() => set('associatedYears', active ? associatedYears.filter((v) => v !== y) : [...associatedYears, y].sort())}
-                  className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-medium"
-                  style={{
-                    borderColor: active ? 'var(--color-gold)' : 'var(--color-line)',
-                    backgroundColor: active ? 'var(--color-gold-soft)' : 'transparent',
-                    color: active ? 'var(--color-gold)' : 'var(--color-char-soft)',
-                  }}
-                >
-                  Year {y}
-                </button>
-              )
-            })}
-          </div>
-        </Field>
-      )}
-
-      {needsDept && (
-        <Field label="Department" htmlFor="reg-dept">
-          <select
-            id="reg-dept"
-            value={departmentId}
-            onChange={(e) => set('departmentId', e.target.value)}
-            className={selectCls}
-            style={inputStyle}
-            disabled={!institutionId || (role === 'faculty' && associatedYears.length === 0)}
-          >
-            <option value="">
-              {!institutionId
-                ? 'Select your college first'
-                : role === 'faculty' && associatedYears.length === 0
-                  ? 'Select your years first'
-                  : deptOptions.length === 0
-                    ? 'No departments available'
-                    : 'Select your department'}
-            </option>
-            {deptOptions.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name} — Year {d.mbbsYear}
-              </option>
-            ))}
-          </select>
-        </Field>
       )}
 
       <ErrorLine error={optionsError ?? error} />
