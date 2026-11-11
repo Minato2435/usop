@@ -29,7 +29,7 @@ const ROLE_LABELS: Record<Role, string> = {
   skillLabDirector: 'Skill Lab Director',
 }
 const COLLEGE_ROLES: Role[] = ['student', 'faculty', 'hod', 'principal']
-const ALL_ROLES: Role[] = [...COLLEGE_ROLES, 'institutionAdmin', 'skillLabDirector']
+const ALL_ROLES: Role[] = [...COLLEGE_ROLES, 'institutionAdmin'] // Skill Lab Director: admin-created only
 const YEARS: MbbsYear[] = [1, 2, 3, 4]
 const TABS: { key: RegistrationStatus; label: string }[] = [
   { key: 'pending', label: 'Waiting' },
@@ -80,7 +80,7 @@ export function RegistrationRequestsPage({ Shell, institutionId }: { Shell: Comp
     <Shell eyebrow="People" title="Registration requests">
       <p className="text-[13px] mb-5 -mt-1 max-w-2xl" style={{ color: 'var(--color-char-soft)' }}>
         {isPrimary
-          ? 'People who signed up themselves. You approve Institution Admins and Skill Lab Directors; college roles are normally approved by the college’s admin, and you can step in for them.'
+          ? 'People who signed up themselves. You approve Institution Admins; college roles are normally approved by the college’s admin, and you can step in for them.'
           : 'Students, faculty, HODs and principals who signed up for your college. Nobody can use USOP until you approve them.'}
       </p>
 

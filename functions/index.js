@@ -28,6 +28,9 @@ const auth = getAuth()
 const CREATABLE_ROLES = ['institutionAdmin', 'skillLabDirector', 'principal', 'hod', 'faculty', 'student']
 const COLLEGE_ROLES = ['principal', 'hod', 'faculty', 'student']
 const PLATFORM_ROLES = ['skillLabDirector']
+// Roles a person may ask for when signing up. Skill Lab Director accounts are
+// created by the Primary Admin only.
+const REGISTRABLE_ROLES = ['institutionAdmin', 'principal', 'hod', 'faculty', 'student']
 const YEARS = [1, 2, 3, 4]
 const MOBILE_RE = /^[6-9]\d{9}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -245,10 +248,9 @@ export const adminSyncPhones = onCall({ timeoutSeconds: 540 }, async (request) =
 // ── 2. Self-registration ─────────────────────────────────────────────────
 
 // Colleges and their enabled departments, for the registration form and the
-// approver's review. Any signed-in person may ask (a registrant has no
-// profile yet, so the database rules wouldn't let them read these lists).
-export const registrationOptions = onCall(async (request) => {
-  if (!request.auth) fail('unauthenticated', 'Please verify your mobile number first.')
+// approver's review. Public: the form is filled in before the mobile number
+// is verified, and college / department names aren't sensitive.
+export const registrationOptions = onCall(async () => {
   const [insts, depts, overrides] = await Promise.all([
     db.collection('institutions').get(),
     db.collection('departments').get(),
@@ -281,6 +283,7 @@ export const submitRegistration = onCall(async (request) => {
   if (existing.exists && existing.data().status === 'approved') fail('already-exists', 'This request was already approved. Please sign in.')
 
   const profile = await cleanProfile({ ...(request.data ?? {}), phone: phoneE164.slice(3) })
+  if (!REGISTRABLE_ROLES.includes(profile.role)) fail('invalid-argument', 'This role can’t be requested. Ask the platform admin.')
   await assertRollNumberFree(profile.rollNumber)
 
   const record = await auth.getUser(uid)
@@ -345,6 +348,7 @@ export const decideRegistration = onCall(async (request) => {
   // verified mobile number or the login email.
   const edits = request.data?.edits ?? {}
   const profile = await cleanProfile({ ...req, ...edits, phone: req.phone, email: req.email })
+  if (!REGISTRABLE_ROLES.includes(profile.role)) fail('invalid-argument', 'This role can’t be given through a registration.')
   assertCanManage(caller, profile)
   await assertRollNumberFree(profile.rollNumber, uid)
   if ((await db.doc(`users/${uid}`).get()).exists) fail('already-exists', 'This account already has a profile.')

@@ -52,38 +52,6 @@ export function Field({ label, htmlFor, hint, children }: { label: string; htmlF
   )
 }
 
-export function MobileField({ value, onChange, disabled }: { value: string; onChange?: (v: string) => void; disabled?: boolean }) {
-  return (
-    <Field label="Mobile number" htmlFor="mobile">
-      <div
-        className="flex rounded-[8px] border overflow-hidden focus-within:border-[var(--color-gold)]"
-        style={{ borderColor: 'var(--color-line)', opacity: disabled ? 0.7 : 1 }}
-      >
-        <span
-          className="px-3 flex items-center font-mono text-[14px] border-r"
-          style={{ backgroundColor: 'var(--color-paper)', borderColor: 'var(--color-line)', color: 'var(--color-char-soft)' }}
-        >
-          +91
-        </span>
-        <input
-          id="mobile"
-          type="tel"
-          inputMode="numeric"
-          autoComplete="tel-national"
-          maxLength={10}
-          required
-          disabled={disabled}
-          placeholder="10-digit number"
-          value={value}
-          onChange={(e) => onChange?.(e.target.value.replace(/\D/g, '').slice(0, 10))}
-          className="flex-1 min-w-0 px-3 py-2.5 text-[14px] font-mono outline-none"
-          style={{ backgroundColor: 'var(--color-paper-raised)', color: 'var(--color-char)' }}
-        />
-      </div>
-    </Field>
-  )
-}
-
 export function ErrorLine({ error }: { error: string | null }) {
   if (!error) return null
   return (

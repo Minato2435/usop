@@ -1,263 +1,213 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
-import { FirebaseError } from 'firebase/app'
-import {
-  RecaptchaVerifier,
-  deleteUser,
-  getAdditionalUserInfo,
-  signInWithEmailAndPassword,
-  signInWithPhoneNumber,
-  signOut,
-  type ConfirmationResult,
-} from 'firebase/auth'
+import { useState, type FormEvent } from 'react'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { deleteUser, getAdditionalUserInfo, signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import { useAuth } from './AuthContext'
-import { AuthCard, ErrorLine, Field, MobileField, SubmitButton, TextLink, inputCls, inputStyle } from './authUi'
+import { AuthCard, ErrorLine, Field, SubmitButton, TextLink, inputCls, inputStyle } from './authUi'
+import { describeAuthError, isEmail, isValidMobile, normalizeMobile, usePhoneOtp } from './phoneOtp'
 
-// Sign in with mobile + OTP (first tab) or email + password, or start a new
-// registration.
+// One box for "Mobile number or email". As the person types we work out
+// which it is; Continue then asks for an OTP (mobile) or the password (email).
 //
-// Admins create accounts through the server functions, which attach the
-// mobile number to the login, so mobile + OTP works from day one.
-// "Create an account" verifies the mobile number by OTP — that creates the
-// login — and then /register collects the details and sends them for
-// approval. Signing in (not registering) with a number nobody has would also
-// make Firebase create an empty login; that one is deleted straight away.
-//
-// `hold` stops the page redirecting while the OTP is being confirmed, so an
-// unknown number can be cleaned up first.
+// Signing in with a number nobody has makes Firebase create an empty login —
+// that one is deleted straight away and the person is pointed to Create an
+// account. `hold` stops the redirect while that clean-up happens.
 
-const RESEND_AFTER_MS = 30_000
+type Step = 'id' | 'password' | 'otp'
+type Kind = 'mobile' | 'email' | null
 
-function describeAuthError(err: unknown): string {
-  if (err instanceof FirebaseError) {
-    switch (err.code) {
-      case 'auth/invalid-credential':
-      case 'auth/invalid-login-credentials':
-      case 'auth/wrong-password':
-      case 'auth/user-not-found':
-        return 'Invalid email or password.'
-      case 'auth/too-many-requests':
-        return 'Too many attempts. Please wait a few minutes and try again.'
-      case 'auth/invalid-email':
-        return 'That email address looks malformed.'
-      case 'auth/invalid-phone-number':
-      case 'auth/missing-phone-number':
-        return 'That mobile number doesn’t look right.'
-      case 'auth/invalid-verification-code':
-      case 'auth/missing-verification-code':
-        return 'That code is incorrect. Check the SMS and try again.'
-      case 'auth/code-expired':
-        return 'That code has expired. Send a new one.'
-      case 'auth/quota-exceeded':
-        return 'The daily SMS limit has been reached. Please sign in with email for now.'
-      case 'auth/captcha-check-failed':
-        return 'The security check failed. Reload the page and try again.'
-      case 'auth/operation-not-allowed':
-        return 'Mobile login isn’t switched on for this app yet.'
-      case 'auth/network-request-failed':
-        return 'Network error. Check your connection and try again.'
-      default:
-        return `Sign-in failed (${err.code}).`
-    }
-  }
-  return 'Sign-in failed. Please try again.'
+function detect(raw: string): Kind {
+  const v = raw.trim()
+  if (!v) return null
+  if (v.includes('@') || /[a-z]/i.test(v)) return 'email'
+  return 'mobile'
 }
-
-const toE164 = (digits: string) => `+91${digits}`
-const validMobile = (digits: string) => /^[6-9]\d{9}$/.test(digits)
-
-type Tab = 'phone' | 'email'
-type PhoneMode = 'login' | 'register'
 
 export function LoginPage() {
   const { firebaseUser } = useAuth()
-  const [tab, setTab] = useState<Tab>('phone')
-  const [phoneMode, setPhoneMode] = useState<PhoneMode>('login')
-  const [step, setStep] = useState<'enter' | 'code'>('enter')
+  const navigate = useNavigate()
+  const otp = usePhoneOtp()
 
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
+  const [step, setStep] = useState<Step>('id')
   const [password, setPassword] = useState('')
-  const [mobile, setMobile] = useState('')
   const [code, setCode] = useState('')
-
   const [error, setError] = useState<string | null>(null)
   const [unknownNumber, setUnknownNumber] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
+  const [busy, setBusy] = useState(false)
   const [hold, setHold] = useState(false)
 
-  const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null)
-  const [resendAt, setResendAt] = useState(0)
-  const [now, setNow] = useState(() => Date.now())
+  // Signed in and nothing in progress — "/" routes onward (to /register for
+  // someone without an approved profile). auth.currentUser guards the moment
+  // after an unknown number's login was deleted.
+  if (firebaseUser && auth.currentUser && !hold) return <Navigate to="/" replace />
 
-  const recaptchaHost = useRef<HTMLDivElement>(null)
-  const verifierRef = useRef<RecaptchaVerifier | null>(null)
+  const kind = detect(identifier)
+  const mobile = normalizeMobile(identifier)
+  const email = identifier.trim().toLowerCase()
 
-  useEffect(() => {
-    if (step !== 'code') return
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [step])
+  const hint =
+    kind === 'mobile'
+      ? isValidMobile(mobile)
+        ? `We’ll send an OTP to +91 ${mobile}`
+        : 'Enter your 10-digit mobile number'
+      : kind === 'email'
+        ? isEmail(email)
+          ? 'Next you’ll enter your password'
+          : 'Enter your full email address'
+        : 'Use the mobile number or email your account was made with'
 
-  useEffect(() => () => verifierRef.current?.clear(), [])
-
-  // Signed in and nothing in progress — leave /login ("/" routes onward,
-  // including to /register for someone without an approved profile).
-  // (auth.currentUser guards the moment after an unknown number's login was
-  // deleted but before the context has caught up.)
-  if (firebaseUser && auth.currentUser && !hold) {
-    return <Navigate to="/" replace />
-  }
-
-  // A fresh invisible reCAPTCHA per send: a used or failed verifier can't be
-  // reused, and rendering twice into one element throws.
-  function freshVerifier(): RecaptchaVerifier {
-    verifierRef.current?.clear()
-    const host = recaptchaHost.current!
-    host.innerHTML = ''
-    const el = document.createElement('div')
-    host.appendChild(el)
-    verifierRef.current = new RecaptchaVerifier(auth, el, { size: 'invisible' })
-    return verifierRef.current
-  }
-
-  function resetPhoneFlow() {
-    setStep('enter')
+  function backToId() {
+    setStep('id')
+    setPassword('')
     setCode('')
-    setConfirmation(null)
     setError(null)
-    setUnknownNumber(false)
+    otp.reset()
   }
 
-  function goTo(nextTab: Tab, mode: PhoneMode = 'login') {
-    setTab(nextTab)
-    setPhoneMode(mode)
-    resetPhoneFlow()
-  }
-
-  async function handleEmail(e: FormEvent) {
-    e.preventDefault()
+  async function sendOtp() {
+    setBusy(true)
     setError(null)
-    setSubmitting(true)
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password)
-    } catch (err) {
-      setError(describeAuthError(err))
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  async function sendCode(e?: FormEvent) {
-    e?.preventDefault()
-    setError(null)
-    setUnknownNumber(false)
-    if (!validMobile(mobile)) return setError('Enter a valid 10-digit mobile number.')
-    setSubmitting(true)
-    try {
-      const result = await signInWithPhoneNumber(auth, toE164(mobile), freshVerifier())
-      setConfirmation(result)
+      await otp.send(mobile)
       setCode('')
-      setStep('code')
-      setResendAt(Date.now() + RESEND_AFTER_MS)
+      setStep('otp')
     } catch (err) {
       setError(describeAuthError(err))
     } finally {
-      setSubmitting(false)
+      setBusy(false)
     }
   }
 
-  async function verifyCode(e: FormEvent) {
+  async function onContinue(e: FormEvent) {
     e.preventDefault()
-    if (!confirmation) return
     setError(null)
-    setSubmitting(true)
+    setUnknownNumber(false)
+    if (kind === 'mobile') {
+      if (!isValidMobile(mobile)) return setError('Enter a valid 10-digit Indian mobile number.')
+      await sendOtp()
+    } else if (kind === 'email') {
+      if (!isEmail(email)) return setError('Enter a valid email address.')
+      setStep('password')
+    } else {
+      setError('Enter your mobile number or email.')
+    }
+  }
+
+  async function onPassword(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setError(null)
+    try {
+      await signInWithEmailAndPassword(auth, email, password)
+    } catch (err) {
+      setError(describeAuthError(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onVerify(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setError(null)
     setHold(true)
     try {
-      const cred = await confirmation.confirm(code.trim())
-      if (phoneMode === 'login' && getAdditionalUserInfo(cred)?.isNewUser) {
-        // Nobody has this number — remove the empty login Firebase just made.
+      const cred = await otp.confirm(code)
+      if (getAdditionalUserInfo(cred)?.isNewUser) {
         await deleteUser(cred.user).catch(() => signOut(auth))
-        resetPhoneFlow()
+        backToId()
         setUnknownNumber(true)
-        setError('No account uses this mobile number yet.')
+        setError(`No account uses +91 ${mobile} yet.`)
       }
-      // Registering: keep the new login; "/" sends them on to /register.
-      // An existing account (registering again by mistake) just signs in.
     } catch (err) {
       setError(describeAuthError(err))
     } finally {
       setHold(false)
-      setSubmitting(false)
+      setBusy(false)
     }
   }
 
-  const canResend = now >= resendAt
-  const resendIn = Math.max(0, Math.ceil((resendAt - now) / 1000))
-  const registering = tab === 'phone' && phoneMode === 'register'
+  const chip = (
+    <div className="flex items-center justify-between gap-3 rounded-full border px-3.5 py-2" style={{ borderColor: 'var(--color-line)', backgroundColor: 'var(--color-paper)' }}>
+      <span className="text-[13px] truncate font-mono" style={{ color: 'var(--color-char)' }}>
+        {step === 'otp' ? `+91 ${mobile}` : email}
+      </span>
+      <TextLink tone="soft" onClick={backToId}>
+        Change
+      </TextLink>
+    </div>
+  )
 
   return (
-    <AuthCard subtitle={registering ? 'Create an account' : 'Sign in to your account'}>
-      {!registering && (
-        <div className="grid grid-cols-2 gap-1 p-1 rounded-full mb-6" style={{ backgroundColor: 'var(--color-paper)' }}>
-          {(['phone', 'email'] as const).map((t) => {
-            const active = tab === t
-            return (
-              <button
-                key={t}
-                type="button"
-                onClick={() => goTo(t)}
-                className="rounded-full py-2 text-[13px] font-medium transition-colors"
-                style={{
-                  backgroundColor: active ? 'var(--color-ink)' : 'transparent',
-                  color: active ? 'var(--color-frost)' : 'var(--color-char-soft)',
+    <AuthCard subtitle="Sign in to your account">
+      {step === 'id' && (
+        <form onSubmit={onContinue} className="space-y-4">
+          <Field label="Mobile number or email" htmlFor="identifier" hint={hint}>
+            <div className="relative">
+              {kind === 'mobile' && (
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-[14px]" style={{ color: 'var(--color-char-soft)' }}>
+                  +91
+                </span>
+              )}
+              <input
+                id="identifier"
+                autoFocus
+                autoComplete="username"
+                value={identifier}
+                onChange={(e) => {
+                  setIdentifier(e.target.value)
+                  setError(null)
+                  setUnknownNumber(false)
                 }}
-              >
-                {t === 'phone' ? 'Mobile & OTP' : 'Email & password'}
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      {tab === 'email' && (
-        <form onSubmit={handleEmail} className="space-y-4">
-          <Field label="Email" htmlFor="email">
-            <input id="email" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} style={inputStyle} />
+                placeholder="98765 43210 or name@college.edu"
+                className={`${inputCls} ${kind === 'mobile' ? 'pl-12 font-mono' : ''}`}
+                style={inputStyle}
+              />
+            </div>
           </Field>
-          <Field label="Password" htmlFor="password">
-            <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className={inputCls} style={inputStyle} />
-          </Field>
-          <ErrorLine error={error} />
-          <SubmitButton busy={submitting} label="Sign in" busyLabel="Signing in…" />
-        </form>
-      )}
-
-      {tab === 'phone' && step === 'enter' && (
-        <form onSubmit={sendCode} className="space-y-4">
-          {registering && (
-            <p className="text-[12.5px] leading-relaxed rounded-[10px] px-3 py-2.5" style={{ backgroundColor: 'var(--color-gold-soft)', color: 'var(--color-char)' }}>
-              First we confirm your mobile number with an OTP. Then you fill in your details and your college (or the platform admin) approves
-              your account.
-            </p>
-          )}
-          <MobileField value={mobile} onChange={setMobile} />
           <ErrorLine error={error} />
           {unknownNumber && (
             <p className="text-[12.5px]" style={{ color: 'var(--color-char-soft)' }}>
-              New here? <TextLink onClick={() => goTo('phone', 'register')}>Create an account</TextLink> with this number.
+              New here? <TextLink onClick={() => navigate(`/register?mobile=${mobile}`)}>Create an account</TextLink> with this number.
             </p>
           )}
-          <SubmitButton busy={submitting} label="Send OTP" busyLabel="Sending…" />
+          <SubmitButton
+            busy={busy}
+            label={kind === 'mobile' ? 'Send OTP' : 'Continue'}
+            busyLabel={kind === 'mobile' ? 'Sending OTP…' : 'Please wait…'}
+          />
         </form>
       )}
 
-      {tab === 'phone' && step === 'code' && (
-        <form onSubmit={verifyCode} className="space-y-4">
-          <p className="text-[13px]" style={{ color: 'var(--color-char-soft)' }}>
-            We sent a 6-digit code to <span className="font-mono" style={{ color: 'var(--color-char)' }}>+91 {mobile}</span>.
+      {step === 'password' && (
+        <form onSubmit={onPassword} className="space-y-4">
+          {chip}
+          <Field label="Password" htmlFor="password">
+            <input
+              id="password"
+              type="password"
+              autoFocus
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputCls}
+              style={inputStyle}
+            />
+          </Field>
+          <ErrorLine error={error} />
+          <SubmitButton busy={busy} label="Sign in" busyLabel="Signing in…" />
+          <p className="text-[12.5px] text-center" style={{ color: 'var(--color-char-soft)' }}>
+            Forgot it? Sign in with your <TextLink onClick={backToId}>mobile number and an OTP</TextLink> instead.
           </p>
-          <Field label="OTP code" htmlFor="otp">
+        </form>
+      )}
+
+      {step === 'otp' && (
+        <form onSubmit={onVerify} className="space-y-4">
+          {chip}
+          <Field label="OTP code" htmlFor="otp" hint="Enter the 6-digit code we sent by SMS.">
             <input
               id="otp"
               inputMode="numeric"
@@ -272,32 +222,23 @@ export function LoginPage() {
             />
           </Field>
           <ErrorLine error={error} />
-          <SubmitButton busy={submitting} disabled={code.length !== 6} label={registering ? 'Verify & continue' : 'Verify & sign in'} busyLabel="Verifying…" />
-          <div className="flex items-center justify-between text-[12.5px]">
-            <TextLink tone="soft" onClick={resetPhoneFlow}>
-              Change number
-            </TextLink>
-            <button type="button" disabled={!canResend || submitting} onClick={() => sendCode()} className="font-medium disabled:opacity-50" style={{ color: 'var(--color-gold)' }}>
-              {canResend ? 'Resend code' : `Resend in ${resendIn}s`}
+          <SubmitButton busy={busy} disabled={code.length !== 6} label="Verify & sign in" busyLabel="Verifying…" />
+          <div className="text-right text-[12.5px]">
+            <button type="button" disabled={!otp.canResend || busy} onClick={sendOtp} className="font-medium disabled:opacity-50" style={{ color: 'var(--color-gold)' }}>
+              {otp.canResend ? 'Resend code' : `Resend in ${otp.resendIn}s`}
             </button>
           </div>
         </form>
       )}
 
       <div className="mt-6 pt-4 border-t text-center text-[12.5px]" style={{ borderColor: 'var(--color-line)', color: 'var(--color-char-soft)' }}>
-        {registering ? (
-          <>
-            Already have an account? <TextLink onClick={() => goTo('phone')}>Sign in</TextLink>
-          </>
-        ) : (
-          <>
-            New to USOP? <TextLink onClick={() => goTo('phone', 'register')}>Create an account</TextLink>
-          </>
-        )}
+        New to USOP?{' '}
+        <Link to="/register" className="font-medium underline underline-offset-2" style={{ color: 'var(--color-gold)' }}>
+          Create an account
+        </Link>
       </div>
 
-      {/* Invisible reCAPTCHA (Firebase requires it before sending an OTP on the web). */}
-      <div ref={recaptchaHost} />
+      <div ref={otp.recaptchaHost} />
     </AuthCard>
   )
 }

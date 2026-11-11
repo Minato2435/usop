@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import { useAuth } from './AuthContext'
-import { AuthCard, ErrorLine, Field, MobileField, SubmitButton, TextLink, inputCls, inputStyle } from './authUi'
+import { AuthCard, ErrorLine, Field, SubmitButton, TextLink, inputCls, inputStyle } from './authUi'
+import { describeAuthError, isValidMobile, normalizeMobile, usePhoneOtp } from './phoneOtp'
 import {
   accountErrorMessage,
   cancelRegistration,
@@ -14,10 +15,14 @@ import {
 } from '../lib/accounts'
 import type { MbbsYear, RegistrationRequest, Role } from '../types'
 
-// /register — for someone signed in (their mobile is verified) who has no
-// approved profile yet. Shows the registration form, then the request's
-// status: waiting for approval, or rejected with the reason (edit & resend).
+// /register — "Create an account". The form opens straight away; the mobile
+// number is verified by OTP inside the form (that creates the login), then
+// "Send for approval" sends the request. After that this page shows the
+// request's status: waiting, or rejected with the reason (edit & resend).
 // The moment it's approved the profile appears and "/" takes them home.
+//
+// The typed details live here, in the page, so they survive the moment the
+// OTP signs the person in and the app reloads their (missing) profile.
 
 const REGISTER_ROLES: { role: Role; label: string; hint: string }[] = [
   { role: 'student', label: 'Student', hint: 'Approved by your college' },
@@ -25,20 +30,54 @@ const REGISTER_ROLES: { role: Role; label: string; hint: string }[] = [
   { role: 'hod', label: 'Head of Department', hint: 'Approved by your college' },
   { role: 'principal', label: 'Principal', hint: 'Approved by your college' },
   { role: 'institutionAdmin', label: 'Institution Admin', hint: 'Approved by the platform admin' },
-  { role: 'skillLabDirector', label: 'Skill Lab Director', hint: 'Approved by the platform admin' },
 ]
-const ROLE_LABEL = Object.fromEntries(REGISTER_ROLES.map((r) => [r.role, r.label])) as Record<Role, string>
+const ROLE_LABEL: Partial<Record<Role, string>> = Object.fromEntries(REGISTER_ROLES.map((r) => [r.role, r.label]))
 const YEARS: MbbsYear[] = [1, 2, 3, 4]
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const fmt = (ms: number) => new Date(ms).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
+interface Draft {
+  role: Role
+  name: string
+  email: string
+  password: string
+  mobile: string
+  stateFilter: string
+  institutionId: string
+  mbbsYear: MbbsYear
+  rollNumber: string
+  associatedYears: MbbsYear[]
+  departmentId: string
+}
+
+function draftFrom(r: RegistrationRequest | null, mobile = ''): Draft {
+  return {
+    role: r?.role ?? 'student',
+    name: r?.name ?? '',
+    email: r?.email ?? '',
+    password: '',
+    mobile: r?.phone ?? mobile,
+    stateFilter: '',
+    institutionId: r?.institutionId ?? '',
+    mbbsYear: r?.mbbsYear ?? 1,
+    rollNumber: r?.rollNumber ?? '',
+    associatedYears: r?.associatedMbbsYears ?? [],
+    departmentId: r?.departmentId ?? '',
+  }
+}
+
 export function RegisterPage() {
   const { firebaseUser, appUser, loading } = useAuth()
+  const [params] = useSearchParams()
   const uid = firebaseUser?.uid ?? null
 
+  const [draft, setDraft] = useState<Draft>(() => draftFrom(null, normalizeMobile(params.get('mobile') ?? '').slice(0, 10)))
   const [request, setRequest] = useState<RegistrationRequest | null | undefined>(undefined)
   useEffect(() => {
-    if (!uid) return
+    if (!uid) {
+      setRequest(undefined)
+      return
+    }
     return watchMyRegistration(uid, setRequest, () => setRequest(null))
   }, [uid])
 
@@ -47,11 +86,9 @@ export function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [confirmCancel, setConfirmCancel] = useState(false)
 
-  if (loading) return null
-  if (!firebaseUser) return <Navigate to="/login" replace />
   if (appUser) return <Navigate to="/" replace />
 
-  const mobile = firebaseUser.phoneNumber?.replace(/^\+91/, '') ?? ''
+  const verifiedMobile = firebaseUser?.phoneNumber?.replace(/^\+91/, '') ?? null
 
   async function withdraw() {
     setBusy(true)
@@ -59,24 +96,32 @@ export function RegisterPage() {
     try {
       await cancelRegistration({})
       await signOut(auth).catch(() => {})
+      setDraft((d) => ({ ...d, mobile: '' }))
+      setConfirmCancel(false)
     } catch (e) {
       setError(accountErrorMessage(e))
+    } finally {
       setBusy(false)
     }
   }
 
-  if (!mobile) {
+  // Signed in with email but there's no profile and no mobile on this login
+  // (e.g. a half-made account) — nothing to register from here.
+  if (firebaseUser && !verifiedMobile && !loading) {
     return (
       <AuthCard subtitle="Create an account">
         <p className="text-[13.5px] mb-4" style={{ color: 'var(--color-char)' }}>
-          This login has no account yet. Ask your administrator, or sign out and create an account with your mobile number.
+          This login has no account yet. Sign out and create an account with your mobile number, or ask your administrator.
         </p>
-        <SignOutRow />
+        <TextLink tone="soft" onClick={() => signOut(auth)}>
+          Sign out
+        </TextLink>
       </AuthCard>
     )
   }
 
-  if (request === undefined) {
+  // Waiting for the app to load the request after signing in.
+  if (firebaseUser && (loading || request === undefined)) {
     return (
       <AuthCard subtitle="Create an account">
         <p className="text-[13px]" style={{ color: 'var(--color-char-soft)' }}>
@@ -86,23 +131,34 @@ export function RegisterPage() {
     )
   }
 
-  const showForm = request === null || editing
+  const showForm = !firebaseUser || !request || editing
 
   if (showForm) {
     return (
       <AuthCard subtitle={request ? 'Edit your request' : 'Create an account'} wide>
         <RegistrationForm
-          mobile={mobile}
-          existing={request}
-          email={firebaseUser.email ?? ''}
+          draft={draft}
+          setDraft={setDraft}
+          verifiedMobile={verifiedMobile}
+          existing={request ?? null}
           onDone={() => setEditing(false)}
+          onUseOtherNumber={withdraw}
           onCancelEdit={request ? () => setEditing(false) : undefined}
         />
-        {!request && (
-          <div className="mt-6 pt-4 border-t text-center text-[12.5px]" style={{ borderColor: 'var(--color-line)', color: 'var(--color-char-soft)' }}>
-            Changed your mind? <TextLink tone="soft" onClick={withdraw}>Cancel and remove this number</TextLink>
-          </div>
-        )}
+        <div className="mt-6 pt-4 border-t text-center text-[12.5px]" style={{ borderColor: 'var(--color-line)', color: 'var(--color-char-soft)' }}>
+          {firebaseUser ? (
+            <>
+              Changed your mind? <TextLink tone="soft" onClick={withdraw}>Cancel and remove this number</TextLink>
+            </>
+          ) : (
+            <>
+              Already have an account?{' '}
+              <Link to="/login" className="font-medium underline underline-offset-2" style={{ color: 'var(--color-gold)' }}>
+                Sign in
+              </Link>
+            </>
+          )}
+        </div>
       </AuthCard>
     )
   }
@@ -120,20 +176,22 @@ export function RegisterPage() {
         <div className="text-[14px] font-medium" style={{ color: approved ? 'var(--color-teal)' : rejected ? 'var(--color-clay)' : 'var(--color-char)' }}>
           {approved ? 'Approved — opening your dashboard…' : rejected ? 'Your request wasn’t approved' : `Sent to ${approverText}`}
         </div>
-        <p className="text-[12.5px] mt-1 leading-relaxed" style={{ color: 'var(--color-char)' }}>
-          {rejected ? (
-            <>
-              <span className="font-medium">Reason:</span> {request.reason}
-              <br />
-              Fix the details below and send it again.
-            </>
-          ) : approved ? null : (
-            <>
-              You’ll be able to use USOP as soon as {approverText} approves your account. Keep this page open or come back later — sign in with
-              your mobile number or email.
-            </>
-          )}
-        </p>
+        {!approved && (
+          <p className="text-[12.5px] mt-1 leading-relaxed" style={{ color: 'var(--color-char)' }}>
+            {rejected ? (
+              <>
+                <span className="font-medium">Reason:</span> {request.reason}
+                <br />
+                Fix the details and send it again.
+              </>
+            ) : (
+              <>
+                You’ll be able to use USOP as soon as {approverText} approves your account. You can close this page — sign in later with your
+                mobile number or email to check.
+              </>
+            )}
+          </p>
+        )}
       </div>
 
       <dl className="grid grid-cols-[120px_1fr] gap-x-3 gap-y-2 text-[13px] mb-6">
@@ -151,7 +209,10 @@ export function RegisterPage() {
         {!approved && (
           <button
             type="button"
-            onClick={() => setEditing(true)}
+            onClick={() => {
+              setDraft(draftFrom(request))
+              setEditing(true)
+            }}
             className="chamfer-sm px-4 py-2.5 text-[13px] font-medium"
             style={{ backgroundColor: 'var(--color-ink)', color: 'var(--color-frost)' }}
           >
@@ -201,23 +262,26 @@ function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   )
 }
 
-function SignOutRow() {
-  return <TextLink tone="soft" onClick={() => signOut(auth)}>Sign out</TextLink>
-}
-
 function RegistrationForm({
-  mobile,
+  draft,
+  setDraft,
+  verifiedMobile,
   existing,
-  email: authEmail,
   onDone,
+  onUseOtherNumber,
   onCancelEdit,
 }: {
-  mobile: string
+  draft: Draft
+  setDraft: (fn: (d: Draft) => Draft) => void
+  verifiedMobile: string | null
   existing: RegistrationRequest | null
-  email: string
   onDone: () => void
+  onUseOtherNumber: () => void
   onCancelEdit?: () => void
 }) {
+  const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }))
+  const { role, name, email, password, mobile, stateFilter, institutionId, mbbsYear, rollNumber, associatedYears, departmentId } = draft
+
   const [options, setOptions] = useState<RegistrationOptions | null>(null)
   const [optionsError, setOptionsError] = useState<string | null>(null)
   useEffect(() => {
@@ -226,21 +290,47 @@ function RegistrationForm({
       .catch((e) => setOptionsError(accountErrorMessage(e, 'Couldn’t load the list of colleges. Reload the page to try again.')))
   }, [])
 
-  const [role, setRole] = useState<Role>(existing?.role ?? 'student')
-  const [name, setName] = useState(existing?.name ?? '')
-  const [email, setEmail] = useState(existing?.email ?? authEmail)
-  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [stateFilter, setStateFilter] = useState('')
-  const [institutionId, setInstitutionId] = useState(existing?.institutionId ?? '')
-  const [mbbsYear, setMbbsYear] = useState<MbbsYear>(existing?.mbbsYear ?? 1)
-  const [rollNumber, setRollNumber] = useState(existing?.rollNumber ?? '')
-  const [associatedYears, setAssociatedYears] = useState<MbbsYear[]>(existing?.associatedMbbsYears ?? [])
-  const [departmentId, setDepartmentId] = useState(existing?.departmentId ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const platformWide = role === 'skillLabDirector'
+  // ── Mobile verification (inside the form) ──
+  const otp = usePhoneOtp()
+  const [code, setCode] = useState('')
+  const [otpBusy, setOtpBusy] = useState(false)
+  const [otpError, setOtpError] = useState<string | null>(null)
+  const verified = verifiedMobile !== null
+
+  async function sendOtp() {
+    setOtpError(null)
+    if (!isValidMobile(mobile)) return setOtpError('Enter a valid 10-digit Indian mobile number.')
+    setOtpBusy(true)
+    try {
+      await otp.send(mobile)
+      setCode('')
+    } catch (err) {
+      setOtpError(describeAuthError(err))
+    } finally {
+      setOtpBusy(false)
+    }
+  }
+
+  async function verifyOtp() {
+    setOtpError(null)
+    setOtpBusy(true)
+    try {
+      // Signs this number in. A brand-new number becomes their login; a number
+      // that already has an account signs into it (and the page follows).
+      await otp.confirm(code)
+    } catch (err) {
+      setOtpError(describeAuthError(err))
+    } finally {
+      setOtpBusy(false)
+    }
+  }
+
+  // ── The rest of the form ──
+  const platformWide = false
   const needsDept = role === 'faculty' || role === 'hod'
   const states = useMemo(() => [...new Set((options?.institutions ?? []).map((i) => i.state).filter(Boolean))].sort(), [options])
   const colleges = useMemo(
@@ -252,13 +342,12 @@ function RegistrationForm({
     return role === 'faculty' ? all.filter((d) => associatedYears.includes(d.mbbsYear)) : all
   }, [options, institutionId, role, associatedYears])
 
-  // Keep the department valid as the college / years change.
   useEffect(() => {
-    if (departmentId && options && !deptOptions.some((d) => d.id === departmentId)) setDepartmentId('')
-  }, [deptOptions, departmentId, options])
+    if (departmentId && options && !deptOptions.some((d) => d.id === departmentId)) setDraft((d) => ({ ...d, departmentId: '' }))
+  }, [deptOptions, departmentId, options, setDraft])
 
   const needsPassword = !existing
-  const valid =
+  const detailsValid =
     name.trim() !== '' &&
     EMAIL_RE.test(email.trim()) &&
     (needsPassword ? password.length >= 6 : password === '' || password.length >= 6) &&
@@ -267,9 +356,11 @@ function RegistrationForm({
     (role !== 'student' || rollNumber.trim() !== '') &&
     (role !== 'faculty' || associatedYears.length > 0)
 
+  const submitHint = !verified ? 'Verify your mobile number to continue.' : !detailsValid ? 'Fill in every field above.' : null
+
   async function submit(e: FormEvent) {
     e.preventDefault()
-    if (!valid || busy) return
+    if (!verified || !detailsValid || busy) return
     setBusy(true)
     setError(null)
     try {
@@ -277,13 +368,14 @@ function RegistrationForm({
         role,
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        institutionId: platformWide ? null : institutionId,
+        institutionId,
         departmentId: needsDept ? departmentId : null,
         mbbsYear: role === 'student' ? mbbsYear : null,
         associatedMbbsYears: role === 'faculty' ? associatedYears : null,
         rollNumber: role === 'student' ? rollNumber.trim() : null,
         ...(password ? { password } : {}),
       })
+      setDraft((d) => ({ ...d, password: '' }))
       onDone()
     } catch (err) {
       setError(accountErrorMessage(err, 'Couldn’t send your request. Please try again.'))
@@ -293,9 +385,130 @@ function RegistrationForm({
   }
 
   const selectCls = `${inputCls} appearance-auto`
+  const sectionTitle = (n: string, t: string) => (
+    <div className="flex items-center gap-2 pt-1">
+      <span className="font-mono text-[11px]" style={{ color: 'var(--color-gold)' }}>
+        {n}
+      </span>
+      <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--color-char-soft)' }}>
+        {t}
+      </span>
+      <span className="flex-1 h-px" style={{ backgroundColor: 'var(--color-line)' }} />
+    </div>
+  )
 
   return (
     <form onSubmit={submit} className="space-y-4">
+      {sectionTitle('01', 'Your mobile number')}
+      {verified ? (
+        <div className="flex items-center justify-between gap-3 rounded-[10px] border px-3.5 py-2.5" style={{ borderColor: 'var(--color-teal)', backgroundColor: 'var(--color-teal-soft)' }}>
+          <div>
+            <div className="font-mono text-[14px]" style={{ color: 'var(--color-char)' }}>
+              +91 {verifiedMobile}
+            </div>
+            <div className="text-[11.5px] font-medium" style={{ color: 'var(--color-teal)' }}>
+              ✓ Verified
+            </div>
+          </div>
+          {!existing && (
+            <TextLink tone="soft" onClick={onUseOtherNumber}>
+              Use a different number
+            </TextLink>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <div
+              className="flex flex-1 min-w-0 rounded-[8px] border overflow-hidden focus-within:border-[var(--color-gold)]"
+              style={{ borderColor: 'var(--color-line)', opacity: otp.codeSent ? 0.7 : 1 }}
+            >
+              <span className="px-3 flex items-center font-mono text-[14px] border-r" style={{ backgroundColor: 'var(--color-paper)', borderColor: 'var(--color-line)', color: 'var(--color-char-soft)' }}>
+                +91
+              </span>
+              <input
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                maxLength={10}
+                disabled={otp.codeSent}
+                placeholder="10-digit mobile number"
+                value={mobile}
+                onChange={(e) => set('mobile', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                className="flex-1 min-w-0 px-3 py-2.5 text-[14px] font-mono outline-none"
+                style={{ backgroundColor: 'var(--color-paper-raised)', color: 'var(--color-char)' }}
+              />
+            </div>
+            {!otp.codeSent ? (
+              <button
+                type="button"
+                onClick={sendOtp}
+                disabled={otpBusy || !isValidMobile(mobile)}
+                className="shrink-0 rounded-[8px] px-4 text-[13px] font-medium disabled:opacity-50"
+                style={{ backgroundColor: 'var(--color-gold)', color: 'var(--color-paper-raised)' }}
+              >
+                {otpBusy ? 'Sending…' : 'Send OTP'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  otp.reset()
+                  setCode('')
+                  setOtpError(null)
+                }}
+                className="shrink-0 rounded-[8px] border px-3 text-[12.5px]"
+                style={{ borderColor: 'var(--color-line)', color: 'var(--color-char-soft)' }}
+              >
+                Change
+              </button>
+            )}
+          </div>
+
+          {otp.codeSent && (
+            <div className="rounded-[10px] px-3.5 py-3 space-y-2.5" style={{ backgroundColor: 'var(--color-gold-soft)' }}>
+              <p className="text-[12.5px]" style={{ color: 'var(--color-char)' }}>
+                Enter the 6-digit code sent to <span className="font-mono">+91 {otp.sentTo}</span>.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (code.length === 6) void verifyOtp()
+                    }
+                  }}
+                  className={`${inputCls} font-mono tracking-[0.45em] text-center text-[16px]`}
+                  style={inputStyle}
+                />
+                <button
+                  type="button"
+                  onClick={verifyOtp}
+                  disabled={otpBusy || code.length !== 6}
+                  className="shrink-0 rounded-[8px] px-4 text-[13px] font-medium disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--color-ink)', color: 'var(--color-frost)' }}
+                >
+                  {otpBusy ? 'Checking…' : 'Verify'}
+                </button>
+              </div>
+              <div className="text-right text-[12px]">
+                <button type="button" disabled={!otp.canResend || otpBusy} onClick={sendOtp} className="font-medium disabled:opacity-50" style={{ color: 'var(--color-gold)' }}>
+                  {otp.canResend ? 'Resend code' : `Resend in ${otp.resendIn}s`}
+                </button>
+              </div>
+            </div>
+          )}
+          <ErrorLine error={otpError} />
+        </div>
+      )}
+
+      {sectionTitle('02', 'About you')}
       <Field label="I am a">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {REGISTER_ROLES.map((r) => {
@@ -304,7 +517,7 @@ function RegistrationForm({
               <button
                 key={r.role}
                 type="button"
-                onClick={() => setRole(r.role)}
+                onClick={() => set('role', r.role)}
                 className="rounded-[10px] border px-3 py-2 text-left transition-colors"
                 style={{
                   borderColor: active ? 'var(--color-gold)' : 'var(--color-line)',
@@ -323,22 +536,25 @@ function RegistrationForm({
         </div>
       </Field>
 
+      <Field label="Full name" htmlFor="reg-name">
+        <input id="reg-name" value={name} onChange={(e) => set('name', e.target.value)} placeholder="As on your college records" className={inputCls} style={inputStyle} />
+      </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Full name" htmlFor="reg-name">
-          <input id="reg-name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="As on your college records" className={inputCls} style={inputStyle} />
-        </Field>
-        <MobileField value={mobile} disabled />
         <Field label="Email" htmlFor="reg-email" hint="You can also sign in with this email.">
-          <input id="reg-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} style={inputStyle} />
+          <input id="reg-email" type="email" autoComplete="email" value={email} onChange={(e) => set('email', e.target.value)} className={inputCls} style={inputStyle} />
         </Field>
-        <Field label={needsPassword ? 'Password' : 'New password (optional)'} htmlFor="reg-password" hint={needsPassword ? 'At least 6 characters.' : 'Leave blank to keep your current one.'}>
+        <Field
+          label={needsPassword ? 'Password' : 'New password (optional)'}
+          htmlFor="reg-password"
+          hint={needsPassword ? 'At least 6 characters.' : 'Leave blank to keep your current one.'}
+        >
           <div className="relative">
             <input
               id="reg-password"
               type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => set('password', e.target.value)}
               className={`${inputCls} pr-14`}
               style={inputStyle}
             />
@@ -349,40 +565,38 @@ function RegistrationForm({
         </Field>
       </div>
 
-      {!platformWide && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="State" htmlFor="reg-state">
-            <select id="reg-state" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} className={selectCls} style={inputStyle} disabled={!options}>
-              <option value="">All states</option>
-              {states.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="College" htmlFor="reg-college">
-            <select id="reg-college" required value={institutionId} onChange={(e) => setInstitutionId(e.target.value)} className={selectCls} style={inputStyle} disabled={!options}>
-              <option value="">{options ? 'Select your college' : 'Loading…'}</option>
-              {colleges.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                  {c.city ? ` — ${c.city}` : ''}
-                </option>
-              ))}
-              {/* Keep a picked college visible even when the state filter hides it. */}
-              {institutionId && !colleges.some((c) => c.id === institutionId) && (
-                <option value={institutionId}>{options?.institutions.find((c) => c.id === institutionId)?.name ?? 'Selected college'}</option>
-              )}
-            </select>
-          </Field>
-        </div>
-      )}
+      {sectionTitle('03', 'Your college')}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="State" htmlFor="reg-state">
+          <select id="reg-state" value={stateFilter} onChange={(e) => set('stateFilter', e.target.value)} className={selectCls} style={inputStyle} disabled={!options}>
+            <option value="">All states</option>
+            {states.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="College" htmlFor="reg-college">
+          <select id="reg-college" value={institutionId} onChange={(e) => set('institutionId', e.target.value)} className={selectCls} style={inputStyle} disabled={!options}>
+            <option value="">{options ? 'Select your college' : 'Loading…'}</option>
+            {colleges.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+                {c.city ? ` — ${c.city}` : ''}
+              </option>
+            ))}
+            {institutionId && !colleges.some((c) => c.id === institutionId) && (
+              <option value={institutionId}>{options?.institutions.find((c) => c.id === institutionId)?.name ?? 'Selected college'}</option>
+            )}
+          </select>
+        </Field>
+      </div>
 
       {role === 'student' && (
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="MBBS year" htmlFor="reg-year">
-            <select id="reg-year" value={mbbsYear} onChange={(e) => setMbbsYear(Number(e.target.value) as MbbsYear)} className={selectCls} style={inputStyle}>
+            <select id="reg-year" value={mbbsYear} onChange={(e) => set('mbbsYear', Number(e.target.value) as MbbsYear)} className={selectCls} style={inputStyle}>
               {YEARS.map((y) => (
                 <option key={y} value={y}>
                   Year {y}
@@ -391,7 +605,7 @@ function RegistrationForm({
             </select>
           </Field>
           <Field label="Registration number" htmlFor="reg-roll">
-            <input id="reg-roll" required value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} placeholder="e.g. MBBS2026-0142" className={inputCls} style={inputStyle} />
+            <input id="reg-roll" value={rollNumber} onChange={(e) => set('rollNumber', e.target.value)} placeholder="e.g. MBBS2026-0142" className={inputCls} style={inputStyle} />
           </Field>
         </div>
       )}
@@ -405,7 +619,7 @@ function RegistrationForm({
                 <button
                   key={y}
                   type="button"
-                  onClick={() => setAssociatedYears((p) => (p.includes(y) ? p.filter((v) => v !== y) : [...p, y].sort()))}
+                  onClick={() => set('associatedYears', active ? associatedYears.filter((v) => v !== y) : [...associatedYears, y].sort())}
                   className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-medium"
                   style={{
                     borderColor: active ? 'var(--color-gold)' : 'var(--color-line)',
@@ -425,9 +639,8 @@ function RegistrationForm({
         <Field label="Department" htmlFor="reg-dept">
           <select
             id="reg-dept"
-            required
             value={departmentId}
-            onChange={(e) => setDepartmentId(e.target.value)}
+            onChange={(e) => set('departmentId', e.target.value)}
             className={selectCls}
             style={inputStyle}
             disabled={!institutionId || (role === 'faculty' && associatedYears.length === 0)}
@@ -451,7 +664,12 @@ function RegistrationForm({
       )}
 
       <ErrorLine error={optionsError ?? error} />
-      <SubmitButton busy={busy} disabled={!valid} label={existing ? 'Send again for approval' : 'Send for approval'} busyLabel="Sending…" />
+      <SubmitButton busy={busy} disabled={!verified || !detailsValid} label={existing ? 'Send again for approval' : 'Send for approval'} busyLabel="Sending…" />
+      {submitHint && (
+        <p className="text-center text-[12px] -mt-1" style={{ color: 'var(--color-char-soft)' }}>
+          {submitHint}
+        </p>
+      )}
       {onCancelEdit && (
         <p className="text-center text-[12.5px]">
           <TextLink tone="soft" onClick={onCancelEdit}>
@@ -459,6 +677,7 @@ function RegistrationForm({
           </TextLink>
         </p>
       )}
+      <div ref={otp.recaptchaHost} />
     </form>
   )
 }

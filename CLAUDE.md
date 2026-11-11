@@ -2114,22 +2114,31 @@ but another Primary Admin; Institution Admin: Principal/HOD/Faculty/Student of t
   has no profile and the rules wouldn't let them read those), `submitRegistration`,
   `cancelRegistration`, `decideRegistration`.
 
-**Login** (`auth/LoginPage.tsx`): tabs Mobile & OTP (default) / Email & password, +91 only.
-Signing in with an unknown number deletes the empty login Firebase makes
-(`getAdditionalUserInfo().isNewUser`) and offers "Create an account". Each send gets a fresh
-invisible `RecaptchaVerifier` in a new child element. Console: Phone provider on, Blaze, SMS region
+**Login** (`auth/LoginPage.tsx`): ONE field, "Mobile number or email" — `detect()` decides as
+they type (anything with `@` or a letter = email, else mobile; `normalizeMobile` strips +91 /
+spaces). Continue → password step (email) or OTP step (mobile), with a "Change" chip. Signing in
+with an unknown number deletes the empty login Firebase makes (`getAdditionalUserInfo().isNewUser`)
+and offers "Create an account" (`/register?mobile=`). OTP sending/confirming is shared in
+`auth/phoneOtp.ts` (`usePhoneOtp`: a fresh invisible `RecaptchaVerifier` per send, in a new child
+element; resend after 30 s). Console: Phone provider on, Blaze, SMS region
 = India, 1,000 SMS/day cap, test number `+91 99999 00001` / `123456`.
 
 **Self-registration** — `registrationRequests/{uid}` (`RegistrationRequest` type), written only by
 the server:
-- Create an account → OTP (creates the login) → `/register` (`auth/RegisterPage.tsx`): role,
-  name, email + password (so email login works too), college; student year + reg. no.; faculty
-  years + department; HOD department. Then "Waiting for approval" / "Rejected — reason, edit and
+- Create an account → `/register` (`auth/RegisterPage.tsx`) opens the form straight away, even
+  signed out. Section 01 verifies the mobile inside the form (Send OTP → code → ✓ Verified; that
+  creates the login; "Use a different number" withdraws it). Then role, name, email + password
+  (so email login works too), college; student year + reg. no.; faculty years + department; HOD
+  department. "Send for approval" stays disabled until the number is verified. The typed `Draft`
+  lives in `RegisterPage` (not the form) so it survives the reload when the OTP signs them in.
+  `registrationOptions` is public for this reason. Then "Waiting for approval" / "Rejected — reason, edit and
   send again" / withdraw (deletes the login).
 - No `users/{uid}` profile exists until approved, so nothing else is reachable. `AuthContext`
   exposes `profileMissing`; `RequireRole` and `RootRedirect` send such users to `/register`.
-- `approver`: `'institution'` for Principal/HOD/Faculty/Student (their college's admin; Primary
-  Admin as backup), `'primary'` for Institution Admin / Skill Lab Director.
+- Requestable roles (`REGISTRABLE_ROLES` in functions): Student, Faculty, HOD, Principal,
+  Institution Admin. **Skill Lab Director is never self-registered** — Primary Admin creates it
+  from Users. `approver`: `'institution'` for Principal/HOD/Faculty/Student (their college's
+  admin; Primary Admin as backup), `'primary'` for Institution Admin.
 - Approvers: `/admin/registrations`, `/institution-admin/registrations`
   (`components/RegistrationRequestsPage.tsx`) with Waiting/Approved/Rejected tabs, a review modal
   that can correct details (Primary may change the college/any role; a college admin only college
