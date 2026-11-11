@@ -71,26 +71,49 @@ export function usePhoneOtp() {
     return () => clearInterval(id)
   }, [confirmation])
 
-  useEffect(() => () => verifierRef.current?.clear(), [])
-
-  // A fresh verifier per send: a used or failed one can't be reused, and
-  // rendering twice into one element throws.
-  function freshVerifier(): RecaptchaVerifier {
+  // Build (and pre-render) a fresh invisible verifier. Done ahead of time —
+  // on page load and again straight after every send — so clicking
+  // "Send OTP" doesn't first wait for Google's reCAPTCHA script to download
+  // and start. A used or failed verifier can't be reused, and rendering twice
+  // into one element throws, so each one gets a new child element.
+  function prepare(): RecaptchaVerifier | null {
+    const host = recaptchaHost.current
+    if (!host) return null
     verifierRef.current?.clear()
-    const host = recaptchaHost.current!
     host.innerHTML = ''
     const el = document.createElement('div')
     host.appendChild(el)
-    verifierRef.current = new RecaptchaVerifier(auth, el, { size: 'invisible' })
-    return verifierRef.current
+    const verifier = new RecaptchaVerifier(auth, el, { size: 'invisible' })
+    verifierRef.current = verifier
+    verifier.render().catch(() => {
+      // Network hiccup: send() will build another one.
+      if (verifierRef.current === verifier) verifierRef.current = null
+    })
+    return verifier
   }
 
+  useEffect(() => {
+    prepare()
+    return () => {
+      verifierRef.current?.clear()
+      verifierRef.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function send(mobile: string): Promise<void> {
-    const result = await signInWithPhoneNumber(auth, `+91${mobile}`, freshVerifier())
-    setConfirmation(result)
-    setSentTo(mobile)
-    setNow(Date.now())
-    setResendAt(Date.now() + RESEND_AFTER_MS)
+    const verifier = verifierRef.current ?? prepare()
+    if (!verifier) throw new Error('The page isn’t ready yet. Try again in a moment.')
+    try {
+      const result = await signInWithPhoneNumber(auth, `+91${mobile}`, verifier)
+      setConfirmation(result)
+      setSentTo(mobile)
+      setNow(Date.now())
+      setResendAt(Date.now() + RESEND_AFTER_MS)
+    } finally {
+      // Ready a new one for "Resend" or a retry, in the background.
+      prepare()
+    }
   }
 
   async function confirm(code: string): Promise<UserCredential> {
