@@ -22,6 +22,7 @@ const NAV: NavItem[] = [
   { label: 'Faculty', to: '/hod/faculty', icon: 'cap' },
   { label: 'Activities', to: '/hod/activities', icon: 'inbox' },
   { label: 'Videos', to: '/hod/videos', icon: 'video' },
+  { label: 'Resources', to: '/hod/resources', icon: 'resources' },
 ]
 
 const STORAGE_KEY = 'usop.hod.sidebarCollapsed'

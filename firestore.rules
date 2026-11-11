@@ -250,6 +250,26 @@ service cloud.firestore {
       allow update, delete: if isPrimaryAdmin() || isInstitutionAdminFor(resource.data.institutionId);
     }
 
+    // Resources (PDF / Word / PowerPoint / Excel / images) — same model and
+    // rule shape as videoTutorials: any active user can read (study material
+    // isn't sensitive, and the student/faculty list queries filter on
+    // institutionId/audience/mbbsYear, which a flat read rule always
+    // satisfies); Primary Admin writes anything, a college admin only their
+    // own college's resources.
+    match /resources/{resourceId} {
+      allow read: if isActive();
+      allow create: if isPrimaryAdmin() || isInstitutionAdminFor(request.resource.data.institutionId);
+      allow update, delete: if isPrimaryAdmin() || isInstitutionAdminFor(resource.data.institutionId);
+    }
+
+    // A college's include/exclude switch for a catalog resource.
+    match /institutionResourceOverrides/{overrideId} {
+      allow read: if isPrimaryAdmin()
+        || (isActive() && sameInstitution(resource.data.institutionId));
+      allow create: if isPrimaryAdmin() || isInstitutionAdminFor(request.resource.data.institutionId);
+      allow update, delete: if isPrimaryAdmin() || isInstitutionAdminFor(resource.data.institutionId);
+    }
+
     // Per-institution include/exclude toggle for a shared-catalog video —
     // same shape as institutionCompetencyOverrides.
     match /institutionVideoOverrides/{overrideId} {

@@ -33,6 +33,7 @@ const NAV: NavItem[] = [
   { label: 'Competencies', to: '/institution-admin/competencies', icon: 'competencies' },
   { label: 'Log templates', to: '/institution-admin/log-templates', icon: 'templates' },
   { label: 'Video tutorials', to: '/institution-admin/video-tutorials', icon: 'video' },
+  { label: 'Resources', to: '/institution-admin/resources', icon: 'resources' },
   { label: 'Users', to: '/institution-admin/users', icon: 'users' },
   { label: 'Promote students', to: '/institution-admin/promote-students', icon: 'promote' },
 ]

@@ -351,6 +351,41 @@ export interface VideoTutorial {
 
 // Per-institution include/exclude toggle for a shared-catalog video, same
 // absence-means-enabled pattern as InstitutionCompetencyOverride.
+// --- Resources (study material: PDFs, Word, PowerPoint, Excel, images) -------
+// Same publishing model as VideoTutorial: Primary Admin authors catalog
+// resources (institutionId ''), a college authors its own (its institutionId);
+// a college can switch a catalog resource off for itself
+// (institutionResourceOverrides). The file lives in Storage at
+// resources/{id}/{stamp}-{fileName}.
+export type ResourceKind = 'pdf' | 'word' | 'powerpoint' | 'excel' | 'image'
+export interface Resource {
+  id: string
+  title: string
+  description: string
+  kind: ResourceKind
+  fileName: string // original name, used for downloads
+  contentType: string
+  size: number // bytes
+  url: string // Storage download URL
+  storagePath: string
+  institutionId: string // '' = catalog (every college that has it switched on)
+  department: string // Department.name, or '' = every department
+  // Students only: the MBBS year it's for, or 0 = every year. Faculty
+  // resources aren't year-scoped (stored as 0).
+  mbbsYear: MbbsYear | 0
+  audience: VideoAudience
+  active: boolean // author's publish switch; read via isResourceActive()
+  createdBy: string
+  createdAt: number
+  updatedAt: number
+}
+export interface InstitutionResourceOverride {
+  id: string // `${institutionId}_${resourceId}`
+  institutionId: string
+  resourceId: string
+  enabled: boolean
+}
+
 export interface InstitutionVideoOverride {
   id: string // `${institutionId}_${videoId}`
   institutionId: string

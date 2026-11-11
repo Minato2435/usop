@@ -21,6 +21,7 @@ const NAV: NavItem[] = [
   { label: 'Student Activities', to: '/faculty/inbox', icon: 'inbox' },
   { label: 'Forms', to: '/faculty/forms', icon: 'forms' },
   { label: 'Videos', to: '/faculty/videos', icon: 'video' },
+  { label: 'Resources', to: '/faculty/resources', icon: 'resources' },
 ]
 
 const STORAGE_KEY = 'usop.faculty.sidebarCollapsed'

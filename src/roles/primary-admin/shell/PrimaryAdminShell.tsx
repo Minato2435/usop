@@ -38,6 +38,7 @@ const NAV: NavGroup[] = [
       { label: 'Log templates', to: '/admin/log-templates', icon: 'templates' },
       { label: 'Forms', to: '/admin/forms', icon: 'forms' },
       { label: 'Video tutorials', to: '/admin/video-tutorials', icon: 'video' },
+      { label: 'Resources', to: '/admin/resources', icon: 'resources' },
     ],
   },
   { label: 'Certificates', items: [{ label: 'Certificate Management', to: '/admin/certificates', icon: 'certificate' }] },

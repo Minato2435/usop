@@ -46,6 +46,7 @@ export type IconName =
   | 'certificate'
   | 'download'
   | 'promote'
+  | 'resources'
 
 // Hand-drawn line icon set — 1.6px stroke, 24x24, deliberately squared
 // (not the rounded-everything default) to match the panel's chamfer motif.
@@ -232,6 +233,15 @@ export function Icon({
         <svg {...common}>
           <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
           <circle cx="12" cy="12" r="3" />
+        </svg>
+      )
+    case 'resources':
+      return (
+        <svg {...common}>
+          <path d="M7 3h8l4 4v11H7Z" />
+          <path d="M15 3v4h4" />
+          <path d="M4 7v14h11" />
+          <path d="M10 11h6M10 14h6" />
         </svg>
       )
     case 'promote':

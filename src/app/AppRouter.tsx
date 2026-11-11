@@ -50,6 +50,15 @@ import { InstitutionAdminVideoTutorialsPage } from '../roles/institution-admin/V
 import { InstitutionAdminUsersPage } from '../roles/institution-admin/UsersPage'
 import { InstitutionAdminPromoteStudentsPage } from '../roles/institution-admin/PromoteStudentsPage'
 import { PrimaryAdminPromoteStudentsPage } from '../roles/primary-admin/PromoteStudentsPage'
+import {
+  FacultyResourcesPage,
+  HodResourcesPage,
+  InstitutionAdminResourceEditorPage,
+  InstitutionAdminResourcesPage,
+  PrimaryAdminResourceEditorPage,
+  PrimaryAdminResourcesPage,
+  StudentResourcesPage,
+} from '../components/resources/rolePages'
 import { PrimaryAdminCertificateManagementPage } from '../roles/primary-admin/CertificateManagementPage'
 import { PrimaryAdminShell } from '../roles/primary-admin/shell/PrimaryAdminShell'
 import { StudentMyPortfolioPage } from '../roles/student/MyPortfolioPage'
@@ -562,6 +571,79 @@ export function AppRouter() {
             }
           />
 
+          {/* Resources (study material) */}
+          <Route
+            path="/admin/resources"
+            element={
+              <RequireRole roles={['primaryAdmin']}>
+                <PrimaryAdminResourcesPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/admin/resources/new"
+            element={
+              <RequireRole roles={['primaryAdmin']}>
+                <PrimaryAdminResourceEditorPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/admin/resources/:resourceId/edit"
+            element={
+              <RequireRole roles={['primaryAdmin']}>
+                <PrimaryAdminResourceEditorPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/institution-admin/resources"
+            element={
+              <RequireRole roles={['institutionAdmin']}>
+                <InstitutionAdminResourcesPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/institution-admin/resources/new"
+            element={
+              <RequireRole roles={['institutionAdmin']}>
+                <InstitutionAdminResourceEditorPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/institution-admin/resources/:resourceId/edit"
+            element={
+              <RequireRole roles={['institutionAdmin']}>
+                <InstitutionAdminResourceEditorPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/student/resources"
+            element={
+              <RequireRole roles={['student']}>
+                <StudentResourcesPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/faculty/resources"
+            element={
+              <RequireRole roles={['faculty']}>
+                <FacultyResourcesPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/hod/resources"
+            element={
+              <RequireRole roles={['hod']}>
+                <HodResourcesPage />
+              </RequireRole>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </DarkModeProvider>

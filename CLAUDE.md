@@ -2045,3 +2045,53 @@ logged in, so Year N work stays with Year N reviewers and in the student's Year 
   the Promote page can count unfinished work. Until it's deployed the page says it couldn't check,
   and promoting still works.
 - Built on git branch `year-promotion`; the pre-feature code is tagged `v1-before-promotion`.
+
+## Resources (study material: PDF, Word, PowerPoint, Excel, images)
+
+A file library on the same publishing model as Video Tutorials.
+
+- **Data**: `resources/{id}` (`Resource` in `types/index.ts`, `lib/firestore/resources.ts`).
+  - Scope: `institutionId` is `''` for the catalog (every college) or a college id (that college only).
+  - `department` is `''` for all departments, otherwise one department name.
+  - `mbbsYear` is `0` for all years, else 1–4. Faculty resources are always `0`.
+  - Also carries `audience` (student / faculty), `active` (the author's publish switch, read via
+    `isResourceActive`), and the file fields (`kind`, `fileName`, `contentType`, `size`, `url`,
+    `storagePath`).
+  - `institutionResourceOverrides/{inst}_{resId}` is a college's include/exclude switch for a catalog
+    resource (absent = included), same as `institutionVideoOverrides`.
+- **Files**: Storage `resources/{id}/{timestamp}-{name}`.
+  - Uploaded with an explicit `contentType` derived from the extension (`resourceFileType`),
+    because browsers sometimes leave `file.type` empty for Office files.
+  - Accepted: pdf, doc/docx, ppt/pptx, xls/xlsx, png/jpg/webp, max 50 MB, enforced both in the
+    editor and in `storage.rules`.
+  - The id is pre-generated: upload first, then write the doc, so the doc never points at a
+    missing file.
+  - Replacing a file uploads the new one, updates the doc, then deletes the old file. Delete
+    removes the doc, then the file.
+- **Pages** (all shared components in `src/components/resources/`; per-role wrappers are in
+  `rolePages.tsx`):
+  - `ResourcesManagePage`:
+    - Primary Admin (`/admin/resources`) sees everything, with a college filter, publish switch,
+      edit, and delete with inline confirm.
+    - Institution Admin (`/institution-admin/resources`) gets an **Our college** tab (full
+      management) and a **Catalog** tab (include/exclude switches staged behind
+      `SaveChangesBar`).
+  - `ResourceEditorPage` (`…/resources/new`, `…/resources/:resourceId/edit`):
+    - Step 01 is the file (the title is pre-filled from the file name).
+    - Step 02 is who it's for: Primary Admin chooses All colleges / One college, then audience,
+      year (incl. All years), and All departments / one department.
+    - Step 03 is visibility.
+    - A sticky live preview shows the result. An Institution Admin can't open another college's
+      resource there.
+  - `ResourceLibraryPage` (`/student/resources`, `/faculty/resources`, `/hod/resources`):
+    - Students see catalog + own-college student resources for their year or all years, in their
+      derived departments.
+    - Faculty and HOD see faculty resources for all departments or their own.
+    - Catalog items the college switched off are hidden.
+    - Grouped "General" first, then by department. Type chips, search, a "New" badge (14 days),
+      Open (PDF/images preview in a new tab) and Download (`getBlob`, keeps the original file
+      name; falls back to opening the URL).
+- **Rules**: `resources` read is `isActive()`; create/update/delete is Primary Admin or the
+  college's own admin. The overrides rules are the same as video overrides. Storage restricts size
+  and type. **Both `firestore.rules` and `storage.rules` need deploying.**
+- Icon `resources` was added to `Icon.tsx`. Every role's sidebar has a Resources link.

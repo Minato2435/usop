@@ -54,6 +54,19 @@ service firebase.storage {
       allow delete: if request.auth != null && request.auth.uid == studentId;
     }
 
+    // Resource files (resources/{resourceId}/{stamp}-{fileName}). Same
+    // "signed in" reasoning as videoTutorials — who may publish is enforced
+    // by the Firestore resources/{id} write rule and the admin-only UI — but
+    // uploads are limited to 50 MB and the document/image types the
+    // Resources page accepts.
+    match /resources/{resourceId}/{fileName} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.resource.size < 50 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf|application/msword|application/vnd[.]ms-powerpoint|application/vnd[.]ms-excel|application/vnd[.]openxmlformats-officedocument[.].*|image/(png|jpeg|webp)');
+      allow delete: if request.auth != null;
+    }
+
     // Default-deny everything else.
     match /{allPaths=**} {
       allow read, write: if false;
