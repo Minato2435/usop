@@ -247,6 +247,23 @@ export const adminSyncPhones = onCall({ timeoutSeconds: 540 }, async (request) =
 
 // ── 2. Self-registration ─────────────────────────────────────────────────
 
+// Sign-in page: is this mobile number on any login? Checked before sending an
+// OTP, so an unregistered number gets "No account uses this number" straight
+// away instead of an SMS. Public (the person isn't signed in yet). It does
+// reveal whether a number has an account — the same thing the old flow showed
+// after the OTP, just without spending an SMS.
+export const checkMobile = onCall(async (request) => {
+  const mobile = String(request.data?.mobile ?? '')
+  if (!MOBILE_RE.test(mobile)) throw new HttpsError('invalid-argument', 'Enter a valid 10-digit mobile number.')
+  try {
+    await auth.getUserByPhoneNumber(`+91${mobile}`)
+    return { exists: true }
+  } catch (e) {
+    if (e?.code === 'auth/user-not-found') return { exists: false }
+    throw new HttpsError('internal', 'Couldn’t check that number. Try again.')
+  }
+})
+
 // Colleges and their enabled departments, for the registration form and the
 // approver's review. Public: the form is filled in before the mobile number
 // is verified, and college / department names aren't sensitive.

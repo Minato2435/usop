@@ -29,6 +29,7 @@ export interface RegistrationOptions {
   institutions: { id: string; name: string; city: string; state: string }[]
   departments: Record<string, { id: string; name: string; mbbsYear: MbbsYear }[]>
 }
+export const checkMobile = call<{ mobile: string }, { exists: boolean }>('checkMobile')
 export const getRegistrationOptions = call<Record<string, never>, RegistrationOptions>('registrationOptions')
 
 export type RegistrationInput = Omit<AccountProfile, 'phone' | 'assignedHOD'> & { password?: string }

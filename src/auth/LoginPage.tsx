@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { deleteUser, getAdditionalUserInfo, signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
+import { checkMobile } from '../lib/accounts'
 import { useAuth } from './AuthContext'
 import { AuthCard, ErrorLine, Field, SubmitButton, TextLink, inputCls, inputStyle } from './authUi'
 import { describeAuthError, isEmail, isValidMobile, normalizeMobile, usePhoneOtp } from './phoneOtp'
@@ -26,6 +27,9 @@ function detect(raw: string): Kind {
 export function LoginPage() {
   const { firebaseUser } = useAuth()
   const navigate = useNavigate()
+  // A message passed from another page, e.g. "Signed out. Your request is
+  // still waiting…" from the registration status page.
+  const notice = (useLocation().state as { notice?: string } | null)?.notice ?? null
   const otp = usePhoneOtp()
 
   const [identifier, setIdentifier] = useState('')
@@ -36,15 +40,48 @@ export function LoginPage() {
   const [unknownNumber, setUnknownNumber] = useState(false)
   const [busy, setBusy] = useState(false)
   const [hold, setHold] = useState(false)
+  const [sending, setSending] = useState(false)
+  const lastTried = useRef('')
+
+  const kind = detect(identifier)
+  const mobile = normalizeMobile(identifier)
+  const email = identifier.trim().toLowerCase()
+  const mobileReady = kind === 'mobile' && isValidMobile(mobile)
+
+  // Start the invisible security check as soon as the number is complete,
+  // so pressing "Send OTP" only has to send.
+  // …and ask the server whether the number has an account, so an
+  // unregistered number is told so without an SMS being sent. Cached per
+  // number; a failed check returns null (then we just send, as before).
+  const lookups = useRef(new Map<string, Promise<boolean | null>>())
+  function lookup(m: string) {
+    let p = lookups.current.get(m)
+    if (!p) {
+      p = checkMobile({ mobile: m }).then((r) => r.exists, () => null)
+      lookups.current.set(m, p)
+      void p.then((v) => { if (v === null) lookups.current.delete(m) })
+    }
+    return p
+  }
+  useEffect(() => {
+    if (!mobileReady) return
+    otp.warm()
+    void lookup(mobile)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mobileReady, mobile])
+
+  // Sign in as soon as the 6th digit is typed (or pasted / auto-filled).
+  useEffect(() => {
+    if (step === 'otp' && code.length === 6 && otp.codeSent && !sending && !busy && lastTried.current !== code) {
+      void verify()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, code, otp.codeSent, sending, busy])
 
   // Signed in and nothing in progress — "/" routes onward (to /register for
   // someone without an approved profile). auth.currentUser guards the moment
   // after an unknown number's login was deleted.
   if (firebaseUser && auth.currentUser && !hold) return <Navigate to="/" replace />
-
-  const kind = detect(identifier)
-  const mobile = normalizeMobile(identifier)
-  const email = identifier.trim().toLowerCase()
 
   const hint =
     kind === 'mobile'
@@ -65,17 +102,22 @@ export function LoginPage() {
     otp.reset()
   }
 
+  // The code screen opens straight away (the SMS usually lands within a
+  // couple of seconds anyway); the person can start typing while we send.
   async function sendOtp() {
-    setBusy(true)
+    setSending(true)
     setError(null)
+    setCode('')
+    lastTried.current = ''
+    setStep('otp')
+    const resend = otp.codeSent
     try {
       await otp.send(mobile)
-      setCode('')
-      setStep('otp')
     } catch (err) {
+      if (!resend) setStep('id')
       setError(describeAuthError(err))
     } finally {
-      setBusy(false)
+      setSending(false)
     }
   }
 
@@ -85,6 +127,13 @@ export function LoginPage() {
     setUnknownNumber(false)
     if (kind === 'mobile') {
       if (!isValidMobile(mobile)) return setError('Enter a valid 10-digit Indian mobile number.')
+      setBusy(true)
+      const exists = await lookup(mobile)
+      setBusy(false)
+      if (exists === false) {
+        setUnknownNumber(true)
+        return setError(`No account uses +91 ${mobile} yet.`)
+      }
       await sendOtp()
     } else if (kind === 'email') {
       if (!isEmail(email)) return setError('Enter a valid email address.')
@@ -107,8 +156,13 @@ export function LoginPage() {
     }
   }
 
-  async function onVerify(e: FormEvent) {
+  function onVerify(e: FormEvent) {
     e.preventDefault()
+    if (code.length === 6 && otp.codeSent && !sending) void verify()
+  }
+
+  async function verify() {
+    lastTried.current = code
     setBusy(true)
     setError(null)
     setHold(true)
@@ -143,6 +197,11 @@ export function LoginPage() {
     <AuthCard subtitle="Sign in to your account">
       {step === 'id' && (
         <form onSubmit={onContinue} className="space-y-4">
+          {notice && !error && (
+            <p className="text-[12.5px] rounded-[8px] px-3 py-2 leading-relaxed" style={{ backgroundColor: 'var(--color-gold-soft)', color: 'var(--color-char)' }}>
+              {notice}
+            </p>
+          )}
           <Field label="Mobile number or email" htmlFor="identifier" hint={hint}>
             <div className="relative">
               {kind === 'mobile' && (
@@ -175,7 +234,7 @@ export function LoginPage() {
           <SubmitButton
             busy={busy}
             label={kind === 'mobile' ? 'Send OTP' : 'Continue'}
-            busyLabel={kind === 'mobile' ? 'Sending OTP…' : 'Please wait…'}
+            busyLabel={kind === 'mobile' ? 'Checking…' : 'Please wait…'}
           />
         </form>
       )}
@@ -207,7 +266,7 @@ export function LoginPage() {
       {step === 'otp' && (
         <form onSubmit={onVerify} className="space-y-4">
           {chip}
-          <Field label="OTP code" htmlFor="otp" hint="Enter the 6-digit code we sent by SMS.">
+          <Field label="OTP code" htmlFor="otp" hint={sending ? `Sending a code to +91 ${mobile}…` : 'Enter the 6-digit code we sent by SMS. You’ll be signed in as soon as it’s complete.'}>
             <input
               id="otp"
               inputMode="numeric"
@@ -222,9 +281,14 @@ export function LoginPage() {
             />
           </Field>
           <ErrorLine error={error} />
-          <SubmitButton busy={busy} disabled={code.length !== 6} label="Verify & sign in" busyLabel="Verifying…" />
+          <SubmitButton
+            busy={busy || sending}
+            disabled={code.length !== 6}
+            label="Verify & sign in"
+            busyLabel={sending ? 'Sending code…' : 'Signing you in…'}
+          />
           <div className="text-right text-[12.5px]">
-            <button type="button" disabled={!otp.canResend || busy} onClick={sendOtp} className="font-medium disabled:opacity-50" style={{ color: 'var(--color-gold)' }}>
+            <button type="button" disabled={!otp.canResend || busy || sending} onClick={sendOtp} className="font-medium disabled:opacity-50" style={{ color: 'var(--color-gold)' }}>
               {otp.canResend ? 'Resend code' : `Resend in ${otp.resendIn}s`}
             </button>
           </div>

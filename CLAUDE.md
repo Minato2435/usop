@@ -2088,9 +2088,16 @@ A file library on the same publishing model as Video Tutorials.
       derived departments.
     - Faculty and HOD see faculty resources for all departments or their own.
     - Catalog items the college switched off are hidden.
-    - Grouped "General" first, then by department. Type chips, search, a "New" badge (14 days),
-      Open (PDF/images preview in a new tab) and Download (`getBlob`, keeps the original file
-      name; falls back to opening the URL).
+    - Grouped "General" first, then by department. A "New" badge (14 days), Open (PDF/images
+      preview in a new tab) and Download (`getBlob`, keeps the original file name; falls back
+      to opening the URL).
+    - Layout (redesigned): hairline stat strip (Files / New in 2 weeks / Departments / From your
+      college), then a toolbar card — search (title, description, file name), Department select
+      (only departments that have files, plus "General"), Sort select (newest, oldest, A–Z, Z–A,
+      largest, smallest), Cards/List toggle (`localStorage` `usop.resources.view`) — and colour-
+      dotted file-type chips whose counts follow the department + search filters, with
+      "Showing N of M · Clear filters". Cards: per-type colour top stripe, year + "Your college"
+      / "USOP library" chips, description, size · date footer with Open/Download.
 - **Rules**: `resources` read is `isActive()`; create/update/delete is Primary Admin or the
   college's own admin. The overrides rules are the same as video overrides. Storage restricts size
   and type. **Both `firestore.rules` and `storage.rules` need deploying.**
@@ -2116,9 +2123,13 @@ but another Primary Admin; Institution Admin: Principal/HOD/Faculty/Student of t
 
 **Login** (`auth/LoginPage.tsx`): ONE field, "Mobile number or email" — `detect()` decides as
 they type (anything with `@` or a letter = email, else mobile; `normalizeMobile` strips +91 /
-spaces). Continue → password step (email) or OTP step (mobile), with a "Change" chip. Signing in
-with an unknown number deletes the empty login Firebase makes (`getAdditionalUserInfo().isNewUser`)
-and offers "Create an account" (`/register?mobile=`). OTP sending/confirming is shared in
+spaces). Continue → password step (email) or OTP step (mobile), with a "Change" chip. Before
+sending, the public `checkMobile` function (Admin `getUserByPhoneNumber`, prefetched as soon as 10
+digits are typed) says whether the number has a login; if not, no SMS is sent and the page offers
+"Create an account" (`/register?mobile=`). If that check fails we send anyway, and signing in with
+an unknown number still deletes the empty login Firebase makes (`getAdditionalUserInfo().isNewUser`).
+The invisible reCAPTCHA is also pre-run (`otp.warm()`) once the number is complete, the code screen
+opens immediately, and it signs in on the 6th digit. OTP sending/confirming is shared in
 `auth/phoneOtp.ts` (`usePhoneOtp`: a fresh invisible `RecaptchaVerifier` per send, in a new child
 element; resend after 30 s). Console: Phone provider on, Blaze, SMS region
 = India, 1,000 SMS/day cap, test number `+91 99999 00001` / `123456`.

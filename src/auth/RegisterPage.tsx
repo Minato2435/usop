@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Icon, type IconName } from '../roles/primary-admin/shell/Icon'
 import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import { useAuth } from './AuthContext'
@@ -24,12 +25,12 @@ import type { MbbsYear, RegistrationRequest, Role } from '../types'
 // The typed details live here, in the page, so they survive the moment the
 // OTP signs the person in and the app reloads their (missing) profile.
 
-const REGISTER_ROLES: { role: Role; label: string; hint: string }[] = [
-  { role: 'student', label: 'Student', hint: 'Approved by your college' },
-  { role: 'faculty', label: 'Faculty', hint: 'Approved by your college' },
-  { role: 'hod', label: 'Head of Department', hint: 'Approved by your college' },
-  { role: 'principal', label: 'Principal', hint: 'Approved by your college' },
-  { role: 'institutionAdmin', label: 'Institution Admin', hint: 'Approved by the platform admin' },
+const REGISTER_ROLES: { role: Role; label: string; hint: string; icon: IconName }[] = [
+  { role: 'student', label: 'Student', hint: 'Log activities and track your skills', icon: 'cap' },
+  { role: 'faculty', label: 'Faculty', hint: 'Review and assess students', icon: 'users' },
+  { role: 'hod', label: 'Head of Department', hint: 'Oversee your department', icon: 'departments' },
+  { role: 'principal', label: 'Principal', hint: 'College-wide reports', icon: 'crest' },
+  { role: 'institutionAdmin', label: 'Institution Admin', hint: 'Manage your college on USOP', icon: 'institutions' },
 ]
 const ROLE_LABEL: Partial<Record<Role, string>> = Object.fromEntries(REGISTER_ROLES.map((r) => [r.role, r.label]))
 const YEARS: MbbsYear[] = [1, 2, 3, 4]
@@ -69,6 +70,7 @@ function draftFrom(r: RegistrationRequest | null, mobile = ''): Draft {
 export function RegisterPage() {
   const { firebaseUser, appUser, loading } = useAuth()
   const [params] = useSearchParams()
+  const navigate = useNavigate()
   const uid = firebaseUser?.uid ?? null
 
   const [draft, setDraft] = useState<Draft>(() => draftFrom(null, normalizeMobile(params.get('mobile') ?? '').slice(0, 10)))
@@ -85,8 +87,11 @@ export function RegisterPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmCancel, setConfirmCancel] = useState(false)
+  const [leaving, setLeaving] = useState(false)
 
   if (appUser) return <Navigate to="/" replace />
+  // Signing out from the status view: don't flash the empty form meanwhile.
+  if (leaving) return <AuthCard subtitle="Signing out…"><p className="text-[13px]" style={{ color: 'var(--color-char-soft)' }}>Signing out…</p></AuthCard>
 
   const verifiedMobile = firebaseUser?.phoneNumber?.replace(/^\+91/, '') ?? null
 
@@ -221,7 +226,20 @@ export function RegisterPage() {
         )}
         <button
           type="button"
-          onClick={() => signOut(auth)}
+          onClick={async () => {
+            // Leave for the sign-in page (not back to an empty form): the
+            // request stays saved and they can sign in any time to check it.
+            // Sign out first — /login sends a signed-in visitor straight back.
+            const notice = approved
+              ? 'Signed out.'
+              : rejected
+                ? 'Signed out. Sign in again with your mobile number or email to fix and resend your request.'
+                : 'Signed out. Your request is still waiting for approval — sign in any time with your mobile number or email to check on it.'
+            setLeaving(true)
+            await signOut(auth).catch(() => {})
+            setDraft(draftFrom(null))
+            navigate('/login', { replace: true, state: { notice } })
+          }}
           className="px-4 py-2.5 text-[13px] font-medium rounded-[6px] border"
           style={{ borderColor: 'var(--color-line)', color: 'var(--color-char)' }}
         >
@@ -248,6 +266,132 @@ export function RegisterPage() {
         )}
       </div>
     </AuthCard>
+  )
+}
+
+// The "I am a" picker: a button showing the chosen role, opening a list of
+// roles with an icon and a one-line description each. Keyboard: ↑/↓ to move,
+// Enter to pick, Esc to close.
+function RoleSelect({ value, onChange }: { value: Role; onChange: (r: Role) => void }) {
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const current = REGISTER_ROLES.find((r) => r.role === value) ?? REGISTER_ROLES[0]
+
+  useEffect(() => {
+    if (!open) return
+    setActive(Math.max(0, REGISTER_ROLES.findIndex((r) => r.role === value)))
+    const onDown = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open, value])
+
+  function pick(r: Role) {
+    onChange(r)
+    setOpen(false)
+  }
+
+  function onKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Escape') return setOpen(false)
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      if (!open) return setOpen(true)
+      const d = e.key === 'ArrowDown' ? 1 : -1
+      setActive((i) => (i + d + REGISTER_ROLES.length) % REGISTER_ROLES.length)
+    }
+    if ((e.key === 'Enter' || e.key === ' ') && open) {
+      e.preventDefault()
+      pick(REGISTER_ROLES[active].role)
+    }
+  }
+
+  const badge = (icon: IconName, on: boolean) => (
+    <span
+      className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center"
+      style={{
+        backgroundColor: on ? 'var(--color-gold)' : 'var(--color-gold-soft)',
+        color: on ? 'var(--color-paper-raised)' : 'var(--color-gold)',
+      }}
+    >
+      <Icon name={icon} className="h-[18px] w-[18px]" />
+    </span>
+  )
+
+  return (
+    <div ref={wrapRef} className="relative" onKeyDown={onKeyDown}>
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-3 rounded-[10px] border px-3 py-2.5 text-left transition-colors"
+        style={{
+          borderColor: open ? 'var(--color-gold)' : 'var(--color-line)',
+          backgroundColor: 'var(--color-paper-raised)',
+          boxShadow: open ? '0 0 0 3px color-mix(in srgb, var(--color-gold) 18%, transparent)' : undefined,
+        }}
+      >
+        {badge(current.icon, true)}
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-medium" style={{ color: 'var(--color-char)' }}>
+            {current.label}
+          </span>
+          <span className="block text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
+            {current.hint}
+          </span>
+        </span>
+        <Icon
+          name="chevron"
+          className="h-4 w-4 shrink-0 transition-transform"
+          style={{ color: 'var(--color-char-soft)', transform: open ? 'rotate(-90deg)' : 'rotate(90deg)' }}
+        />
+      </button>
+
+      {open && (
+        <ul
+          role="listbox"
+          className="absolute z-30 left-0 right-0 mt-2 rounded-[12px] border p-1.5 fade-up"
+          style={{
+            backgroundColor: 'var(--color-paper-raised)',
+            borderColor: 'var(--color-line)',
+            boxShadow: '0 24px 48px -20px rgba(11,18,32,0.35)',
+            animationDuration: '160ms',
+          }}
+        >
+          {REGISTER_ROLES.map((r, i) => {
+            const selected = r.role === value
+            return (
+              <li key={r.role} role="option" aria-selected={selected}>
+                <button
+                  type="button"
+                  onMouseEnter={() => setActive(i)}
+                  onClick={() => pick(r.role)}
+                  className="w-full flex items-center gap-3 rounded-[8px] px-2.5 py-2 text-left transition-colors"
+                  style={{ backgroundColor: i === active ? 'var(--color-gold-soft)' : 'transparent' }}
+                >
+                  {badge(r.icon, selected)}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13.5px] font-medium" style={{ color: 'var(--color-char)' }}>
+                      {r.label}
+                    </span>
+                    <span className="block text-[11.5px]" style={{ color: 'var(--color-char-soft)' }}>
+                      {r.hint}
+                    </span>
+                  </span>
+                  {selected && (
+                    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="var(--color-gold)" strokeWidth={2.2} strokeLinecap="square">
+                      <path d="M5 12.5 10 17.5 19 7" />
+                    </svg>
+                  )}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
   )
 }
 
@@ -300,14 +444,30 @@ function RegistrationForm({
   const [otpBusy, setOtpBusy] = useState(false)
   const [otpError, setOtpError] = useState<string | null>(null)
   const verified = verifiedMobile !== null
+  const lastTried = useRef('')
+
+  // Run the invisible security check as soon as the number is complete, so
+  // "Send OTP" only has to send.
+  const mobileReady = isValidMobile(mobile)
+  useEffect(() => {
+    if (mobileReady && !verified) otp.warm()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mobileReady, verified])
+
+  // Verify as soon as the 6th digit is typed (or auto-filled).
+  useEffect(() => {
+    if (otp.codeSent && code.length === 6 && !otpBusy && lastTried.current !== code) void verifyOtp()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, otp.codeSent, otpBusy])
 
   async function sendOtp() {
     setOtpError(null)
     if (!isValidMobile(mobile)) return setOtpError('Enter a valid 10-digit Indian mobile number.')
     setOtpBusy(true)
     try {
-      await otp.send(mobile)
       setCode('')
+      lastTried.current = ''
+      await otp.send(mobile)
     } catch (err) {
       setOtpError(describeAuthError(err))
     } finally {
@@ -316,6 +476,7 @@ function RegistrationForm({
   }
 
   async function verifyOtp() {
+    lastTried.current = code
     setOtpError(null)
     setOtpBusy(true)
     try {
@@ -400,31 +561,11 @@ function RegistrationForm({
   return (
     <form onSubmit={submit} className="space-y-4">
       {sectionTitle('01', 'About you')}
-      <Field label="I am a">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {REGISTER_ROLES.map((r) => {
-            const active = role === r.role
-            return (
-              <button
-                key={r.role}
-                type="button"
-                onClick={() => set('role', r.role)}
-                className="rounded-[10px] border px-3 py-2 text-left transition-colors"
-                style={{
-                  borderColor: active ? 'var(--color-gold)' : 'var(--color-line)',
-                  backgroundColor: active ? 'var(--color-gold-soft)' : 'var(--color-paper-raised)',
-                }}
-              >
-                <div className="text-[13px] font-medium" style={{ color: 'var(--color-char)' }}>
-                  {r.label}
-                </div>
-                <div className="text-[10.5px]" style={{ color: 'var(--color-char-soft)' }}>
-                  {r.hint}
-                </div>
-              </button>
-            )
-          })}
-        </div>
+      <Field
+        label="I am a"
+        hint={role === 'institutionAdmin' ? 'Your request goes to the platform admin.' : 'Your request goes to your college’s admin.'}
+      >
+        <RoleSelect value={role} onChange={(r) => set('role', r)} />
       </Field>
 
       <Field label="Full name" htmlFor="reg-name">

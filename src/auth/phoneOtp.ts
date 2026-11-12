@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { FirebaseError } from 'firebase/app'
-import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult, type UserCredential } from 'firebase/auth'
+import { RecaptchaVerifier, initializeRecaptchaConfig, signInWithPhoneNumber, type ConfirmationResult, type UserCredential } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 
 // Shared by the sign-in page and the registration form: sending an OTP to a
@@ -92,8 +92,27 @@ export function usePhoneOtp() {
     return verifier
   }
 
+  // Run the invisible check ahead of time (once the number is complete).
+  // The verifier keeps the resulting token, and Firebase's send uses a token
+  // that's already there instead of starting the check — so "Send OTP" only
+  // has to send. Tokens last ~2 minutes; an expired one is simply redone.
+  const warmRef = useRef<Promise<unknown> | null>(null)
+  function warm() {
+    const verifier = verifierRef.current
+    if (!verifier || warmRef.current) return
+    const p = verifier.verify().catch(() => null)
+    warmRef.current = p
+    void p.then(() => {
+      // Let a later warm() (e.g. after the token expired) start a new check.
+      setTimeout(() => { if (warmRef.current === p) warmRef.current = null }, 100_000)
+    })
+  }
+
   useEffect(() => {
     prepare()
+    // Firebase asks the server for its reCAPTCHA settings before the first
+    // send; ask now so that round trip is out of the way.
+    initializeRecaptchaConfig(auth).catch(() => {})
     return () => {
       verifierRef.current?.clear()
       verifierRef.current = null
@@ -104,6 +123,9 @@ export function usePhoneOtp() {
   async function send(mobile: string): Promise<void> {
     const verifier = verifierRef.current ?? prepare()
     if (!verifier) throw new Error('The page isn’t ready yet. Try again in a moment.')
+    // A check already running for this verifier: let it finish rather than
+    // starting a second one.
+    if (warmRef.current) await warmRef.current
     try {
       const result = await signInWithPhoneNumber(auth, `+91${mobile}`, verifier)
       setConfirmation(result)
@@ -112,6 +134,7 @@ export function usePhoneOtp() {
       setResendAt(Date.now() + RESEND_AFTER_MS)
     } finally {
       // Ready a new one for "Resend" or a retry, in the background.
+      warmRef.current = null
       prepare()
     }
   }
@@ -128,6 +151,7 @@ export function usePhoneOtp() {
 
   return {
     recaptchaHost,
+    warm,
     send,
     confirm,
     reset,
