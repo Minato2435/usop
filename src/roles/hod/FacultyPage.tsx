@@ -60,7 +60,9 @@ export function HodFacultyPage() {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
-    const list = faculty.filter((f) => term === '' || f.name.toLowerCase().includes(term) || f.email.toLowerCase().includes(term))
+    const list = faculty.filter(
+      (f) => term === '' || f.name.toLowerCase().includes(term) || f.email.toLowerCase().includes(term) || (f.rollNumber ?? '').toLowerCase().includes(term),
+    )
     const reviewed = (uid: string) => reviewCounts.get(uid)?.reviewed ?? 0
     const pending = (uid: string) => reviewCounts.get(uid)?.pending ?? 0
     return list.sort((a, b) => {
@@ -82,7 +84,7 @@ export function HodFacultyPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name or email"
+            placeholder="Search name, email or reg. no."
             className="w-full pl-8 pr-3 py-2 text-[13.5px] border outline-none transition-colors duration-150 focus:border-[var(--color-gold)]"
             style={{ borderColor: 'var(--color-line)', color: 'var(--color-char)' }}
           />
@@ -156,6 +158,11 @@ export function HodFacultyPage() {
                         <span className="block font-mono text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
                           {f.email}
                         </span>
+                        {f.rollNumber && (
+                          <span className="block font-mono text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
+                            Reg {f.rollNumber}
+                          </span>
+                        )}
                       </span>
                     </div>
 

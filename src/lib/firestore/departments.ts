@@ -105,6 +105,14 @@ export function watchInstitutionDepartmentOverrides(
   })
 }
 
+// Primary Admin only (its read rule branch doesn't depend on the document):
+// every college's department on/off switches at once.
+export function watchAllDepartmentOverrides(onChange: (overrides: InstitutionDepartmentOverride[]) => void): Unsubscribe {
+  return onSnapshot(departmentOverridesRef, (snap) => {
+    onChange(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as InstitutionDepartmentOverride))
+  })
+}
+
 export async function setDepartmentEnabledForInstitution(
   institutionId: string,
   departmentId: string,

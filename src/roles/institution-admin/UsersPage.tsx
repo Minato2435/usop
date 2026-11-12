@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 import { InstitutionAdminShell } from './shell/InstitutionAdminShell'
 import { Card, GhostButton, PrimaryButton, Skeleton } from '../primary-admin/shell/ui'
 import { Icon, type IconName } from '../primary-admin/shell/Icon'
 import { UserFormModal } from '../primary-admin/shell/UserFormModal'
 import { watchInstitutionUsers, setUserStatus, type UserStatus } from '../../lib/firestore/users'
-import { watchInstitutionDepartments, watchCatalogDepartments } from '../../lib/firestore/departments'
+import { watchInstitutionDepartments, watchCatalogDepartments, watchInstitutionDepartmentOverrides } from '../../lib/firestore/departments'
+import { AcademicCell, UserFilterBar, applyUserFilters, useStoredUserFilters, useUserAcademics } from '../../components/users/UserListFilters'
 import { watchInstitution } from '../../lib/firestore/institutions'
-import type { AppUser, Department, Institution, Role } from '../../types'
+import type { AppUser, Department, Institution, InstitutionDepartmentOverride, Role } from '../../types'
 
 const ROLE_LABELS: Record<Role, string> = {
   primaryAdmin: 'Primary Admin',
@@ -40,6 +42,7 @@ function initials(name: string): string {
 
 export function InstitutionAdminUsersPage() {
   const { appUser } = useAuth()
+  const navigate = useNavigate()
   const institutionId = appUser?.institutionId ?? null
 
   const [users, setUsers] = useState<AppUser[] | null>(null)
@@ -50,9 +53,8 @@ export function InstitutionAdminUsersPage() {
   const [newUserOpen, setNewUserOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<AppUser | null>(null)
 
-  const [search, setSearch] = useState('')
-  const [roleFilter, setRoleFilter] = useState<Role | 'all'>('all')
-  const [statusFilter, setStatusFilter] = useState<'all' | UserStatus>('all')
+  const [overrides, setOverrides] = useState<InstitutionDepartmentOverride[]>([])
+  const [filters, setFilters] = useStoredUserFilters('usop.instAdmin.userFilters')
 
   useEffect(() => {
     if (!institutionId) return
@@ -67,29 +69,18 @@ export function InstitutionAdminUsersPage() {
     if (!institutionId) return
     return watchInstitutionDepartments(institutionId, setOwnDepartments)
   }, [institutionId])
+  useEffect(() => {
+    if (!institutionId) return
+    return watchInstitutionDepartmentOverrides(institutionId, setOverrides)
+  }, [institutionId])
 
-  const departmentName = useMemo(() => {
-    const map = new Map([...catalogDepartments, ...ownDepartments].map((d) => [d.id, d.name]))
-    return (id: string | null) => (id ? (map.get(id) ?? '—') : null)
-  }, [catalogDepartments, ownDepartments])
-
-  // A student is bound by year only — every department enabled for their
-  // college in that year applies — so there's no single department to
-  // name; every other role still uses its own departmentId.
-  const departmentDisplay = useMemo(() => {
-    return (u: AppUser) => (u.role === 'student' ? (u.mbbsYear ? `All Year ${u.mbbsYear}` : null) : departmentName(u.departmentId))
-  }, [departmentName])
+  const allDepartments = useMemo(() => [...catalogDepartments, ...ownDepartments], [catalogDepartments, ownDepartments])
+  const academics = useUserAcademics(allDepartments, overrides)
+  const noCollege = useMemo(() => () => null, [])
 
   const loading = !users || !institution
-  const list = users ?? []
-  const q = search.trim().toLowerCase()
-  const filtered = list.filter(
-    (u) =>
-      (roleFilter === 'all' || u.role === roleFilter) &&
-      (statusFilter === 'all' || userStatus(u) === statusFilter) &&
-      (q === '' || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)),
-  )
-  const filtersActive = roleFilter !== 'all' || statusFilter !== 'all' || q !== ''
+  const list = useMemo(() => users ?? [], [users])
+  const filtered = useMemo(() => applyUserFilters(list, filters, academics, noCollege), [list, filters, academics, noCollege])
 
   async function changeStatus(u: AppUser, status: UserStatus) {
     setBusyUid(u.uid)
@@ -102,65 +93,35 @@ export function InstitutionAdminUsersPage() {
       eyebrow="People"
       title="Users"
       actions={
-        <PrimaryButton onClick={() => setNewUserOpen(true)}>
-          <Icon name="plus" className="h-3.5 w-3.5" />
-          New user
-        </PrimaryButton>
+        <div className="flex items-center gap-2">
+          <GhostButton onClick={() => navigate('/institution-admin/users/import')}>
+            <Icon name="upload" className="h-3.5 w-3.5" />
+            Bulk add
+          </GhostButton>
+          <PrimaryButton onClick={() => setNewUserOpen(true)}>
+            <Icon name="plus" className="h-3.5 w-3.5" />
+            New user
+          </PrimaryButton>
+        </div>
       }
     >
       {!loading && (
         <p className="text-[13px] mb-5" style={{ color: 'var(--color-char-soft)' }}>
-          {filtered.length} of {list.length} account{list.length === 1 ? '' : 's'} at {institution!.name}
+          {list.length} account{list.length === 1 ? '' : 's'} at {institution!.name}
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <div className="relative w-full sm:w-[260px]">
-          <Icon name="search" className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: 'var(--color-char-soft)' }} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name or email"
-            className="w-full pl-8 pr-3 py-2 text-[13.5px] border outline-none transition-colors duration-150 focus:border-[var(--color-gold)]"
-            style={{ borderColor: 'var(--color-line)', color: 'var(--color-char)' }}
-          />
-        </div>
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value as Role | 'all')}
-          className="px-3 py-2 text-[13px] border outline-none transition-colors duration-150 focus:border-[var(--color-gold)]"
-          style={{ borderColor: 'var(--color-line)', color: 'var(--color-char)', backgroundColor: 'var(--color-paper)' }}
-        >
-          <option value="all">All roles</option>
-          {ALLOWED_ROLES.map((r) => (
-            <option key={r} value={r}>
-              {ROLE_LABELS[r]}
-            </option>
-          ))}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as 'all' | UserStatus)}
-          className="px-3 py-2 text-[13px] border outline-none transition-colors duration-150 focus:border-[var(--color-gold)]"
-          style={{ borderColor: 'var(--color-line)', color: 'var(--color-char)', backgroundColor: 'var(--color-paper)' }}
-        >
-          <option value="all">All statuses</option>
-          <option value="active">Active</option>
-          <option value="paused">Paused</option>
-          <option value="rejected">Rejected</option>
-        </select>
-        {filtersActive && (
-          <GhostButton
-            onClick={() => {
-              setRoleFilter('all')
-              setStatusFilter('all')
-              setSearch('')
-            }}
-          >
-            Clear filters
-          </GhostButton>
-        )}
-      </div>
+      {!loading && (
+        <UserFilterBar
+          f={filters}
+          onChange={setFilters}
+          ac={academics}
+          roles={ALLOWED_ROLES}
+          lockedInstitutionId={institutionId ?? undefined}
+          shown={filtered.length}
+          total={list.length}
+        />
+      )}
 
       {loading ? (
         <div className="space-y-4">
@@ -190,7 +151,7 @@ export function InstitutionAdminUsersPage() {
               >
                 <div className="flex-[2] min-w-[220px]">Name</div>
                 <div className="w-[140px] shrink-0">Role</div>
-                <div className="w-[160px] shrink-0">Department</div>
+                <div className="w-[160px] shrink-0">Year · Department</div>
                 <div className="w-[92px] shrink-0">Status</div>
                 <div className="w-[132px] shrink-0 text-right">Actions</div>
               </div>
@@ -198,7 +159,7 @@ export function InstitutionAdminUsersPage() {
                 <UserRow
                   key={u.uid}
                   user={u}
-                  department={departmentDisplay(u)}
+                  academic={academics.academic(u)}
                   busy={busyUid === u.uid}
                   onChangeStatus={(status) => changeStatus(u, status)}
                   onEdit={() => setEditingUser(u)}
@@ -212,7 +173,7 @@ export function InstitutionAdminUsersPage() {
       {(newUserOpen || editingUser) && institution && (
         <UserFormModal
           institutions={[institution]}
-          departments={[...catalogDepartments, ...ownDepartments]}
+          departments={allDepartments}
           existingUsers={list}
           editingUser={editingUser ?? undefined}
           allowedRoles={ALLOWED_ROLES}
@@ -232,13 +193,13 @@ export function InstitutionAdminUsersPage() {
 
 function UserRow({
   user: u,
-  department,
+  academic,
   busy,
   onChangeStatus,
   onEdit,
 }: {
   user: AppUser
-  department: string | null
+  academic: { main: string; sub: string | null }
   busy: boolean
   onChangeStatus: (status: UserStatus) => void
   onEdit: () => void
@@ -263,9 +224,9 @@ function UserRow({
           <span className="block font-mono text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
             {u.email}
           </span>
-          {u.phone && (
+          {(u.phone || u.rollNumber) && (
             <span className="block font-mono text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
-              +91 {u.phone}
+              {[u.phone ? `+91 ${u.phone}` : null, u.rollNumber ? `Reg ${u.rollNumber}` : null].filter(Boolean).join(' · ')}
             </span>
           )}
         </span>
@@ -280,9 +241,7 @@ function UserRow({
         </span>
       </div>
 
-      <div className="w-[160px] shrink-0 text-[13px] truncate" style={{ color: 'var(--color-char-soft)' }}>
-        {department ?? '—'}
-      </div>
+      <AcademicCell academic={academic} />
 
       <div className="w-[92px] shrink-0">
         <span className="inline-flex items-center gap-1.5 text-[12.5px]" style={{ color: STATUS_COLORS[status] }}>

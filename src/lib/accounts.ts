@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { httpsCallable } from 'firebase/functions'
 import { collection, doc, onSnapshot, query, where, type Unsubscribe } from 'firebase/firestore'
 import { db, functions } from './firebase'
-import type { AccountProfile, MbbsYear, RegistrationRequest } from '../types'
+import type { AccountProfile, MbbsYear, RegistrationRequest, Role } from '../types'
 
 // Calls into the server functions (functions/index.js) for everything that
 // touches someone else's login account, plus self-registration.
@@ -22,7 +22,17 @@ export function accountErrorMessage(err: unknown, fallback = 'Something went wro
 }
 
 export const adminCreateUser = call<{ profile: AccountProfile; password: string }, { uid: string }>('adminCreateUser')
-export const adminUpdateUser = call<{ uid: string; profile: AccountProfile; password?: string }>('adminUpdateUser')
+export interface BulkRowResult {
+  key: string
+  ok: boolean
+  uid?: string
+  error?: string
+}
+// Up to 50 rows per call; password optional (empty → mobile OTP sign-in).
+export const adminBulkCreateUsers = call<{ rows: { key: string; profile: AccountProfile }[]; password?: string }, { results: BulkRowResult[] }>(
+  'adminBulkCreateUsers',
+)
+export const adminUpdateUser =call<{ uid: string; profile: AccountProfile; password?: string }>('adminUpdateUser')
 export const adminDeleteUser = call<{ uid: string }>('adminDeleteUser')
 
 export interface RegistrationOptions {
@@ -37,6 +47,21 @@ export const submitRegistration = call<RegistrationInput, { ok: true; emailVerif
 // Copy the login's email-verified flag onto the request (own, or — for an
 // approver — someone else's by uid).
 export const syncEmailStatus = call<{ uid?: string }, { emailVerified: boolean }>('syncEmailStatus')
+export interface AbandonedSignup {
+  uid: string
+  kind: 'empty' | 'unverified' // never sent the form | never verified the email
+  name: string
+  email: string
+  phone: string
+  role: Role | null
+  institutionId: string | null
+  createdAt: number
+  lastSignInAt: number | null
+  since: number
+  autoRemoveAt: number // when the daily clean-up would remove it
+}
+export const listAbandonedSignups = call<Record<string, never>, { items: AbandonedSignup[] }>('listAbandonedSignups')
+export const removeAbandonedSignups = call<{ uids: string[] }, { removed: number; skipped: number }>('removeAbandonedSignups')
 export const passwordResetAllowed = call<{ email: string }, { allowed: boolean }>('passwordResetAllowed')
 export const cancelRegistration = call<Record<string, never>>('cancelRegistration')
 export const decideRegistration = call<{

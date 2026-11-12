@@ -97,13 +97,17 @@ async function cleanProfile(input) {
     if (!dept.exists || (d.institutionId !== '' && d.institutionId !== institutionId)) fail('invalid-argument', 'That department isn’t part of this college.')
   }
 
+  // Every role has a registration number: a student's university
+  // registration no., a doctor's medical-council no., an admin's staff no.
+  // Unique across the platform (see assertRollNumberFree).
+  const rollNumber = str(input.rollNumber).replace(/\s+/g, ' ')
+  if (!rollNumber) fail('invalid-argument', 'Enter the registration number.')
+  if (rollNumber.length > 40) fail('invalid-argument', 'The registration number is too long.')
+
   let mbbsYear = null
-  let rollNumber = null
   if (role === 'student') {
     mbbsYear = Number(input.mbbsYear)
     if (!YEARS.includes(mbbsYear)) fail('invalid-argument', 'Choose the MBBS year.')
-    rollNumber = str(input.rollNumber)
-    if (!rollNumber) fail('invalid-argument', 'Enter the registration number.')
   }
 
   let associatedMbbsYears = null
@@ -121,7 +125,7 @@ async function cleanProfile(input) {
 async function assertRollNumberFree(rollNumber, exceptUid) {
   if (!rollNumber) return
   const snap = await db.collection('users').where('rollNumber', '==', rollNumber).limit(2).get()
-  if (snap.docs.some((d) => d.id !== exceptUid)) fail('already-exists', `Registration number ${rollNumber} is already used by another student.`)
+  if (snap.docs.some((d) => d.id !== exceptUid)) fail('already-exists', `Registration number ${rollNumber} is already used by another account.`)
 }
 
 // Turns Auth errors into messages an admin can act on.
@@ -142,18 +146,27 @@ const e164 = (phone) => `+91${phone}`
 
 // ── 1. Admin: manage accounts ────────────────────────────────────────────
 
-export const adminCreateUser = onCall(async (request) => {
-  const caller = await requireAdmin(request)
-  const profile = await cleanProfile(request.data?.profile ?? {})
+// Creates one login + profile. `password` may be empty only for bulk
+// imports: the person then signs in with mobile + OTP (or sets a password
+// via "Forgot password?", which works because the email is trusted).
+async function createAccount(caller, profileInput, password, { passwordOptional = false } = {}) {
+  const profile = await cleanProfile(profileInput ?? {})
   assertCanManage(caller, profile)
-  const password = String(request.data?.password ?? '')
-  if (password.length < 6) fail('invalid-argument', 'The password must be at least 6 characters.')
+  if (password || !passwordOptional) {
+    if (password.length < 6) fail('invalid-argument', 'The password must be at least 6 characters.')
+  }
   await assertRollNumberFree(profile.rollNumber)
 
   let uid
   try {
     // emailVerified: the admin vouches for the address, so no link is needed.
-    const user = await auth.createUser({ email: profile.email, emailVerified: true, password, phoneNumber: e164(profile.phone), displayName: profile.name })
+    const user = await auth.createUser({
+      email: profile.email,
+      emailVerified: true,
+      phoneNumber: e164(profile.phone),
+      displayName: profile.name,
+      ...(password ? { password } : {}),
+    })
     uid = user.uid
   } catch (err) {
     authFail(err)
@@ -164,7 +177,46 @@ export const adminCreateUser = onCall(async (request) => {
     await auth.deleteUser(uid).catch(() => {})
     authFail(err)
   }
+  return uid
+}
+
+export const adminCreateUser = onCall(async (request) => {
+  const caller = await requireAdmin(request)
+  const uid = await createAccount(caller, request.data?.profile, String(request.data?.password ?? ''))
   return { uid }
+})
+
+// Bulk import: up to 50 people per call (the page sends the list in
+// chunks). Each row succeeds or fails on its own — one bad row never stops
+// the rest — and the result says which, with a readable reason.
+const BULK_MAX = 50
+export const adminBulkCreateUsers = onCall({ timeoutSeconds: 300 }, async (request) => {
+  const caller = await requireAdmin(request)
+  const rows = Array.isArray(request.data?.rows) ? request.data.rows : []
+  if (rows.length === 0) fail('invalid-argument', 'No people to add.')
+  if (rows.length > BULK_MAX) fail('invalid-argument', `Send at most ${BULK_MAX} people at a time.`)
+  const password = String(request.data?.password ?? '')
+  if (password && password.length < 6) fail('invalid-argument', 'The password must be at least 6 characters.')
+
+  // A few at a time: fast, but well inside Auth's account-creation limits.
+  const results = new Array(rows.length)
+  let next = 0
+  async function worker() {
+    while (next < rows.length) {
+      const i = next++
+      const key = str(rows[i]?.key) || String(i)
+      try {
+        const uid = await createAccount(caller, rows[i]?.profile, password, { passwordOptional: true })
+        results[i] = { key, ok: true, uid }
+      } catch (err) {
+        const message = err instanceof HttpsError ? err.message : 'Something went wrong.'
+        if (!(err instanceof HttpsError)) console.error(err)
+        results[i] = { key, ok: false, error: message }
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(5, rows.length) }, worker))
+  return { results }
 })
 
 export const adminUpdateUser = onCall(async (request) => {
@@ -446,21 +498,22 @@ export const decideRegistration = onCall(async (request) => {
   return { ok: true }
 })
 
-// ── 3. Daily clean-up of abandoned sign-ups ──────────────────────────────
+// ── 3. Abandoned sign-ups (daily clean-up + Primary Admin's list) ───────
 //
-// • A login with no profile and no request, older than 7 days — someone
-//   verified their mobile and never sent the form. Deleted, so the number
-//   (and any email) is free again.
-// • A pending request whose email was never verified, 14 days after it was
-//   last sent — deleted with its login.
-// Anyone with a profile is never touched.
+// "Abandoned" = a login with no profile that is either
+//   • 'empty'      — verified a mobile but never sent the form (no request), or
+//   • 'unverified' — sent a request but never clicked the email link.
+// Anyone with a users/{uid} profile is never included. Rejected requests
+// aren't abandoned (the person may fix and resend).
 const DAY = 86_400_000
-export const cleanupAbandonedSignups = onSchedule({ schedule: 'every day 03:30', timeZone: 'Asia/Kolkata', timeoutSeconds: 540 }, async () => {
-  const now = Date.now()
+const KEEP_EMPTY_DAYS = 7
+const KEEP_UNVERIFIED_DAYS = 14
+
+async function findAbandoned() {
   const [profiles, requests] = await Promise.all([db.collection('users').select().get(), db.collection('registrationRequests').get()])
   const hasProfile = new Set(profiles.docs.map((d) => d.id))
   const reqs = new Map(requests.docs.map((d) => [d.id, d.data()]))
-  let removed = 0
+  const items = []
   let pageToken
   do {
     const page = await auth.listUsers(1000, pageToken)
@@ -468,14 +521,68 @@ export const cleanupAbandonedSignups = onSchedule({ schedule: 'every day 03:30',
       if (hasProfile.has(u.uid)) continue
       const created = Date.parse(u.metadata.creationTime)
       const req = reqs.get(u.uid)
-      const emptyLogin = !req && now - created > 7 * DAY
-      const unverifiedRequest = req && req.status === 'pending' && !u.emailVerified && now - (req.submittedAt ?? created) > 14 * DAY
-      if (!emptyLogin && !unverifiedRequest) continue
-      if (req) await db.doc(`registrationRequests/${u.uid}`).delete().catch(() => {})
-      await auth.deleteUser(u.uid).catch(() => {})
-      removed++
+      const base = {
+        uid: u.uid,
+        phone: (u.phoneNumber ?? '').replace(/^\+91/, ''),
+        createdAt: created,
+        lastSignInAt: u.metadata.lastSignInTime ? Date.parse(u.metadata.lastSignInTime) : null,
+      }
+      if (!req) {
+        items.push({ ...base, kind: 'empty', name: u.displayName ?? '', email: u.email ?? '', role: null, institutionId: null, since: created, autoRemoveAt: created + KEEP_EMPTY_DAYS * DAY })
+      } else if (req.status === 'pending' && !u.emailVerified) {
+        const since = req.submittedAt ?? created
+        items.push({ ...base, kind: 'unverified', name: req.name ?? '', email: req.email ?? '', role: req.role ?? null, institutionId: req.institutionId ?? null, since, autoRemoveAt: since + KEEP_UNVERIFIED_DAYS * DAY })
+      }
     }
     pageToken = page.pageToken
   } while (pageToken)
+  return items.sort((a, b) => a.since - b.since)
+}
+
+async function removeSignup(uid) {
+  await db.doc(`registrationRequests/${uid}`).delete().catch(() => {})
+  await auth.deleteUser(uid).catch(() => {})
+}
+
+// Primary Admin: see every abandoned sign-up (any age), with when the daily
+// job would remove it.
+export const listAbandonedSignups = onCall({ timeoutSeconds: 120 }, async (request) => {
+  const caller = await requireAdmin(request)
+  if (caller.role !== 'primaryAdmin') fail('permission-denied', 'Only the Primary Admin can see this.')
+  return { items: await findAbandoned() }
+})
+
+// Primary Admin: remove chosen abandoned sign-ups now. Each uid is re-checked
+// on the server, so an account that has meanwhile been approved (or verified
+// its email) is never removed.
+export const removeAbandonedSignups = onCall({ timeoutSeconds: 300 }, async (request) => {
+  const caller = await requireAdmin(request)
+  if (caller.role !== 'primaryAdmin') fail('permission-denied', 'Only the Primary Admin can do this.')
+  const uids = Array.isArray(request.data?.uids) ? request.data.uids.map(String) : []
+  if (uids.length === 0) fail('invalid-argument', 'Choose at least one sign-up to remove.')
+  const abandoned = new Set((await findAbandoned()).map((i) => i.uid))
+  let removed = 0
+  let skipped = 0
+  for (const uid of uids) {
+    if (!abandoned.has(uid)) {
+      skipped++
+      continue
+    }
+    await removeSignup(uid)
+    removed++
+  }
+  return { removed, skipped }
+})
+
+// Daily (03:30 IST): remove empty logins after 7 days and unverified requests
+// 14 days after they were sent.
+export const cleanupAbandonedSignups = onSchedule({ schedule: 'every day 03:30', timeZone: 'Asia/Kolkata', timeoutSeconds: 540 }, async () => {
+  const now = Date.now()
+  let removed = 0
+  for (const item of await findAbandoned()) {
+    if (now < item.autoRemoveAt) continue
+    await removeSignup(item.uid)
+    removed++
+  }
   console.log(`cleanupAbandonedSignups: removed ${removed} abandoned sign-up(s)`)
 })

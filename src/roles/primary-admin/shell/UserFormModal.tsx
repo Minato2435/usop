@@ -1,4 +1,5 @@
 import { suggestEmailFix } from '../../../lib/emailTypos'
+import { regNoHelp, sameRegNo } from '../../../lib/registrationNumber'
 import { useEffect, useMemo, useState } from 'react'
 import { Modal, Field, PrimaryButton, GhostButton, inputClass, Badge } from './ui'
 import { Icon } from './Icon'
@@ -158,7 +159,7 @@ export function UserFormModal({
   const emailTaken = normalizedEmail !== '' && otherUsers.some((u) => u.email.trim().toLowerCase() === normalizedEmail)
   const phoneTaken = phone.length === 10 && otherUsers.some((u) => u.phone === phone)
   const rollTaken =
-    rollNumber.trim() !== '' && otherUsers.some((u) => u.rollNumber?.trim().toLowerCase() === rollNumber.trim().toLowerCase())
+    rollNumber.trim() !== '' && otherUsers.some((u) => sameRegNo(u.rollNumber, rollNumber))
 
   function toggleYear(y: MbbsYear) {
     setAssociatedMbbsYears((prev) => (prev.includes(y) ? prev.filter((v) => v !== y) : [...prev, y].sort()))
@@ -179,7 +180,8 @@ export function UserFormModal({
     (isEditing ? password === '' || password.length >= 6 : password.length >= 6) &&
     (isPlatformWideRole(role) || institutionId !== '') &&
     (role !== 'hod' && role !== 'faculty' ? true : departmentId !== '') &&
-    (role !== 'student' || (rollNumber.trim() !== '' && !rollTaken)) &&
+    rollNumber.trim() !== '' &&
+    !rollTaken &&
     (role !== 'faculty' || associatedMbbsYears.length > 0)
 
   async function handleSubmit() {
@@ -196,7 +198,7 @@ export function UserFormModal({
         departmentId: role === 'hod' || role === 'faculty' ? departmentId : null,
         mbbsYear: role === 'student' ? mbbsYear : null,
         associatedMbbsYears: role === 'faculty' ? associatedMbbsYears : null,
-        rollNumber: role === 'student' ? rollNumber.trim() : null,
+        rollNumber: rollNumber.trim().replace(/\s+/g, ' '),
         assignedHOD: role === 'student' && assignedHOD ? assignedHOD : null,
       }
       if (isEditing) {
@@ -543,18 +545,25 @@ export function UserFormModal({
           </div>
         )}
 
-        {role === 'student' && (
-          <Field label="Registration number">
-            <input
-              className={inputClass}
-              style={{ borderColor: rollTaken ? 'var(--color-clay)' : 'var(--color-line)' }}
-              value={rollNumber}
-              onChange={(e) => setRollNumber(e.target.value)}
-              placeholder="e.g. MBBS2026-0142"
-            />
-            {rollTaken && <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-clay)' }}>Already assigned to another student.</p>}
-          </Field>
-        )}
+        <Field label="Registration number">
+          <input
+            className={inputClass}
+            style={{ borderColor: rollTaken ? 'var(--color-clay)' : 'var(--color-line)' }}
+            value={rollNumber}
+            onChange={(e) => setRollNumber(e.target.value)}
+            placeholder={regNoHelp(role).placeholder}
+          />
+          {rollTaken ? (
+            <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-clay)' }}>
+              Already used by {otherUsers.find((u) => sameRegNo(u.rollNumber, rollNumber))?.name ?? 'another account'}.
+            </p>
+          ) : (
+            <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-char-soft)' }}>
+              {isEditing && !editingUser.rollNumber ? 'This account has no registration number yet — add it to save. ' : ''}
+              {regNoHelp(role).hint}
+            </p>
+          )}
+        </Field>
 
         {role === 'student' && (
           <Field label="Assigned HOD (optional)">

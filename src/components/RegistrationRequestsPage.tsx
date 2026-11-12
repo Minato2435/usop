@@ -1,16 +1,20 @@
 import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react'
 import { Badge, Card, Field, GhostButton, Modal, PrimaryButton, Skeleton, inputClass } from '../roles/primary-admin/shell/ui'
-import { Icon } from '../roles/primary-admin/shell/Icon'
+import { Icon, type IconName } from '../roles/primary-admin/shell/Icon'
 import {
   accountErrorMessage,
   decideRegistration,
   syncEmailStatus,
   getRegistrationOptions,
+  listAbandonedSignups,
+  removeAbandonedSignups,
   watchRegistrationRequests,
+  type AbandonedSignup,
   type RegistrationOptions,
 } from '../lib/accounts'
 import { watchInstitutionUsers } from '../lib/firestore/users'
 import type { AppUser, MbbsYear, RegistrationRequest, RegistrationStatus, Role } from '../types'
+import { regNoHelp, sameRegNo } from '../lib/registrationNumber'
 
 // Self-registrations waiting for approval. Shared by Primary Admin (every
 // request — the only approver for Institution Admin / Skill Lab Director,
@@ -32,13 +36,112 @@ const ROLE_LABELS: Record<Role, string> = {
 const COLLEGE_ROLES: Role[] = ['student', 'faculty', 'hod', 'principal']
 const ALL_ROLES: Role[] = [...COLLEGE_ROLES, 'institutionAdmin'] // Skill Lab Director: admin-created only
 const YEARS: MbbsYear[] = [1, 2, 3, 4]
-const TABS: { key: RegistrationStatus; label: string }[] = [
-  { key: 'pending', label: 'Waiting' },
-  { key: 'approved', label: 'Approved' },
-  { key: 'rejected', label: 'Rejected' },
-]
 const fmt = (ms: number | null) =>
   ms ? new Date(ms).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
+
+// Same jewel tones and emblems as the Users page, so a role reads the same
+// everywhere in the admin panel.
+const ROLE_COLOR: Record<Role, string> = {
+  primaryAdmin: 'var(--color-gold)',
+  institutionAdmin: '#7B4FA0',
+  principal: '#2E6DA4',
+  hod: '#9C6B1F',
+  faculty: '#3F7D4A',
+  student: '#A83B5C',
+  skillLabDirector: '#1F8A7A',
+}
+const TABLE_BORDER = 'color-mix(in srgb, var(--color-char-soft) 28%, var(--color-line) 72%)'
+const ROW_BORDER = 'color-mix(in srgb, var(--color-char-soft) 16%, var(--color-line) 84%)'
+
+type TabKey = RegistrationStatus | 'abandoned'
+const TAB_META: Record<TabKey, { label: string; icon: IconName; color: string }> = {
+  pending: { label: 'Waiting', icon: 'inbox', color: 'var(--color-gold)' },
+  approved: { label: 'Approved', icon: 'checkCircle', color: 'var(--color-teal)' },
+  rejected: { label: 'Rejected', icon: 'close', color: 'var(--color-clay)' },
+  abandoned: { label: 'Abandoned', icon: 'clock', color: '#6B7280' },
+}
+
+function initials(name: string): string {
+  const parts = name.replace(/^Dr\.?\s*/i, '').trim().split(/\s+/).filter(Boolean).slice(0, 2)
+  return parts.map((p) => p[0]?.toUpperCase() ?? '').join('') || '·'
+}
+
+function RoleChip({ role }: { role: Role }) {
+  const color = ROLE_COLOR[role]
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium border"
+      style={{ borderColor: `color-mix(in srgb, ${color} 45%, var(--color-line) 55%)`, color }}
+    >
+      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+      {ROLE_LABELS[role]}
+    </span>
+  )
+}
+
+function Dot({ color, children }: { color: string; children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[12.5px]" style={{ color }}>
+      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+      {children}
+    </span>
+  )
+}
+
+function SegGroup<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: { v: T; l: string }[] }) {
+  return (
+    <div className="inline-flex border rounded-[3px] overflow-hidden" style={{ borderColor: 'var(--color-line)' }}>
+      {options.map((o, i) => (
+        <button
+          key={o.v}
+          type="button"
+          onClick={() => onChange(o.v)}
+          className="px-2.5 py-2 text-[12.5px] font-medium transition-colors duration-150"
+          style={{
+            backgroundColor: value === o.v ? 'var(--color-ink)' : 'transparent',
+            color: value === o.v ? 'var(--color-frost)' : 'var(--color-char-soft)',
+            borderRight: i < options.length - 1 ? '1px solid var(--color-line)' : undefined,
+          }}
+        >
+          {o.l}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function SearchBox({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <div className="relative w-full sm:w-[260px]">
+      <Icon name="search" className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: 'var(--color-char-soft)' }} />
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full pl-8 pr-3 py-2 text-[13.5px] border outline-none transition-colors duration-150 focus:border-[var(--color-gold)]"
+        style={{ borderColor: 'var(--color-line)', color: 'var(--color-char)', backgroundColor: 'var(--color-paper)' }}
+      />
+    </div>
+  )
+}
+
+const selectStyle = { borderColor: 'var(--color-line)', color: 'var(--color-char)', backgroundColor: 'var(--color-paper)' }
+const selectCls = 'px-3 py-2 text-[13px] border outline-none transition-colors duration-150 focus:border-[var(--color-gold)]'
+
+function EmptyState({ title, text }: { title: string; text: string }) {
+  return (
+    <Card className="chamfer">
+      <div className="text-center py-8">
+        <div className="font-display text-[20px] mb-1.5" style={{ color: 'var(--color-char)' }}>
+          {title}
+        </div>
+        <p className="text-[13.5px]" style={{ color: 'var(--color-char-soft)' }}>
+          {text}
+        </p>
+      </div>
+    </Card>
+  )
+}
 
 export function RegistrationRequestsPage({ Shell, institutionId }: { Shell: ComponentType<ShellProps>; institutionId?: string | null }) {
   const isPrimary = institutionId === undefined
@@ -57,9 +160,22 @@ export function RegistrationRequestsPage({ Shell, institutionId }: { Shell: Comp
   const deptName = (inst: string | null, id: string | null) =>
     inst && id ? (options?.departments[inst]?.find((d) => d.id === id)?.name ?? '…') : null
 
-  const [tab, setTab] = useState<RegistrationStatus>('pending')
+  const [tab, setTab] = useState<TabKey>('pending')
+  const [abandonedCount, setAbandonedCount] = useState<number | null>(null)
   const [search, setSearch] = useState('')
+  const [roleFilter, setRoleFilter] = useState<Role | 'all'>('all')
+  const [collegeFilter, setCollegeFilter] = useState('all')
+  const [emailFilter, setEmailFilter] = useState<'all' | 'verified' | 'unverified'>('all')
   const [reviewing, setReviewing] = useState<string | null>(null)
+
+  // Primary Admin: count abandoned sign-ups for the tile even before the tab
+  // is opened.
+  useEffect(() => {
+    if (!isPrimary) return
+    listAbandonedSignups({})
+      .then((r) => setAbandonedCount(r.items.length))
+      .catch(() => {})
+  }, [isPrimary])
 
   const counts = useMemo(() => {
     const c: Record<RegistrationStatus, number> = { pending: 0, approved: 0, rejected: 0 }
@@ -71,119 +187,214 @@ export function RegistrationRequestsPage({ Shell, institutionId }: { Shell: Comp
     const q = search.trim().toLowerCase()
     return (requests ?? [])
       .filter((r) => r.status === tab)
+      .filter((r) => roleFilter === 'all' || r.role === roleFilter)
+      .filter((r) => collegeFilter === 'all' || r.institutionId === collegeFilter)
+      .filter((r) => tab !== 'pending' || emailFilter === 'all' || (emailFilter === 'verified') === (r.emailVerified === true))
       .filter((r) => !q || [r.name, r.email, r.phone, r.rollNumber ?? ''].some((v) => v.toLowerCase().includes(q)))
       .sort((a, b) => (tab === 'pending' ? a.submittedAt - b.submittedAt : (b.decidedAt ?? 0) - (a.decidedAt ?? 0)))
-  }, [requests, tab, search])
+  }, [requests, tab, search, roleFilter, collegeFilter, emailFilter])
+
+  const filtersActive = search !== '' || roleFilter !== 'all' || collegeFilter !== 'all' || emailFilter !== 'all'
+  function clearFilters() {
+    setSearch('')
+    setRoleFilter('all')
+    setCollegeFilter('all')
+    setEmailFilter('all')
+  }
 
   const current = reviewing ? (requests ?? []).find((r) => r.uid === reviewing) ?? null : null
+  const tabs: TabKey[] = isPrimary ? ['pending', 'approved', 'rejected', 'abandoned'] : ['pending', 'approved', 'rejected']
+  const roleChoices = isPrimary ? ALL_ROLES : COLLEGE_ROLES
 
   return (
     <Shell eyebrow="People" title="Registration requests">
-      <p className="text-[13px] mb-5 -mt-1 max-w-2xl" style={{ color: 'var(--color-char-soft)' }}>
+      <p className="text-[13.5px] mb-6 -mt-1 max-w-2xl leading-relaxed" style={{ color: 'var(--color-char-soft)' }}>
         {isPrimary
           ? 'People who signed up themselves. You approve Institution Admins; college roles are normally approved by the college’s admin, and you can step in for them.'
           : 'Students, faculty, HODs and principals who signed up for your college. Nobody can use USOP until you approve them.'}
       </p>
 
-      <div className="flex flex-wrap items-center gap-3 mb-5">
-        <div className="flex gap-5 border-b" style={{ borderColor: 'var(--color-line)' }}>
-          {TABS.map((t) => {
-            const active = tab === t.key
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className="pb-2 -mb-px text-[13.5px] font-medium border-b-2 transition-colors"
-                style={{ borderColor: active ? 'var(--color-gold)' : 'transparent', color: active ? 'var(--color-char)' : 'var(--color-char-soft)' }}
-              >
-                {t.label}
-                <span className="ml-1.5 tabular-nums text-[12px]" style={{ color: t.key === 'pending' && counts.pending ? 'var(--color-gold)' : 'inherit' }}>
-                  {counts[t.key]}
+      {/* Status tiles — also the tabs */}
+      <div className={`grid gap-2.5 mb-7 ${isPrimary ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
+        {tabs.map((k, i) => {
+          const meta = TAB_META[k]
+          const active = tab === k
+          const n = k === 'abandoned' ? abandonedCount : requests ? counts[k] : null
+          return (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setTab(k)}
+              className="rounded-[6px] fade-up text-left px-4 py-4 border transition-all duration-200"
+              style={{
+                animationDelay: `${i * 40}ms`,
+                backgroundColor: active
+                  ? `color-mix(in srgb, ${meta.color} 16%, var(--color-paper) 84%)`
+                  : `color-mix(in srgb, ${meta.color} 6%, var(--color-paper) 94%)`,
+                borderColor: active ? meta.color : `color-mix(in srgb, ${meta.color} 38%, var(--color-line) 62%)`,
+              }}
+            >
+              <div className="flex items-center gap-2 mb-2.5">
+                <span
+                  className="h-6 w-6 shrink-0 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: `color-mix(in srgb, ${meta.color} 24%, var(--color-paper) 76%)`, color: meta.color }}
+                >
+                  <Icon name={meta.icon} className="h-3.5 w-3.5" />
                 </span>
-              </button>
-            )
-          })}
-        </div>
-        <div className="relative ml-auto w-full sm:w-[260px]">
-          <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: 'var(--color-char-soft)' }} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Name, email, mobile, reg. no."
-            className="w-full pl-9 pr-3 py-2 text-[13px] rounded-full border outline-none focus:border-[var(--color-gold)]"
-            style={{ borderColor: 'var(--color-line)', backgroundColor: 'var(--color-paper-raised)', color: 'var(--color-char)' }}
-          />
-        </div>
+                <span className="font-display text-[26px] leading-none tabular-nums" style={{ color: meta.color }}>
+                  {n ?? '–'}
+                </span>
+              </div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.07em] leading-tight" style={{ color: meta.color }}>
+                {meta.label}
+                {k === 'pending' && n ? ' · needs you' : ''}
+              </div>
+            </button>
+          )
+        })}
       </div>
 
-      {loadError ? (
-        <Card>
-          <p className="text-[13.5px]" style={{ color: 'var(--color-clay)' }}>
-            Couldn’t load requests. The new database rules may not be deployed yet.
-          </p>
-        </Card>
-      ) : requests === null ? (
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-16" />
-          <Skeleton className="h-16" />
-        </div>
-      ) : list.length === 0 ? (
-        <Card className="text-center py-10">
-          <Icon name="inbox" className="h-6 w-6 mx-auto mb-2" style={{ color: 'var(--color-gold)' }} />
-          <p className="text-[13.5px]" style={{ color: 'var(--color-char)' }}>
-            {tab === 'pending' ? 'No one is waiting for approval.' : `No ${tab} requests${search ? ' match your search' : ''}.`}
-          </p>
-        </Card>
+      {tab === 'abandoned' ? (
+        <AbandonedPanel collegeName={collegeName} onCount={setAbandonedCount} />
       ) : (
-        <div className="rounded-[6px] border overflow-x-auto" style={{ borderColor: 'var(--color-line)' }}>
-          <div className="min-w-[640px]">
-            {list.map((r, i) => (
-              <div
-                key={r.uid}
-                className="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-black/[0.02]"
-                style={{ borderTop: i === 0 ? undefined : '1px solid var(--color-line)' }}
-              >
-                <div
-                  className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center font-display text-[14px] border"
-                  style={{ borderColor: 'var(--color-gold-line)', color: 'var(--color-gold)' }}
-                >
-                  {r.name.trim()[0]?.toUpperCase() ?? '·'}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="font-display text-[15.5px] leading-tight truncate" style={{ color: 'var(--color-char)' }}>
-                    {r.name}
+        <>
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <SearchBox value={search} onChange={setSearch} placeholder="Name, email, mobile, reg. no." />
+            <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value as Role | 'all')} className={selectCls} style={selectStyle}>
+              <option value="all">All roles</option>
+              {roleChoices.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </option>
+              ))}
+            </select>
+            {isPrimary && (
+              <select value={collegeFilter} onChange={(e) => setCollegeFilter(e.target.value)} className={selectCls} style={selectStyle}>
+                <option value="all">All colleges</option>
+                {(options?.institutions ?? []).map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {tab === 'pending' && (
+              <SegGroup
+                value={emailFilter}
+                onChange={setEmailFilter}
+                options={[
+                  { v: 'all', l: 'Any email' },
+                  { v: 'verified', l: 'Email verified' },
+                  { v: 'unverified', l: 'Not verified' },
+                ]}
+              />
+            )}
+            {filtersActive && <GhostButton onClick={clearFilters}>Clear filters</GhostButton>}
+          </div>
+
+          {loadError ? (
+            <EmptyState title="Couldn’t load requests" text="The database rules may not be deployed yet." />
+          ) : requests === null ? (
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-12" />
+              <Skeleton className="h-64" />
+            </div>
+          ) : list.length === 0 ? (
+            filtersActive ? (
+              <EmptyState title="No requests match these filters" text="Clear the filters to see everyone again." />
+            ) : (
+              <EmptyState
+                title={tab === 'pending' ? 'No one is waiting' : tab === 'approved' ? 'Nothing approved yet' : 'Nothing rejected'}
+                text={tab === 'pending' ? 'New sign-ups for you to approve will appear here.' : 'Decided requests are kept here for reference.'}
+              />
+            )
+          ) : (
+            <div className="rounded-[10px] overflow-hidden border" style={{ backgroundColor: 'var(--color-paper)', borderColor: TABLE_BORDER }}>
+              <div className="overflow-x-auto">
+                <div className="min-w-[900px]">
+                  <div
+                    className="flex items-center gap-4 px-5 py-3 border-b text-[10.5px] font-semibold uppercase tracking-[0.08em]"
+                    style={{ borderColor: TABLE_BORDER, color: 'var(--color-char-soft)' }}
+                  >
+                    <div className="flex-[2] min-w-[220px]">Applicant</div>
+                    <div className="w-[150px] shrink-0">Role</div>
+                    <div className="w-[200px] shrink-0">College · details</div>
+                    <div className="w-[120px] shrink-0">{tab === 'pending' ? 'Email' : 'Decided by'}</div>
+                    <div className="w-[110px] shrink-0">{tab === 'pending' ? 'Sent' : 'Decided'}</div>
+                    <div className="w-[96px] shrink-0 text-right">Action</div>
                   </div>
-                  <div className="text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
-                    +91 {r.phone} · {r.email}
-                    {tab === 'pending' && (
-                      <span className="ml-1.5 font-medium" style={{ color: r.emailVerified ? 'var(--color-teal)' : 'var(--color-clay)' }}>
-                        {r.emailVerified ? '✓ verified' : '⚠ email not verified'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="w-[190px] min-w-0">
-                  <Badge tone={r.approver === 'primary' ? 'gold' : 'neutral'}>{ROLE_LABELS[r.role]}</Badge>
-                  <div className="text-[11.5px] mt-1 truncate" style={{ color: 'var(--color-char-soft)' }}>
-                    {r.role === 'student'
-                      ? `Year ${r.mbbsYear} · ${r.rollNumber}`
-                      : (deptName(r.institutionId, r.departmentId) ?? (isPrimary ? collegeName(r.institutionId) : ''))}
-                  </div>
-                </div>
-                <div className="w-[130px] text-[11.5px] font-mono" style={{ color: 'var(--color-char-soft)' }}>
-                  {fmt(tab === 'pending' ? r.submittedAt : r.decidedAt)}
-                </div>
-                <div className="w-[96px] flex justify-end">
-                  {tab === 'pending' ? (
-                    <PrimaryButton onClick={() => setReviewing(r.uid)}>Review</PrimaryButton>
-                  ) : (
-                    <GhostButton onClick={() => setReviewing(r.uid)}>View</GhostButton>
-                  )}
+                  {list.map((r) => {
+                    const place =
+                      r.role === 'student'
+                        ? `Year ${r.mbbsYear}`
+                        : (deptName(r.institutionId, r.departmentId) ?? (r.role === 'faculty' && r.associatedMbbsYears?.length ? `Years ${r.associatedMbbsYears.join(', ')}` : ''))
+                    const details = [place, r.rollNumber].filter(Boolean).join(' · ')
+                    return (
+                      <div
+                        key={r.uid}
+                        className="flex items-center gap-4 px-5 py-3.5 border-b last:border-0 transition-colors duration-100 hover:bg-black/[0.015]"
+                        style={{ borderColor: ROW_BORDER }}
+                      >
+                        <div className="flex-[2] min-w-[220px] flex items-center gap-3">
+                          <span
+                            className="shrink-0 h-9 w-9 rounded-full border flex items-center justify-center font-display text-[14px]"
+                            style={{ borderColor: 'var(--color-gold-line)', color: 'var(--color-gold)' }}
+                          >
+                            {initials(r.name)}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block font-display text-[16px] leading-tight truncate" style={{ color: 'var(--color-char)' }}>
+                              {r.name}
+                            </span>
+                            <span className="block font-mono text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
+                              {r.email}
+                            </span>
+                            <span className="block font-mono text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
+                              +91 {r.phone}
+                            </span>
+                          </span>
+                        </div>
+                        <div className="w-[150px] shrink-0">
+                          <RoleChip role={r.role} />
+                        </div>
+                        <div className="w-[200px] shrink-0 min-w-0">
+                          <div className="text-[13px] truncate" style={{ color: 'var(--color-char)' }}>
+                            {collegeName(r.institutionId)}
+                          </div>
+                          {details && (
+                            <div className="text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
+                              {details}
+                            </div>
+                          )}
+                        </div>
+                        <div className="w-[120px] shrink-0 min-w-0">
+                          {tab === 'pending' ? (
+                            r.emailVerified ? <Dot color="var(--color-teal)">Verified</Dot> : <Dot color="var(--color-clay)">Not verified</Dot>
+                          ) : (
+                            <span className="text-[12.5px] truncate block" style={{ color: 'var(--color-char-soft)' }}>
+                              {r.decidedByName || '—'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="w-[110px] shrink-0 font-mono text-[11.5px]" style={{ color: 'var(--color-char-soft)' }}>
+                          {dayFmt(tab === 'pending' ? r.submittedAt : (r.decidedAt ?? r.submittedAt))}
+                          <div className="font-sans text-[11px]">{ago(tab === 'pending' ? r.submittedAt : (r.decidedAt ?? r.submittedAt))}</div>
+                        </div>
+                        <div className="w-[96px] shrink-0 flex justify-end">
+                          {tab === 'pending' ? (
+                            <PrimaryButton onClick={() => setReviewing(r.uid)}>Review</PrimaryButton>
+                          ) : (
+                            <GhostButton onClick={() => setReviewing(r.uid)}>View</GhostButton>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          )}
+        </>
       )}
 
       {current && options && (
@@ -197,6 +408,228 @@ export function RegistrationRequestsPage({ Shell, institutionId }: { Shell: Comp
         />
       )}
     </Shell>
+  )
+}
+
+// Primary Admin: logins that never finished signing up — verified a mobile
+// but never sent the form, or sent it but never verified the email. The
+// daily job removes them after 7 / 14 days; this removes them now.
+const dayFmt = (ms: number) => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+function ago(ms: number) {
+  const d = Math.floor((Date.now() - ms) / 86_400_000)
+  return d <= 0 ? 'today' : d === 1 ? '1 day ago' : `${d} days ago`
+}
+
+function AbandonedPanel({ collegeName, onCount }: { collegeName: (id: string | null) => string; onCount: (n: number) => void }) {
+  const [items, setItems] = useState<AbandonedSignup[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [kind, setKind] = useState<'all' | 'empty' | 'unverified'>('all')
+  const [search, setSearch] = useState('')
+  const [confirm, setConfirm] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  async function load() {
+    setError(null)
+    setItems(null)
+    try {
+      const { items } = await listAbandonedSignups({})
+      setItems(items)
+      onCount(items.length)
+      setSelected((prev) => new Set([...prev].filter((u) => items.some((i) => i.uid === u))))
+    } catch (e) {
+      setError(accountErrorMessage(e, 'Couldn’t load abandoned sign-ups.'))
+    }
+  }
+  useEffect(() => {
+    void load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const shown = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return (items ?? []).filter((i) => (kind === 'all' || i.kind === kind) && (!q || [i.name, i.email, i.phone].some((v) => v.toLowerCase().includes(q))))
+  }, [items, kind, search])
+  const allShownSelected = shown.length > 0 && shown.every((i) => selected.has(i.uid))
+  const now = Date.now()
+  const kindCount = (k: 'empty' | 'unverified') => (items ?? []).filter((i) => i.kind === k).length
+
+  function toggle(uid: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(uid)) next.delete(uid)
+      else next.add(uid)
+      return next
+    })
+  }
+
+  async function remove() {
+    setBusy(true)
+    setError(null)
+    try {
+      const { removed, skipped } = await removeAbandonedSignups({ uids: [...selected] })
+      setNotice(`Removed ${removed} sign-up${removed === 1 ? '' : 's'}.${skipped ? ` ${skipped} skipped — they finished signing up in the meantime.` : ''}`)
+      setSelected(new Set())
+      setConfirm(false)
+      await load()
+    } catch (e) {
+      setError(accountErrorMessage(e, 'Couldn’t remove them. Please try again.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      <p className="text-[12.5px] mb-5 max-w-2xl leading-relaxed" style={{ color: 'var(--color-char-soft)' }}>
+        Logins that never finished signing up. They can’t use USOP, but they hold their mobile number and email. They’re removed
+        automatically every night (no form after 7 days, unverified email after 14 days) — remove them sooner here. Approved accounts are
+        never listed.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <SearchBox value={search} onChange={setSearch} placeholder="Name, email, mobile" />
+        <SegGroup
+          value={kind}
+          onChange={setKind}
+          options={[
+            { v: 'all', l: `All · ${items?.length ?? 0}` },
+            { v: 'empty', l: `Never sent the form · ${kindCount('empty')}` },
+            { v: 'unverified', l: `Email not verified · ${kindCount('unverified')}` },
+          ]}
+        />
+        <div className="ml-auto flex items-center gap-2">
+          <GhostButton onClick={() => void load()} disabled={busy || items === null}>
+            Refresh
+          </GhostButton>
+          {confirm ? (
+            <>
+              <span className="text-[12.5px]" style={{ color: 'var(--color-clay)' }}>
+                Remove {selected.size} for good?
+              </span>
+              <GhostButton tone="danger" onClick={() => void remove()} disabled={busy}>
+                {busy ? 'Removing…' : 'Yes, remove'}
+              </GhostButton>
+              <GhostButton onClick={() => setConfirm(false)} disabled={busy}>
+                Cancel
+              </GhostButton>
+            </>
+          ) : (
+            <GhostButton tone="danger" onClick={() => setConfirm(true)} disabled={selected.size === 0}>
+              Remove selected{selected.size ? ` (${selected.size})` : ''}
+            </GhostButton>
+          )}
+        </div>
+      </div>
+
+      {notice && (
+        <div className="mb-3">
+          <Badge tone="teal">{notice}</Badge>
+        </div>
+      )}
+      {error && (
+        <div className="mb-3">
+          <Badge tone="clay">{error}</Badge>
+        </div>
+      )}
+
+      {items === null && !error ? (
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-12" />
+          <Skeleton className="h-48" />
+        </div>
+      ) : shown.length === 0 ? (
+        <EmptyState
+          title={(items ?? []).length === 0 ? 'Nothing abandoned' : 'Nothing matches'}
+          text={(items ?? []).length === 0 ? 'Every login has finished signing up.' : 'Try another filter or clear the search.'}
+        />
+      ) : (
+        <div className="rounded-[10px] overflow-hidden border" style={{ backgroundColor: 'var(--color-paper)', borderColor: TABLE_BORDER }}>
+          <div className="overflow-x-auto">
+            <div className="min-w-[860px]">
+              <div
+                className="flex items-center gap-4 px-5 py-3 border-b text-[10.5px] font-semibold uppercase tracking-[0.08em]"
+                style={{ borderColor: TABLE_BORDER, color: 'var(--color-char-soft)' }}
+              >
+                <label className="w-5 shrink-0 flex items-center cursor-pointer" title="Select all shown">
+                  <input
+                    type="checkbox"
+                    checked={allShownSelected}
+                    onChange={() =>
+                      setSelected((prev) => {
+                        const next = new Set(prev)
+                        shown.forEach((i) => (allShownSelected ? next.delete(i.uid) : next.add(i.uid)))
+                        return next
+                      })
+                    }
+                    className="h-4 w-4 accent-[var(--color-gold)]"
+                  />
+                </label>
+                <div className="flex-[2] min-w-[220px]">Login</div>
+                <div className="w-[170px] shrink-0">Stopped at</div>
+                <div className="w-[200px] shrink-0">Role · college</div>
+                <div className="w-[160px] shrink-0">Auto-removal</div>
+              </div>
+              {shown.map((i) => {
+                const label = i.name || (i.phone ? `+91 ${i.phone}` : i.email || 'Unnamed login')
+                return (
+                  <label
+                    key={i.uid}
+                    className="flex items-center gap-4 px-5 py-3.5 border-b last:border-0 cursor-pointer transition-colors duration-100 hover:bg-black/[0.015]"
+                    style={{ borderColor: ROW_BORDER, backgroundColor: selected.has(i.uid) ? 'color-mix(in srgb, var(--color-gold) 7%, transparent)' : undefined }}
+                  >
+                    <span className="w-5 shrink-0 flex items-center">
+                      <input type="checkbox" checked={selected.has(i.uid)} onChange={() => toggle(i.uid)} className="h-4 w-4 accent-[var(--color-gold)]" />
+                    </span>
+                    <div className="flex-[2] min-w-[220px] flex items-center gap-3">
+                      <span
+                        className="shrink-0 h-9 w-9 rounded-full border border-dashed flex items-center justify-center font-display text-[14px]"
+                        style={{ borderColor: 'var(--color-char-soft)', color: 'var(--color-char-soft)' }}
+                      >
+                        {i.name ? initials(i.name) : '?'}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block font-display text-[16px] leading-tight truncate" style={{ color: 'var(--color-char)' }}>
+                          {label}
+                        </span>
+                        {i.email && (
+                          <span className="block font-mono text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
+                            {i.email}
+                          </span>
+                        )}
+                        {i.phone && i.name && (
+                          <span className="block font-mono text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
+                            +91 {i.phone}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="w-[170px] shrink-0">
+                      {i.kind === 'empty' ? <Dot color="var(--color-char-soft)">Never sent the form</Dot> : <Dot color="var(--color-clay)">Email not verified</Dot>}
+                      <div className="text-[11px] mt-0.5" style={{ color: 'var(--color-char-soft)' }}>
+                        {i.kind === 'empty' ? 'Signed up' : 'Sent'} {ago(i.since)}
+                      </div>
+                    </div>
+                    <div className="w-[200px] shrink-0 min-w-0">
+                      {i.role ? <RoleChip role={i.role} /> : <span className="text-[12.5px]" style={{ color: 'var(--color-char-soft)' }}>—</span>}
+                      {i.institutionId && (
+                        <div className="text-[11.5px] truncate mt-1" style={{ color: 'var(--color-char-soft)' }}>
+                          {collegeName(i.institutionId)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="w-[160px] shrink-0 font-mono text-[11.5px]" style={{ color: i.autoRemoveAt <= now ? 'var(--color-clay)' : 'var(--color-char-soft)' }}>
+                      {i.autoRemoveAt <= now ? 'Tonight' : dayFmt(i.autoRemoveAt)}
+                    </div>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -271,8 +704,8 @@ function ReviewModal({
 
   const warnings = useMemo(() => {
     const w: string[] = []
-    if (role === 'student' && rollNumber.trim()) {
-      const clash = collegeUsers.find((u) => u.rollNumber?.trim().toLowerCase() === rollNumber.trim().toLowerCase())
+    if (rollNumber.trim()) {
+      const clash = collegeUsers.find((u) => sameRegNo(u.rollNumber, rollNumber))
       if (clash) w.push(`Registration number ${rollNumber.trim()} already belongs to ${clash.name}.`)
     }
     if (role === 'hod' && departmentId) {
@@ -295,7 +728,7 @@ function ReviewModal({
     name.trim() !== '' &&
     (platformWide || institutionId !== '') &&
     (!needsDept || deptOptions.some((d) => d.id === departmentId)) &&
-    (role !== 'student' || rollNumber.trim() !== '') &&
+    rollNumber.trim() !== '' &&
     (role !== 'faculty' || associatedYears.length > 0)
 
   async function decide(decision: 'approve' | 'reject') {
@@ -315,7 +748,7 @@ function ReviewModal({
                 departmentId: needsDept ? departmentId : null,
                 mbbsYear: role === 'student' ? mbbsYear : null,
                 associatedMbbsYears: role === 'faculty' ? associatedYears : null,
-                rollNumber: role === 'student' ? rollNumber.trim() : null,
+                rollNumber: rollNumber.trim().replace(/\s+/g, ' '),
               },
             },
       )
@@ -416,11 +849,22 @@ function ReviewModal({
                   ))}
                 </select>
               </Field>
-              <Field label="Registration number">
-                <input className={inputClass} style={fieldStyle} value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} />
-              </Field>
             </>
           )}
+          <Field label="Registration number">
+            <input
+              className={inputClass}
+              style={{ borderColor: rollNumber.trim() ? 'var(--color-line)' : 'var(--color-clay)' }}
+              value={rollNumber}
+              onChange={(e) => setRollNumber(e.target.value)}
+              placeholder={regNoHelp(role).placeholder}
+            />
+            {!rollNumber.trim() && (
+              <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-clay)' }}>
+                Needed to approve. {regNoHelp(role).hint}
+              </p>
+            )}
+          </Field>
           {role === 'faculty' && (
             <div className="sm:col-span-2 mb-4">
               <span className="font-display block mb-1.5 text-[11.5px] font-medium uppercase tracking-[0.08em]" style={{ color: 'var(--color-char-soft)' }}>
@@ -469,9 +913,15 @@ function ReviewModal({
           <span style={{ color: 'var(--color-char)' }}>{collegeName(r.institutionId)}</span>
           {r.role === 'student' && (
             <>
-              <span style={{ color: 'var(--color-char-soft)' }}>Year · Reg. no.</span>
-              <span style={{ color: 'var(--color-char)' }}>
-                Year {r.mbbsYear} · {r.rollNumber}
+              <span style={{ color: 'var(--color-char-soft)' }}>Year</span>
+              <span style={{ color: 'var(--color-char)' }}>Year {r.mbbsYear}</span>
+            </>
+          )}
+          {r.rollNumber && (
+            <>
+              <span style={{ color: 'var(--color-char-soft)' }}>Reg. no.</span>
+              <span className="font-mono text-[12.5px]" style={{ color: 'var(--color-char)' }}>
+                {r.rollNumber}
               </span>
             </>
           )}

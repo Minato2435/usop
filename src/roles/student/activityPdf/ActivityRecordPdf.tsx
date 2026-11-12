@@ -23,6 +23,7 @@ export type ExportActivity = {
   assignedFacultyName: string | null
   reviewerName: string | null
   reviewerRole: 'faculty' | 'hod' | null
+  reviewerRegNo?: string | null
   images: { kind: 'photo' | 'sketch'; src: string }[] // data URLs, downloaded + downscaled by the caller
 }
 export type ActivityRecordProps = {
@@ -425,7 +426,9 @@ function ActivityPage({ a, index, total, college, student }: { a: ExportActivity
           [
             decided ? 'Verified by' : 'Reviewer',
             decided ? (reviewer ?? '—') : 'Pending review',
-            decided ? `${roleLabel}${sub.reviewedAt ? ` · ${fmtMs(sub.reviewedAt)}` : ''}` : (a.assignedFacultyName ?? ''),
+            decided
+              ? `${roleLabel}${a.reviewerRegNo ? ` · Reg. ${a.reviewerRegNo}` : ''}${sub.reviewedAt ? ` · ${fmtMs(sub.reviewedAt)}` : ''}`
+              : (a.assignedFacultyName ?? ''),
           ],
         ].map(([kicker, name, role], i) => (
           <View key={i} style={{ flex: 1, marginLeft: i ? 24 : 0 }}>

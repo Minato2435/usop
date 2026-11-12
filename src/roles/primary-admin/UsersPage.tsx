@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { PrimaryAdminShell } from './shell/PrimaryAdminShell'
 import { Card, GhostButton, PrimaryButton, Skeleton } from './shell/ui'
 import { Icon, type IconName } from './shell/Icon'
 import { UserFormModal } from './shell/UserFormModal'
 import { watchUsers, setUserStatus, type UserStatus } from '../../lib/firestore/users'
 import { watchInstitutions } from '../../lib/firestore/institutions'
-import { watchAllDepartments } from '../../lib/firestore/departments'
-import type { AppUser, Department, Institution, Role } from '../../types'
+import { watchAllDepartments, watchAllDepartmentOverrides } from '../../lib/firestore/departments'
+import { AcademicCell, UserFilterBar, applyUserFilters, useStoredUserFilters, useUserAcademics } from '../../components/users/UserListFilters'
+import type { AppUser, Department, Institution, InstitutionDepartmentOverride, Role } from '../../types'
 
 const ROLE_LABELS: Record<Role, string> = {
   primaryAdmin: 'Primary Admin',
@@ -82,6 +84,7 @@ function initials(name: string): string {
 }
 
 export function PrimaryAdminUsersPage() {
+  const navigate = useNavigate()
   const [users, setUsers] = useState<AppUser[] | null>(null)
   const [institutions, setInstitutions] = useState<Institution[] | null>(null)
   const [departments, setDepartments] = useState<Department[] | null>(null)
@@ -89,44 +92,32 @@ export function PrimaryAdminUsersPage() {
   const [newUserOpen, setNewUserOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<AppUser | null>(null)
 
-  const [search, setSearch] = useState('')
-  const [roleFilter, setRoleFilter] = useState<Role | 'all'>('all')
-  const [institutionFilter, setInstitutionFilter] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<'all' | UserStatus>('all')
+  const [overrides, setOverrides] = useState<InstitutionDepartmentOverride[]>([])
+  const [filters, setFilters] = useStoredUserFilters('usop.admin.userFilters', { departmentNeedsCollege: true })
 
   useEffect(() => watchUsers(setUsers), [])
   useEffect(() => watchInstitutions(setInstitutions), [])
   useEffect(() => watchAllDepartments(setDepartments), [])
+  useEffect(() => watchAllDepartmentOverrides(setOverrides), [])
 
   const institutionName = useMemo(() => {
     const map = new Map((institutions ?? []).map((i) => [i.id, i.name]))
     return (id: string | null) => (id ? (map.get(id) ?? '—') : null)
   }, [institutions])
 
-  const departmentName = useMemo(() => {
-    const map = new Map((departments ?? []).map((d) => [d.id, d.name]))
-    return (id: string | null) => (id ? (map.get(id) ?? '—') : null)
-  }, [departments])
-
-  // A student is bound by year only — every department enabled for their
-  // college in that year applies — so there's no single department to
-  // name; every other role still uses its own departmentId.
-  const departmentDisplay = useMemo(() => {
-    return (u: AppUser) => (u.role === 'student' ? (u.mbbsYear ? `All Year ${u.mbbsYear}` : null) : departmentName(u.departmentId))
-  }, [departmentName])
+  const academics = useUserAcademics(departments ?? [], overrides)
 
   const loading = !users || !institutions || !departments
-  const list = users ?? []
+  const list = useMemo(() => users ?? [], [users])
 
-  const q = search.trim().toLowerCase()
-  const filtered = list.filter(
-    (u) =>
-      (roleFilter === 'all' || u.role === roleFilter) &&
-      (institutionFilter === 'all' || u.institutionId === institutionFilter) &&
-      (statusFilter === 'all' || userStatus(u) === statusFilter) &&
-      (q === '' || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)),
-  )
-  const filtersActive = roleFilter !== 'all' || institutionFilter !== 'all' || statusFilter !== 'all' || q !== ''
+  const filtered = useMemo(() => applyUserFilters(list, filters, academics, institutionName), [list, filters, academics, institutionName])
+  // Role tiles count everyone matching the other filters (so picking a
+  // college shows that college's breakdown).
+  const roleCounts = useMemo(() => {
+    const m = new Map<Role, number>()
+    applyUserFilters(list, { ...filters, role: 'all' }, academics, institutionName).forEach((u) => m.set(u.role, (m.get(u.role) ?? 0) + 1))
+    return m
+  }, [list, filters, academics, institutionName])
   const pausedCount = list.filter((u) => userStatus(u) === 'paused').length
   const rejectedCount = list.filter((u) => userStatus(u) === 'rejected').length
 
@@ -141,15 +132,21 @@ export function PrimaryAdminUsersPage() {
       eyebrow="People & institutions"
       title="Users"
       actions={
-        <PrimaryButton onClick={() => setNewUserOpen(true)}>
-          <Icon name="plus" className="h-3.5 w-3.5" />
-          New user
-        </PrimaryButton>
+        <div className="flex items-center gap-2">
+          <GhostButton onClick={() => navigate('/admin/users/import')}>
+            <Icon name="upload" className="h-3.5 w-3.5" />
+            Bulk add
+          </GhostButton>
+          <PrimaryButton onClick={() => setNewUserOpen(true)}>
+            <Icon name="plus" className="h-3.5 w-3.5" />
+            New user
+          </PrimaryButton>
+        </div>
       }
     >
       {!loading && (
         <p className="text-[13px] mb-5" style={{ color: 'var(--color-char-soft)' }}>
-          {filtered.length} of {list.length} account{list.length === 1 ? '' : 's'}
+          {list.length} account{list.length === 1 ? '' : 's'} on the platform
           {pausedCount > 0 && ` · ${pausedCount} paused`}
           {rejectedCount > 0 && ` · ${rejectedCount} rejected`}
         </p>
@@ -164,12 +161,12 @@ export function PrimaryAdminUsersPage() {
         <>
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5 mb-7">
             {ROLES.map((r, i) => {
-              const active = roleFilter === r
+              const active = filters.role === r
               const color = roleColor(r)
               return (
                 <button
                   key={r}
-                  onClick={() => setRoleFilter(active ? 'all' : r)}
+                  onClick={() => setFilters({ ...filters, role: active ? 'all' : r })}
                   className="rounded-[6px] fade-up text-left px-4 py-4 border transition-all duration-200"
                   style={{
                     animationDelay: `${i * 40}ms`,
@@ -191,7 +188,7 @@ export function PrimaryAdminUsersPage() {
                       <Icon name={ROLE_ICONS[r]} className="h-3.5 w-3.5" />
                     </span>
                     <span className="font-display text-[26px] leading-none tabular-nums" style={{ color }}>
-                      {list.filter((u) => u.role === r).length}
+                      {roleCounts.get(r) ?? 0}
                     </span>
                   </div>
                   <div className="text-[10px] font-semibold uppercase tracking-[0.07em] leading-tight" style={{ color }}>
@@ -202,57 +199,7 @@ export function PrimaryAdminUsersPage() {
             })}
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 mb-6">
-            <div className="relative w-full sm:w-[260px]">
-              <Icon
-                name="search"
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none"
-                style={{ color: 'var(--color-char-soft)' }}
-              />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search name or email"
-                className="w-full pl-8 pr-3 py-2 text-[13.5px] border outline-none transition-colors duration-150 focus:border-[var(--color-gold)]"
-                style={{ borderColor: 'var(--color-line)', color: 'var(--color-char)' }}
-              />
-            </div>
-            <select
-              value={institutionFilter}
-              onChange={(e) => setInstitutionFilter(e.target.value)}
-              className="px-3 py-2 text-[13px] border outline-none transition-colors duration-150 focus:border-[var(--color-gold)]"
-              style={{ borderColor: 'var(--color-line)', color: 'var(--color-char)', backgroundColor: 'var(--color-paper)' }}
-            >
-              <option value="all">All institutions</option>
-              {institutions!.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.name}
-                </option>
-              ))}
-            </select>
-            <SegGroup
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={[
-                { v: 'all', l: 'All statuses' },
-                { v: 'active', l: 'Active' },
-                { v: 'paused', l: 'Paused' },
-                { v: 'rejected', l: 'Rejected' },
-              ]}
-            />
-            {filtersActive && (
-              <GhostButton
-                onClick={() => {
-                  setRoleFilter('all')
-                  setInstitutionFilter('all')
-                  setStatusFilter('all')
-                  setSearch('')
-                }}
-              >
-                Clear filters
-              </GhostButton>
-            )}
-          </div>
+          <UserFilterBar f={filters} onChange={setFilters} ac={academics} institutions={institutions ?? []} shown={filtered.length} total={list.length} />
 
           {filtered.length === 0 ? (
             <Card className="chamfer">
@@ -290,7 +237,7 @@ export function PrimaryAdminUsersPage() {
                     <div className="flex-[2] min-w-[220px]">Name</div>
                     <div className="w-[150px] shrink-0">Role</div>
                     <div className="w-[190px] shrink-0">Institution</div>
-                    <div className="w-[140px] shrink-0">Department</div>
+                    <div className="w-[160px] shrink-0">Year · Department</div>
                     <div className="w-[92px] shrink-0">Status</div>
                     <div className="w-[132px] shrink-0 text-right">Actions</div>
                   </div>
@@ -300,7 +247,7 @@ export function PrimaryAdminUsersPage() {
                       key={u.uid}
                       user={u}
                       institution={institutionName(u.institutionId)}
-                      department={departmentDisplay(u)}
+                      academic={academics.academic(u)}
                       busy={busyUid === u.uid}
                       onChangeStatus={(status) => changeStatus(u, status)}
                       onEdit={() => setEditingUser(u)}
@@ -333,46 +280,17 @@ export function PrimaryAdminUsersPage() {
   )
 }
 
-function SegGroup<T extends string>({
-  value,
-  onChange,
-  options,
-}: {
-  value: T
-  onChange: (v: T) => void
-  options: { v: T; l: string }[]
-}) {
-  return (
-    <div className="inline-flex border rounded-[3px] overflow-hidden" style={{ borderColor: 'var(--color-line)' }}>
-      {options.map((o, i) => (
-        <button
-          key={o.v}
-          onClick={() => onChange(o.v)}
-          className="px-2.5 py-2 text-[12.5px] font-medium transition-colors duration-150"
-          style={{
-            backgroundColor: value === o.v ? 'var(--color-ink)' : 'transparent',
-            color: value === o.v ? 'var(--color-frost)' : 'var(--color-char-soft)',
-            borderRight: i < options.length - 1 ? '1px solid var(--color-line)' : undefined,
-          }}
-        >
-          {o.l}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 function UserRow({
   user: u,
   institution,
-  department,
+  academic,
   busy,
   onChangeStatus,
   onEdit,
 }: {
   user: AppUser
   institution: string | null
-  department: string | null
+  academic: { main: string; sub: string | null }
   busy: boolean
   onChangeStatus: (status: UserStatus) => void
   onEdit: () => void
@@ -398,9 +316,9 @@ function UserRow({
           <span className="block font-mono text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
             {u.email}
           </span>
-          {u.phone && (
+          {(u.phone || u.rollNumber) && (
             <span className="block font-mono text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
-              +91 {u.phone}
+              {[u.phone ? `+91 ${u.phone}` : null, u.rollNumber ? `Reg ${u.rollNumber}` : null].filter(Boolean).join(' · ')}
             </span>
           )}
         </span>
@@ -423,9 +341,7 @@ function UserRow({
         {institution ?? 'All institutions'}
       </div>
 
-      <div className="w-[140px] shrink-0 text-[13px] truncate" style={{ color: 'var(--color-char-soft)' }}>
-        {department ?? '—'}
-      </div>
+      <AcademicCell academic={academic} />
 
       <div className="w-[92px] shrink-0">
         <span className="inline-flex items-center gap-1.5 text-[12.5px]" style={{ color: STATUS_COLORS[status] }}>

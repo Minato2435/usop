@@ -72,7 +72,11 @@ export interface AppUser {
   departmentId: string | null // faculty, hod
   mbbsYear: MbbsYear | null // students only
   associatedMbbsYears: MbbsYear[] | null // faculty only
-  rollNumber: string | null // students only
+  // Registration number — every role: a student's university reg. no., a
+  // doctor's medical-council no., an admin's staff ID. Unique platform-wide
+  // (checked by the server). Kept under its original name; older staff
+  // accounts may still have null until an admin adds it.
+  rollNumber: string | null
   assignedHOD: string | null // students only - uid of HOD
   // Students only: every year change made from the Promote students page,
   // oldest first. Absent until the student's first promotion.
@@ -584,6 +588,7 @@ export interface Submission {
   reviewedById?: string | null
   reviewedByName?: string | null
   reviewedByRole?: 'faculty' | 'hod' | null
+  reviewedByRegNo?: string | null // the reviewer's registration no., printed on the sign-off
   // The student's name and register number, copied on every save. After a
   // student is promoted to the next year, Year N staff can no longer read
   // their profile (profile reads are year-scoped), so reviewers fall back to

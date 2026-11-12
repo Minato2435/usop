@@ -178,6 +178,7 @@ export function SubmissionReviewPage({
         reviewedById: appUser?.uid ?? null,
         reviewedByName: appUser?.name ?? null,
         reviewedByRole: appUser?.role === 'hod' ? 'hod' : 'faculty',
+        reviewedByRegNo: appUser?.rollNumber ?? null,
       })
       navigate(backTo)
     } finally {

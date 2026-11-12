@@ -2151,7 +2151,11 @@ the server:
   from Users. `approver`: `'institution'` for Principal/HOD/Faculty/Student (their college's
   admin; Primary Admin as backup), `'primary'` for Institution Admin.
 - Approvers: `/admin/registrations`, `/institution-admin/registrations`
-  (`components/RegistrationRequestsPage.tsx`) with Waiting/Approved/Rejected tabs, a review modal
+  (`components/RegistrationRequestsPage.tsx`) — styled like the Users page: tinted status tiles
+  that double as tabs (Waiting / Approved / Rejected, + Abandoned for Primary Admin), a toolbar
+  (search, role, college for Primary, email-verified SegGroup on Waiting, Clear filters) and the
+  bordered-on-paper table with a header row (Applicant · Role · College · Email/Decided by ·
+  Sent · Action; role chips use the Users page's ROLE_COLOR). A review modal
   that can correct details (Primary may change the college/any role; a college admin only college
   roles), warnings (reg. no. taken, department already has an HOD, college already has a
   Principal/Institution Admin), Approve or Reject with a reason. Sidebar badge =
@@ -2176,6 +2180,11 @@ Deploy: `firebase deploy --only functions,firestore:rules`.
   Approvers see "✓ verified / ⚠ email not verified" in the list; the review modal re-checks via
   `syncEmailStatus({uid})`, and Approve is disabled until verified. `decideRegistration` refuses
   unverified emails server-side.
+- **Session after "Send for approval"**: the server setting the password / changing the email on
+  the login revokes that browser's session (Firebase security), so `RegistrationForm.submit`
+  signs straight back in with the typed email + password before sending the verification
+  link — otherwise the next token refresh signed them out and the empty form reappeared. On
+  Edit request, changing the email therefore requires the password too.
 - **Draft**: the unsent registration form is saved in `localStorage` (`usop.register.draft`,
   never the password) and restored with "Picked up where you left off · Start over"; cleared on
   send, withdraw and sign-out.
@@ -2185,3 +2194,100 @@ Deploy: `firebase deploy --only functions,firestore:rules`.
   request older than 7 days, and pending requests (+ login) whose email is still unverified 14
   days after they were sent. Anyone with a `users/{uid}` profile is never touched — so don't
   create logins by hand without a profile, or they'll be removed after a week.
+- **Abandoned tab** (Primary Admin only, `/admin/registrations` → Abandoned): `listAbandonedSignups`
+  shows every abandoned sign-up at any age ("Never sent the form" / "Email not verified", when the
+  nightly job would remove it); select + `removeAbandonedSignups` removes them now. The server
+  re-checks each uid with the same `findAbandoned()` the nightly job uses, so someone who finished
+  signing up meanwhile is skipped, never deleted.
+
+### Bulk add users
+
+**Users → Bulk add** (`/admin/users/import`, `/institution-admin/users/import`) is the shared page
+`components/BulkUserImportPage.tsx`, with wrappers in `components/bulkImportPages.tsx`.
+
+**Steps**
+- **01** College and role: Student, Faculty, HOD or Principal, one per import. Students take a
+  default year. Faculty and HOD can share one department, or read it from a column.
+- **02** Paste cells from Excel or Google Sheets (TSV), or upload a CSV, or type rows by hand.
+  - Headings are matched by common aliases. With no heading row, the template's column order is
+    used. `.xlsx` files are rejected with a "save as CSV / copy-paste" hint, so no new npm
+    dependency is needed.
+- **03** An editable table that checks every row:
+  - Required fields, email format plus typo hints, and a valid mobile number.
+  - Duplicates inside the list and against existing users.
+  - Department matched by name (or "Name (Year N)") against the departments switched on for that
+    college.
+  - An HOD already exists for that department. For faculty, the department's own year is added
+    automatically.
+  - Status filter, plus "Remove rows that need fixing".
+- **04** How they sign in:
+  - Mobile + OTP (recommended, no password).
+  - Or one shared starting password.
+
+**Creating accounts**
+- `adminBulkCreateUsers` (server function) takes up to 50 rows per call and creates 5 accounts in
+  parallel, sharing `createAccount()` with `adminCreateUser`.
+- Each row gets its own `{key, ok, error}` result, and failed rows stay editable so they can be
+  retried.
+- Emails are trusted (`emailVerified: true`), as with every admin-made account.
+- "Download results" exports a CSV.
+
+### Users page filters
+
+Both Users pages (Primary Admin and Institution Admin) share `components/users/UserListFilters.tsx`.
+
+**Filters**
+- Search across name, email, mobile and reg. no.
+- Role: the role tiles for Primary Admin, a select for Institution Admin.
+- College: Primary Admin only.
+- Year.
+- Department: disabled until a college is chosen (always open for Institution Admin, whose college
+  is fixed). Options are that college's switched-on departments, narrowed to the chosen year.
+- Status.
+
+**Sort**
+- Name, Year, Reg. no. (natural order), Department, Role, College, Status.
+
+**How year and department are matched (`useUserAcademics`)**
+- A student is in their year, and in every department switched on for their college in that year.
+- Faculty are in their `associatedMbbsYears` and their one department.
+- An HOD is in their department and that department's year.
+- Admin roles have no year or department, so they drop out whenever those filters are set.
+- Primary Admin reads every college's switches through `watchAllDepartmentOverrides`.
+
+**Other details**
+- The role tiles count users matching the other filters, so picking a college shows that college's
+  breakdown.
+- Filters persist per browser tab in `sessionStorage` (`usop.admin.userFilters` /
+  `usop.instAdmin.userFilters`).
+- The table's "Year · Department" column shows Year + reg. no. for students, and Department +
+  years for faculty/HOD.
+
+### Registration number for every role
+
+`AppUser.rollNumber` holds every account's registration number. The field keeps its old name, so
+nothing stored needs migrating:
+- a student's university registration number
+- a faculty member's, HOD's or Principal's medical-council number (or staff ID)
+- an admin's or Skill Lab Director's staff ID
+
+**Rules**
+- The server's `cleanProfile` requires it for every role.
+- `assertRollNumberFree` keeps it unique across the whole platform.
+- `lib/registrationNumber.ts` has the shared pieces: `regNoHelp(role)` gives the per-role
+  placeholder and hint, and `sameRegNo` compares two numbers ignoring case and spaces.
+
+**Where it appears**
+- The admin user form, for all roles. Editing an older staff account without one asks for it
+  before saving.
+- Self-registration, for all roles.
+- The approver's review modal, which needs it before Approve.
+- Bulk add, as a Reg. no. column for every role. Header aliases include Staff ID, Employee ID,
+  KMC no. and Medical council no.
+- The Users lists: in the name cell for everyone, in search and in sort.
+- The HOD's Faculty table and the Principal's Directory.
+- Video-batch member paste and range now work for faculty too.
+
+**Reviewer sign-off**
+- Every review decision saves `Submission.reviewedByRegNo`.
+- The Full-record PDF prints it under "Verified by".

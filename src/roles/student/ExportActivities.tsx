@@ -166,6 +166,7 @@ export function ExportActivitiesButton({
         assignedFacultyName: allFaculty[s.facultyId] || null,
         reviewerName: s.reviewedByName ?? null,
         reviewerRole: s.reviewedByRole ?? null,
+        reviewerRegNo: s.reviewedByRegNo ?? null,
         images: imageData.get(s.id) ?? [],
       }))
 

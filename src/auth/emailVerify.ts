@@ -16,13 +16,22 @@ const sentKey = (uid: string) => `usop.verifyEmailSent.${uid}`
 function lastSent(uid: string, email: string): number | null {
   try {
     const [e, at] = (localStorage.getItem(sentKey(uid)) ?? '').split('|')
-    return e === email && at ? Number(at) : null
+    return e && e.toLowerCase() === email.toLowerCase() && at ? Number(at) : null
   } catch {
     return null
   }
 }
 
-export async function sendVerificationEmail(): Promise<void> {
+// One send at a time: a second caller while a send is running (e.g. the
+// status page appearing while "Send for approval" is still sending) gets
+// the same send instead of emailing a second link.
+let inFlight: Promise<void> | null = null
+export function sendVerificationEmail(): Promise<void> {
+  if (!inFlight) inFlight = doSend().finally(() => { inFlight = null })
+  return inFlight
+}
+
+async function doSend(): Promise<void> {
   const user = auth.currentUser
   if (!user) throw new Error('Please sign in again.')
   // The server just changed the email on this login; refresh so Firebase
@@ -49,17 +58,24 @@ export function describeEmailError(err: unknown): string {
 // Resend action. Checks every few seconds while the page is open, and when
 // the tab comes back into focus (e.g. after clicking the link in Gmail).
 export function useEmailVerification(email: string | null, serverSaysVerified: boolean) {
-  const uid = auth.currentUser?.uid ?? null
-  const [verified, setVerified] = useState(serverSaysVerified || auth.currentUser?.emailVerified === true)
+  const uid = auth.currentUser?.uid ?? null  // Verified = the server says so for this request, or this browser's login
+  // says so *for this exact address* (after an email change the old
+  // "verified" must not carry over).
+  const sameAddress = (u: typeof auth.currentUser) => !!u && !!email && (u.email ?? '').toLowerCase() === email.toLowerCase()
+  const [localVerified, setLocalVerified] = useState(() => sameAddress(auth.currentUser) && auth.currentUser?.emailVerified === true)
+  const verified = serverSaysVerified || localVerified
   const [sentAt, setSentAt] = useState<number | null>(() => (uid && email ? lastSent(uid, email) : null))
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const synced = useRef(false)
 
+  // A different address (the request was edited) starts over.
   useEffect(() => {
-    if (serverSaysVerified) setVerified(true)
-  }, [serverSaysVerified])
+    setLocalVerified(sameAddress(auth.currentUser) && auth.currentUser?.emailVerified === true)
+    synced.current = false
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email])
 
   // Tell the server once we see it verified, so the approver sees it too.
   useEffect(() => {
@@ -79,7 +95,7 @@ export function useEmailVerification(email: string | null, serverSaysVerified: b
       if (!user || document.visibilityState !== 'visible') return
       try {
         await user.reload()
-        if (!stopped && user.emailVerified) setVerified(true)
+        if (!stopped && sameAddress(user) && user.emailVerified) setLocalVerified(true)
       } catch {
         /* offline — try again next tick */
       }
@@ -114,7 +130,21 @@ export function useEmailVerification(email: string | null, serverSaysVerified: b
   useEffect(() => {
     if (verified || sentAt !== null || autoSent.current || !email) return
     autoSent.current = true
-    void send()
+    void (async () => {
+      // A send already under way (from "Send for approval")? Wait for it and
+      // use it rather than sending another link.
+      if (inFlight) {
+        await inFlight.catch(() => {})
+        const u = auth.currentUser
+        const at = u ? lastSent(u.uid, email) : null
+        if (at !== null) {
+          setSentAt(at)
+          setNow(Date.now())
+          return
+        }
+      }
+      await send()
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verified, sentAt, email])
 

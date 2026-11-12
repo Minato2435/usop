@@ -146,7 +146,7 @@ export function PrincipalDirectoryPage() {
         (departmentFilter === 'all' ||
           (u.role === 'student' ? u.mbbsYear != null && u.mbbsYear === departmentYear(departmentFilter) : u.departmentId === departmentFilter)) &&
         (statusFilter === 'all' || userStatus(u) === statusFilter) &&
-        (term === '' || u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term) || (u.phone ?? '').includes(term)),
+        (term === '' || u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term) || (u.phone ?? '').includes(term) || (u.rollNumber ?? '').toLowerCase().includes(term)),
     )
     .sort((a, b) => {
       if (sortOrder === 'name-asc') return a.name.localeCompare(b.name)
@@ -171,7 +171,7 @@ export function PrincipalDirectoryPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name, email, or phone"
+            placeholder="Search name, email, phone or reg. no."
             className="w-full pl-8 pr-3 py-2 text-[13.5px] border outline-none transition-colors duration-150 focus:border-[var(--color-gold)]"
             style={{ borderColor: 'var(--color-line)', color: 'var(--color-char)' }}
           />
@@ -295,9 +295,9 @@ export function PrincipalDirectoryPage() {
                         <span className="block font-mono text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
                           {u.email}
                         </span>
-                        {u.phone && (
+                        {(u.phone || u.rollNumber) && (
                           <span className="block font-mono text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
-                            +91 {u.phone}
+                            {[u.phone ? `+91 ${u.phone}` : null, u.rollNumber ? `Reg ${u.rollNumber}` : null].filter(Boolean).join(' · ')}
                           </span>
                         )}
                       </span>

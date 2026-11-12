@@ -179,7 +179,7 @@ export function BatchMemberPicker({
               )}
               {pasteResult.ambiguous.length > 0 && (
                 <p className="text-[12px] leading-relaxed" style={{ color: 'var(--color-char-soft)' }}>
-                  More than one student ends with: <span className="font-mono">{pasteResult.ambiguous.join(', ')}</span> — paste the full register number.
+                  More than one person ends with: <span className="font-mono">{pasteResult.ambiguous.join(', ')}</span> — paste the full register number.
                 </p>
               )}
               <div className="flex flex-wrap gap-2 pt-1">

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { Icon, type IconName } from '../roles/primary-admin/shell/Icon'
-import { signOut } from 'firebase/auth'
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import { useAuth } from './AuthContext'
 import { AuthCard, ErrorLine, Field, SubmitButton, TextLink, inputCls, inputStyle } from './authUi'
@@ -17,6 +17,7 @@ import {
   type RegistrationOptions,
 } from '../lib/accounts'
 import type { MbbsYear, RegistrationRequest, Role } from '../types'
+import { regNoHelp } from '../lib/registrationNumber'
 
 // /register — "Create an account". The form opens straight away; the mobile
 // number is verified by OTP inside the form (that creates the login), then
@@ -127,6 +128,21 @@ export function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [leaving, setLeaving] = useState(false)
+  // Just sent: wait until the saved request (new submittedAt) arrives, so the
+  // old one — e.g. its old, verified email — never flashes on screen.
+  const [awaiting, setAwaiting] = useState<{ prev: number | null } | null>(null)
+  // "Send for approval" is running: keep the form on screen until it has
+  // finished (re-sign-in + verification email), so the status page doesn't
+  // appear half-way and send a second link.
+  const [submitting, setSubmitting] = useState(false)
+  useEffect(() => {
+    if (awaiting && request && request.submittedAt !== awaiting.prev) setAwaiting(null)
+  }, [awaiting, request])
+  useEffect(() => {
+    if (!awaiting) return
+    const t = setTimeout(() => setAwaiting(null), 8000) // never wait forever
+    return () => clearTimeout(t)
+  }, [awaiting])
 
   // Keep the new (not yet sent) form saved while they type.
   const sentAlready = !!request
@@ -158,7 +174,7 @@ export function RegisterPage() {
 
   // Signed in with email but there's no profile and no mobile on this login
   // (e.g. a half-made account) — nothing to register from here.
-  if (firebaseUser && !verifiedMobile && !loading) {
+  if (firebaseUser && !verifiedMobile && !loading && !submitting) {
     return (
       <AuthCard subtitle="Create an account">
         <p className="text-[13.5px] mb-4" style={{ color: 'var(--color-char)' }}>
@@ -172,7 +188,7 @@ export function RegisterPage() {
   }
 
   // Waiting for the app to load the request after signing in.
-  if (firebaseUser && (loading || request === undefined)) {
+  if (firebaseUser && (loading || request === undefined) && !submitting) {
     return (
       <AuthCard subtitle="Create an account">
         <p className="text-[13px]" style={{ color: 'var(--color-char-soft)' }}>
@@ -182,7 +198,17 @@ export function RegisterPage() {
     )
   }
 
-  const showForm = !firebaseUser || !request || editing
+  if (awaiting) {
+    return (
+      <AuthCard subtitle="Sending your request…">
+        <p className="text-[13px]" style={{ color: 'var(--color-char-soft)' }}>
+          Sending your request…
+        </p>
+      </AuthCard>
+    )
+  }
+
+  const showForm = !firebaseUser || !request || editing || submitting
 
   if (showForm) {
     return (
@@ -207,11 +233,13 @@ export function RegisterPage() {
           setDraft={setDraft}
           verifiedMobile={verifiedMobile}
           existing={request ?? null}
-          onDone={() => {
+          onDone={(prev) => {
             clearSavedDraft()
             setRestored(false)
+            setAwaiting({ prev })
             setEditing(false)
           }}
+          onBusy={setSubmitting}
           onUseOtherNumber={withdraw}
           onCancelEdit={request ? () => setEditing(false) : undefined}
         />
@@ -264,7 +292,7 @@ export function RegisterPage() {
         )}
       </div>
 
-      {!approved && <EmailStep email={request.email} serverSaysVerified={request.emailVerified === true} onEdit={() => {
+      {!approved && <EmailStep key={request.email} email={request.email} serverSaysVerified={request.emailVerified === true} onEdit={() => {
         setDraft(draftFrom(request))
         setEditing(true)
       }} />}
@@ -274,7 +302,8 @@ export function RegisterPage() {
         <Row k="Role" v={ROLE_LABEL[request.role] ?? request.role} />
         <Row k="Mobile" v={`+91 ${request.phone}`} mono />
         <Row k="Email" v={request.email} />
-        {request.role === 'student' && <Row k="Year" v={`Year ${request.mbbsYear} · Reg. no. ${request.rollNumber}`} />}
+        {request.role === 'student' && <Row k="Year" v={`Year ${request.mbbsYear}`} />}
+        {request.rollNumber && <Row k="Reg. no." v={request.rollNumber} mono />}
         <Row k="Sent" v={fmt(request.submittedAt)} />
       </dl>
 
@@ -545,6 +574,7 @@ function RegistrationForm({
   verifiedMobile,
   existing,
   onDone,
+  onBusy,
   onUseOtherNumber,
   onCancelEdit,
 }: {
@@ -552,7 +582,8 @@ function RegistrationForm({
   setDraft: (fn: (d: Draft) => Draft) => void
   verifiedMobile: string | null
   existing: RegistrationRequest | null
-  onDone: () => void
+  onDone: (prevSubmittedAt: number | null) => void
+  onBusy: (busy: boolean) => void
   onUseOtherNumber: () => void
   onCancelEdit?: () => void
 }) {
@@ -640,14 +671,19 @@ function RegistrationForm({
     if (departmentId && options && !deptOptions.some((d) => d.id === departmentId)) setDraft((d) => ({ ...d, departmentId: '' }))
   }, [deptOptions, departmentId, options, setDraft])
 
-  const needsPassword = !existing
+  // Changing the email (or setting a password) on the login ends this
+  // browser's session — Firebase does that for security — so we sign straight
+  // back in with the email + password. A changed email therefore needs the
+  // password typed too.
+  const emailChanged = !!existing && email.trim().toLowerCase() !== existing.email
+  const needsPassword = !existing || emailChanged
   const detailsValid =
     name.trim() !== '' &&
     EMAIL_RE.test(email.trim()) &&
     (needsPassword ? password.length >= 6 : password === '' || password.length >= 6) &&
     (platformWide || institutionId !== '') &&
     (!needsDept || departmentId !== '') &&
-    (role !== 'student' || rollNumber.trim() !== '') &&
+    rollNumber.trim() !== '' &&
     (role !== 'faculty' || associatedYears.length > 0)
 
   const submitHint = !detailsValid ? 'Fill in every field above.' : !verified ? 'Verify your mobile number to continue.' : null
@@ -655,7 +691,11 @@ function RegistrationForm({
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (!verified || !detailsValid || busy) return
+    // The request's submittedAt before this send — the page waits until the
+    // saved request shows a different one.
+    const prevSubmittedAt = existing?.submittedAt ?? null
     setBusy(true)
+    onBusy(true)
     setError(null)
     try {
       const res = await submitRegistration({
@@ -666,18 +706,22 @@ function RegistrationForm({
         departmentId: needsDept ? departmentId : null,
         mbbsYear: role === 'student' ? mbbsYear : null,
         associatedMbbsYears: role === 'faculty' ? associatedYears : null,
-        rollNumber: role === 'student' ? rollNumber.trim() : null,
+        rollNumber: rollNumber.trim().replace(/\s+/g, ' '),
         ...(password ? { password } : {}),
       })
+      // Stay signed in: the server's change to the email / password ended
+      // this session, so sign back in to the same account right away.
+      if (password) await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password).catch(() => {})
       setDraft((d) => ({ ...d, password: '' }))
       // New or changed email → email the verification link now. If this
       // fails, the status page notices no link went out and sends one.
       if (!res.emailVerified) await sendVerificationEmail().catch(() => {})
-      onDone()
+      onDone(prevSubmittedAt)
     } catch (err) {
       setError(accountErrorMessage(err, 'Couldn’t send your request. Please try again.'))
     } finally {
       setBusy(false)
+      onBusy(false)
     }
   }
 
@@ -727,9 +771,15 @@ function RegistrationForm({
           <input id="reg-email" type="email" autoComplete="email" value={email} onChange={(e) => set('email', e.target.value)} className={inputCls} style={inputStyle} />
         </Field>
         <Field
-          label={needsPassword ? 'Password' : 'New password (optional)'}
+          label={emailChanged ? 'Password (needed to change the email)' : needsPassword ? 'Password' : 'New password (optional)'}
           htmlFor="reg-password"
-          hint={needsPassword ? 'At least 6 characters.' : 'Leave blank to keep your current one.'}
+          hint={
+            emailChanged
+              ? 'Type your current password, or a new one (6+ characters).'
+              : needsPassword
+                ? 'At least 6 characters.'
+                : 'Leave blank to keep your current one.'
+          }
         >
           <div className="relative">
             <input
@@ -788,7 +838,7 @@ function RegistrationForm({
             </select>
           </Field>
           <Field label="Registration number" htmlFor="reg-roll">
-            <input id="reg-roll" value={rollNumber} onChange={(e) => set('rollNumber', e.target.value)} placeholder="e.g. MBBS2026-0142" className={inputCls} style={inputStyle} />
+            <input id="reg-roll" value={rollNumber} onChange={(e) => set('rollNumber', e.target.value)} placeholder={regNoHelp(role).placeholder} className={inputCls} style={inputStyle} />
           </Field>
         </div>
       )}
@@ -843,6 +893,15 @@ function RegistrationForm({
               </option>
             ))}
           </select>
+        </Field>
+      )}
+
+      {role !== 'student' && (
+        <Field label="Registration number" htmlFor="reg-roll">
+          <input id="reg-roll" value={rollNumber} onChange={(e) => set('rollNumber', e.target.value)} placeholder={regNoHelp(role).placeholder} className={inputCls} style={inputStyle} />
+          <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-char-soft)' }}>
+            {regNoHelp(role).hint}
+          </p>
         </Field>
       )}
 

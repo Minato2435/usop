@@ -188,6 +188,7 @@ export async function facultyDecideSubmission(
     reviewedById?: string | null
     reviewedByName?: string | null
     reviewedByRole?: 'faculty' | 'hod' | null
+    reviewedByRegNo?: string | null
   },
 ): Promise<void> {
   const now = Date.now()

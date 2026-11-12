@@ -35,6 +35,7 @@ import { PrimaryAdminTemplateDetail } from '../roles/primary-admin/TemplateDetai
 import { PrimaryAdminInstitutionsPage } from '../roles/primary-admin/InstitutionsPage'
 import { PrimaryAdminInstitutionDetailPage } from '../roles/primary-admin/InstitutionDetailPage'
 import { PrimaryAdminUsersPage } from '../roles/primary-admin/UsersPage'
+import { PrimaryAdminBulkImportPage, InstitutionAdminBulkImportPage } from '../components/bulkImportPages'
 import { PrimaryAdminDepartmentsPage } from '../roles/primary-admin/DepartmentsPage'
 import { PrimaryAdminCompetenciesPage } from '../roles/primary-admin/CompetenciesPage'
 import { PrimaryAdminCompetencyEditorPage } from '../roles/primary-admin/CompetencyEditorPage'
@@ -154,6 +155,14 @@ export function AppRouter() {
             element={
               <RequireRole roles={['primaryAdmin']}>
                 <PrimaryAdminUsersPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/admin/users/import"
+            element={
+              <RequireRole roles={['primaryAdmin']}>
+                <PrimaryAdminBulkImportPage />
               </RequireRole>
             }
           />
@@ -378,6 +387,14 @@ export function AppRouter() {
             element={
               <RequireRole roles={['institutionAdmin']}>
                 <InstitutionAdminUsersPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/institution-admin/users/import"
+            element={
+              <RequireRole roles={['institutionAdmin']}>
+                <InstitutionAdminBulkImportPage />
               </RequireRole>
             }
           />
