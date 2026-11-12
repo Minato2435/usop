@@ -9,11 +9,16 @@
 //      creates their login), fills in a request, and an admin approves or
 //      rejects it. Nobody gets a profile (and so any access) until approved.
 //
+// Email verification: an email an admin types is trusted (marked verified);
+// a self-registered email must be verified by its link before the request
+// can be approved. A daily job clears abandoned sign-ups.
+//
 // Every function checks who is calling, mirroring firestore.rules:
 // Primary Admin manages everyone; an Institution Admin manages only
 // Principal / HOD / Faculty / Student accounts of their own college.
 
 import { onCall, HttpsError } from 'firebase-functions/https'
+import { onSchedule } from 'firebase-functions/scheduler'
 import { setGlobalOptions } from 'firebase-functions'
 import { initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
@@ -147,7 +152,8 @@ export const adminCreateUser = onCall(async (request) => {
 
   let uid
   try {
-    const user = await auth.createUser({ email: profile.email, password, phoneNumber: e164(profile.phone), displayName: profile.name })
+    // emailVerified: the admin vouches for the address, so no link is needed.
+    const user = await auth.createUser({ email: profile.email, emailVerified: true, password, phoneNumber: e164(profile.phone), displayName: profile.name })
     uid = user.uid
   } catch (err) {
     authFail(err)
@@ -177,6 +183,7 @@ export const adminUpdateUser = onCall(async (request) => {
   try {
     await auth.updateUser(uid, {
       email: profile.email,
+      emailVerified: true, // set by an admin → trusted
       phoneNumber: e164(profile.phone),
       displayName: profile.name,
       ...(password ? { password } : {}),
@@ -207,12 +214,13 @@ export const adminDeleteUser = onCall(async (request) => {
 
 // One-time (and safe to repeat): attach every profile's saved mobile number
 // to its login account, so accounts made before these functions existed can
-// use mobile + OTP too. Primary Admin only.
+// use mobile + OTP too — and mark their emails verified (they were all added
+// by an admin), so "Forgot password?" works for them. Primary Admin only.
 export const adminSyncPhones = onCall({ timeoutSeconds: 540 }, async (request) => {
   const caller = await requireAdmin(request)
   if (caller.role !== 'primaryAdmin') fail('permission-denied', 'Only the Primary Admin can run this.')
   const users = await db.collection('users').get()
-  const result = { attached: 0, alreadyDone: 0, problems: [] }
+  const result = { attached: 0, alreadyDone: 0, emailsMarkedVerified: 0, problems: [] }
   for (const doc of users.docs) {
     const u = doc.data()
     const label = `${u.name ?? '?'} <${u.email ?? '?'}>`
@@ -222,6 +230,10 @@ export const adminSyncPhones = onCall({ timeoutSeconds: 540 }, async (request) =
     }
     try {
       const record = await auth.getUser(doc.id)
+      if (record.email && !record.emailVerified) {
+        await auth.updateUser(doc.id, { emailVerified: true })
+        result.emailsMarkedVerified++
+      }
       if (record.phoneNumber === e164(u.phone)) {
         result.alreadyDone++
         continue
@@ -308,8 +320,11 @@ export const submitRegistration = onCall(async (request) => {
   const password = String(request.data?.password ?? '')
   if (!hasPassword && password.length < 6) fail('invalid-argument', 'Choose a password of at least 6 characters.')
   if (password && password.length < 6) fail('invalid-argument', 'The password must be at least 6 characters.')
+  // A new (or changed) email starts unverified; the page then emails a link.
+  const sameEmail = (record.email ?? '').toLowerCase() === profile.email
+  const emailVerified = sameEmail && record.emailVerified === true
   try {
-    await auth.updateUser(uid, { email: profile.email, displayName: profile.name, ...(password ? { password } : {}) })
+    await auth.updateUser(uid, { email: profile.email, emailVerified, displayName: profile.name, ...(password ? { password } : {}) })
   } catch (err) {
     authFail(err)
   }
@@ -324,8 +339,52 @@ export const submitRegistration = onCall(async (request) => {
     decidedAt: null,
     decidedById: null,
     decidedByName: null,
+    emailVerified,
   })
-  return { ok: true }
+  return { ok: true, emailVerified }
+})
+
+// Copies "has the email link been clicked?" from the login onto the request,
+// so approvers (who can't read logins) see it. Called by the registrant's page
+// once it notices the click, and by the approver's review window.
+export const syncEmailStatus = onCall(async (request) => {
+  if (!request.auth) fail('unauthenticated', 'Please sign in again.')
+  let uid = request.auth.uid
+  const target = str(request.data?.uid)
+  if (target && target !== uid) {
+    const caller = await requireAdmin(request)
+    const snap = await db.doc(`registrationRequests/${target}`).get()
+    if (!snap.exists) fail('not-found', 'This request no longer exists.')
+    const req = snap.data()
+    if (caller.role !== 'primaryAdmin' && (req.approver !== 'institution' || req.institutionId !== caller.institutionId)) {
+      fail('permission-denied', 'This request is for another approver.')
+    }
+    uid = target
+  }
+  let verified = false
+  try {
+    verified = (await auth.getUser(uid)).emailVerified === true
+  } catch {
+    return { emailVerified: false }
+  }
+  const ref = db.doc(`registrationRequests/${uid}`)
+  const snap = await ref.get()
+  if (snap.exists && snap.data().emailVerified !== verified) await ref.update({ emailVerified: verified })
+  return { emailVerified: verified }
+})
+
+// "Forgot password?" — only for a verified email, so a mistyped address can
+// never receive someone else's reset link. Returns whether the page should
+// ask Firebase to send the reset email.
+export const passwordResetAllowed = onCall(async (request) => {
+  const email = str(request.data?.email).toLowerCase()
+  if (!EMAIL_RE.test(email)) fail('invalid-argument', 'Enter a valid email address.')
+  try {
+    const user = await auth.getUserByEmail(email)
+    return { allowed: user.emailVerified === true && !user.disabled }
+  } catch {
+    return { allowed: false }
+  }
 })
 
 // The registrant withdraws: removes the request and their login account.
@@ -369,15 +428,54 @@ export const decideRegistration = onCall(async (request) => {
   assertCanManage(caller, profile)
   await assertRollNumberFree(profile.rollNumber, uid)
   if ((await db.doc(`users/${uid}`).get()).exists) fail('already-exists', 'This account already has a profile.')
+  let record
   try {
-    await auth.getUser(uid)
+    record = await auth.getUser(uid)
   } catch {
     fail('not-found', 'This person deleted their login account.')
+  }
+  if (!record.emailVerified) {
+    await reqRef.update({ emailVerified: false }).catch(() => {})
+    fail('failed-precondition', 'Their email isn’t verified yet. They need to click the link we emailed them.')
   }
 
   const batch = db.batch()
   batch.set(db.doc(`users/${uid}`), { ...profile, active: true, rejected: false })
-  batch.update(reqRef, { ...profile, status: 'approved', reason: null, ...decided })
+  batch.update(reqRef, { ...profile, status: 'approved', reason: null, emailVerified: true, ...decided })
   await batch.commit()
   return { ok: true }
+})
+
+// ── 3. Daily clean-up of abandoned sign-ups ──────────────────────────────
+//
+// • A login with no profile and no request, older than 7 days — someone
+//   verified their mobile and never sent the form. Deleted, so the number
+//   (and any email) is free again.
+// • A pending request whose email was never verified, 14 days after it was
+//   last sent — deleted with its login.
+// Anyone with a profile is never touched.
+const DAY = 86_400_000
+export const cleanupAbandonedSignups = onSchedule({ schedule: 'every day 03:30', timeZone: 'Asia/Kolkata', timeoutSeconds: 540 }, async () => {
+  const now = Date.now()
+  const [profiles, requests] = await Promise.all([db.collection('users').select().get(), db.collection('registrationRequests').get()])
+  const hasProfile = new Set(profiles.docs.map((d) => d.id))
+  const reqs = new Map(requests.docs.map((d) => [d.id, d.data()]))
+  let removed = 0
+  let pageToken
+  do {
+    const page = await auth.listUsers(1000, pageToken)
+    for (const u of page.users) {
+      if (hasProfile.has(u.uid)) continue
+      const created = Date.parse(u.metadata.creationTime)
+      const req = reqs.get(u.uid)
+      const emptyLogin = !req && now - created > 7 * DAY
+      const unverifiedRequest = req && req.status === 'pending' && !u.emailVerified && now - (req.submittedAt ?? created) > 14 * DAY
+      if (!emptyLogin && !unverifiedRequest) continue
+      if (req) await db.doc(`registrationRequests/${u.uid}`).delete().catch(() => {})
+      await auth.deleteUser(u.uid).catch(() => {})
+      removed++
+    }
+    pageToken = page.pageToken
+  } while (pageToken)
+  console.log(`cleanupAbandonedSignups: removed ${removed} abandoned sign-up(s)`)
 })

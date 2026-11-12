@@ -1,3 +1,4 @@
+import { suggestEmailFix } from '../../../lib/emailTypos'
 import { useEffect, useMemo, useState } from 'react'
 import { Modal, Field, PrimaryButton, GhostButton, inputClass, Badge } from './ui'
 import { Icon } from './Icon'
@@ -153,6 +154,7 @@ export function UserFormModal({
   }, [otherUsers, institutionId, studentDepartments])
 
   const normalizedEmail = email.trim().toLowerCase()
+  const emailFix = suggestEmailFix(normalizedEmail)
   const emailTaken = normalizedEmail !== '' && otherUsers.some((u) => u.email.trim().toLowerCase() === normalizedEmail)
   const phoneTaken = phone.length === 10 && otherUsers.some((u) => u.phone === phone)
   const rollTaken =
@@ -253,7 +255,24 @@ export function UserFormModal({
             onChange={(e) => setEmail(e.target.value)}
             placeholder="name@institution.edu"
           />
-          {emailTaken && <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-clay)' }}>Already in use by another account.</p>}
+          {emailTaken ? (
+            <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-clay)' }}>Already in use by another account.</p>
+          ) : emailFix ? (
+            <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-clay)' }}>
+              Did you mean <span className="font-medium">{emailFix}</span>?{' '}
+              <button type="button" onClick={() => setEmail(emailFix)} className="underline font-medium">
+                Use this
+              </button>
+            </p>
+          ) : (
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) &&
+            normalizedEmail !== (editingUser?.email ?? '').trim().toLowerCase() && (
+              <p className="mt-1 text-[11.5px]" style={{ color: 'var(--color-char-soft)' }}>
+                Check it’s right: <span className="font-medium" style={{ color: 'var(--color-char)' }}>{normalizedEmail}</span> — emails added by an admin
+                are trusted without a verification link, and password resets go here.
+              </p>
+            )
+          )}
         </Field>
 
         <Field label="Mobile number">

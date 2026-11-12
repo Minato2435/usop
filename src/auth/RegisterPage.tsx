@@ -6,6 +6,8 @@ import { auth } from '../lib/firebase'
 import { useAuth } from './AuthContext'
 import { AuthCard, ErrorLine, Field, SubmitButton, TextLink, inputCls, inputStyle } from './authUi'
 import { describeAuthError, isValidMobile, normalizeMobile, usePhoneOtp } from './phoneOtp'
+import { sendVerificationEmail, useEmailVerification } from './emailVerify'
+import { suggestEmailFix } from '../lib/emailTypos'
 import {
   accountErrorMessage,
   cancelRegistration,
@@ -51,6 +53,37 @@ interface Draft {
   departmentId: string
 }
 
+// The half-filled form is kept in this browser (never the password), so
+// closing the page and coming back picks up where they left off.
+const DRAFT_KEY = 'usop.register.draft'
+function loadSavedDraft(): Draft | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    if (!raw) return null
+    const d = JSON.parse(raw) as Partial<Draft>
+    const base = draftFrom(null)
+    const merged = { ...base, ...d, password: '' }
+    // Only worth restoring if something was actually typed.
+    return merged.name || merged.email || merged.institutionId || merged.mobile ? merged : null
+  } catch {
+    return null
+  }
+}
+function saveDraft(d: Draft) {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...d, password: '' }))
+  } catch {
+    /* private mode — fine */
+  }
+}
+function clearSavedDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY)
+  } catch {
+    /* fine */
+  }
+}
+
 function draftFrom(r: RegistrationRequest | null, mobile = ''): Draft {
   return {
     role: r?.role ?? 'student',
@@ -73,7 +106,13 @@ export function RegisterPage() {
   const navigate = useNavigate()
   const uid = firebaseUser?.uid ?? null
 
-  const [draft, setDraft] = useState<Draft>(() => draftFrom(null, normalizeMobile(params.get('mobile') ?? '').slice(0, 10)))
+  const [initial] = useState(() => {
+    const fromLink = normalizeMobile(params.get('mobile') ?? '').slice(0, 10)
+    const saved = loadSavedDraft()
+    return saved && (!fromLink || fromLink === saved.mobile) ? { draft: saved, restored: true } : { draft: draftFrom(null, fromLink), restored: false }
+  })
+  const [restored, setRestored] = useState(initial.restored)
+  const [draft, setDraft] = useState<Draft>(initial.draft)
   const [request, setRequest] = useState<RegistrationRequest | null | undefined>(undefined)
   useEffect(() => {
     if (!uid) {
@@ -89,6 +128,12 @@ export function RegisterPage() {
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [leaving, setLeaving] = useState(false)
 
+  // Keep the new (not yet sent) form saved while they type.
+  const sentAlready = !!request
+  useEffect(() => {
+    if (!sentAlready) saveDraft(draft)
+  }, [draft, sentAlready])
+
   if (appUser) return <Navigate to="/" replace />
   // Signing out from the status view: don't flash the empty form meanwhile.
   if (leaving) return <AuthCard subtitle="Signing out…"><p className="text-[13px]" style={{ color: 'var(--color-char-soft)' }}>Signing out…</p></AuthCard>
@@ -100,6 +145,7 @@ export function RegisterPage() {
     setError(null)
     try {
       await cancelRegistration({})
+      clearSavedDraft()
       await signOut(auth).catch(() => {})
       setDraft((d) => ({ ...d, mobile: '' }))
       setConfirmCancel(false)
@@ -141,12 +187,31 @@ export function RegisterPage() {
   if (showForm) {
     return (
       <AuthCard subtitle={request ? 'Edit your request' : 'Create an account'} wide>
+        {restored && !request && (
+          <div className="mb-5 flex items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-[12.5px]" style={{ backgroundColor: 'var(--color-gold-soft)', color: 'var(--color-char)' }}>
+            <span className="flex-1">Picked up where you left off.</span>
+            <TextLink
+              tone="soft"
+              onClick={() => {
+                clearSavedDraft()
+                setRestored(false)
+                setDraft((d) => ({ ...draftFrom(null), mobile: firebaseUser ? d.mobile : '' }))
+              }}
+            >
+              Start over
+            </TextLink>
+          </div>
+        )}
         <RegistrationForm
           draft={draft}
           setDraft={setDraft}
           verifiedMobile={verifiedMobile}
           existing={request ?? null}
-          onDone={() => setEditing(false)}
+          onDone={() => {
+            clearSavedDraft()
+            setRestored(false)
+            setEditing(false)
+          }}
           onUseOtherNumber={withdraw}
           onCancelEdit={request ? () => setEditing(false) : undefined}
         />
@@ -199,6 +264,11 @@ export function RegisterPage() {
         )}
       </div>
 
+      {!approved && <EmailStep email={request.email} serverSaysVerified={request.emailVerified === true} onEdit={() => {
+        setDraft(draftFrom(request))
+        setEditing(true)
+      }} />}
+
       <dl className="grid grid-cols-[120px_1fr] gap-x-3 gap-y-2 text-[13px] mb-6">
         <Row k="Name" v={request.name} />
         <Row k="Role" v={ROLE_LABEL[request.role] ?? request.role} />
@@ -237,6 +307,7 @@ export function RegisterPage() {
                 : 'Signed out. Your request is still waiting for approval — sign in any time with your mobile number or email to check on it.'
             setLeaving(true)
             await signOut(auth).catch(() => {})
+            clearSavedDraft()
             setDraft(draftFrom(null))
             navigate('/login', { replace: true, state: { notice } })
           }}
@@ -266,6 +337,68 @@ export function RegisterPage() {
         )}
       </div>
     </AuthCard>
+  )
+}
+
+// The email step on the "Waiting for approval" page.
+function EmailStep({ email, serverSaysVerified, onEdit }: { email: string; serverSaysVerified: boolean; onEdit: () => void }) {
+  const v = useEmailVerification(email, serverSaysVerified)
+  if (v.verified) {
+    return (
+      <div className="flex items-center gap-3 rounded-[10px] border px-4 py-3 mb-5" style={{ borderColor: 'color-mix(in srgb, var(--color-teal) 35%, transparent)', backgroundColor: 'var(--color-teal-soft)' }}>
+        <span className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)', color: 'var(--color-paper-raised)' }}>
+          <Icon name="checkCircle" className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <div className="text-[13.5px] font-medium" style={{ color: 'var(--color-teal)' }}>
+            Email verified
+          </div>
+          <div className="text-[12px] truncate" style={{ color: 'var(--color-char)' }}>
+            {email}
+          </div>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="rounded-[10px] border px-4 py-3.5 mb-5" style={{ borderColor: 'var(--color-gold)', backgroundColor: 'var(--color-paper)' }}>
+      <div className="flex items-start gap-3">
+        <span className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-gold-soft)', color: 'var(--color-gold)' }}>
+          <Icon name="inbox" className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13.5px] font-medium" style={{ color: 'var(--color-char)' }}>
+            Verify your email
+          </div>
+          <p className="text-[12.5px] mt-0.5 leading-relaxed" style={{ color: 'var(--color-char-soft)' }}>
+            {v.sending && v.sentAt === null ? (
+              'Sending a link…'
+            ) : (
+              <>
+                We sent a link to <span className="font-medium" style={{ color: 'var(--color-char)' }}>{email}</span>. Click it to verify — your request can’t
+                be approved until you do. Not there? Check Spam or Promotions.
+              </>
+            )}
+          </p>
+          {v.error && (
+            <p className="text-[12px] mt-1.5" style={{ color: 'var(--color-clay)' }}>
+              {v.error}
+            </p>
+          )}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[12.5px]">
+            <button type="button" disabled={!v.canResend} onClick={() => void v.send()} className="font-medium disabled:opacity-50" style={{ color: 'var(--color-gold)' }}>
+              {v.sending ? 'Sending…' : v.canResend ? 'Resend email' : `Resend in ${v.resendIn}s`}
+            </button>
+            <TextLink tone="soft" onClick={onEdit}>
+              Wrong email? Change it
+            </TextLink>
+            <span className="text-[11.5px]" style={{ color: 'var(--color-char-soft)' }}>
+              This page updates by itself once you click the link.
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -525,7 +658,7 @@ function RegistrationForm({
     setBusy(true)
     setError(null)
     try {
-      await submitRegistration({
+      const res = await submitRegistration({
         role,
         name: name.trim(),
         email: email.trim().toLowerCase(),
@@ -537,6 +670,9 @@ function RegistrationForm({
         ...(password ? { password } : {}),
       })
       setDraft((d) => ({ ...d, password: '' }))
+      // New or changed email → email the verification link now. If this
+      // fails, the status page notices no link went out and sends one.
+      if (!res.emailVerified) await sendVerificationEmail().catch(() => {})
       onDone()
     } catch (err) {
       setError(accountErrorMessage(err, 'Couldn’t send your request. Please try again.'))
@@ -572,7 +708,22 @@ function RegistrationForm({
         <input id="reg-name" value={name} onChange={(e) => set('name', e.target.value)} placeholder="As on your college records" className={inputCls} style={inputStyle} />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Email" htmlFor="reg-email" hint="You can also sign in with this email.">
+        <Field
+          label="Email"
+          htmlFor="reg-email"
+          hint={
+            suggestEmailFix(email) ? (
+              <span style={{ color: 'var(--color-clay)' }}>
+                Did you mean <span className="font-medium">{suggestEmailFix(email)}</span>?{' '}
+                <button type="button" className="underline font-medium" onClick={() => set('email', suggestEmailFix(email)!)}>
+                  Use this
+                </button>
+              </span>
+            ) : (
+              'We’ll email you a link to verify it. You can also sign in with it.'
+            )
+          }
+        >
           <input id="reg-email" type="email" autoComplete="email" value={email} onChange={(e) => set('email', e.target.value)} className={inputCls} style={inputStyle} />
         </Field>
         <Field

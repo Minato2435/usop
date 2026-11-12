@@ -4,6 +4,7 @@ import { Icon } from '../roles/primary-admin/shell/Icon'
 import {
   accountErrorMessage,
   decideRegistration,
+  syncEmailStatus,
   getRegistrationOptions,
   watchRegistrationRequests,
   type RegistrationOptions,
@@ -154,6 +155,11 @@ export function RegistrationRequestsPage({ Shell, institutionId }: { Shell: Comp
                   </div>
                   <div className="text-[11.5px] truncate" style={{ color: 'var(--color-char-soft)' }}>
                     +91 {r.phone} · {r.email}
+                    {tab === 'pending' && (
+                      <span className="ml-1.5 font-medium" style={{ color: r.emailVerified ? 'var(--color-teal)' : 'var(--color-clay)' }}>
+                        {r.emailVerified ? '✓ verified' : '⚠ email not verified'}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="w-[190px] min-w-0">
@@ -222,6 +228,28 @@ function ReviewModal({
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Ask the server for the live email status (the person may have clicked
+  // the link a moment ago); it also updates the request for the list.
+  const [emailVerified, setEmailVerified] = useState(r.emailVerified === true)
+  const [checkingEmail, setCheckingEmail] = useState(false)
+  async function recheckEmail() {
+    setCheckingEmail(true)
+    try {
+      setEmailVerified((await syncEmailStatus({ uid: r.uid })).emailVerified)
+    } catch {
+      /* keep what we have */
+    } finally {
+      setCheckingEmail(false)
+    }
+  }
+  useEffect(() => {
+    if (r.status === 'pending' && !r.emailVerified) void recheckEmail()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [r.uid])
+  useEffect(() => {
+    if (r.emailVerified) setEmailVerified(true)
+  }, [r.emailVerified])
 
   const platformWide = role === 'skillLabDirector'
   const needsDept = role === 'faculty' || role === 'hod'
@@ -308,7 +336,22 @@ function ReviewModal({
           +91 {r.phone} <span className="text-[11px] font-sans" style={{ color: 'var(--color-teal)' }}>· verified by OTP</span>
         </span>
         <span style={{ color: 'var(--color-char-soft)' }}>Email</span>
-        <span style={{ color: 'var(--color-char)' }}>{r.email}</span>
+        <span style={{ color: 'var(--color-char)' }}>
+          {r.email}{' '}
+          {pending &&
+            (emailVerified ? (
+              <span className="text-[11px]" style={{ color: 'var(--color-teal)' }}>
+                · verified by link
+              </span>
+            ) : (
+              <span className="text-[11px]" style={{ color: 'var(--color-clay)' }}>
+                · not verified yet{' '}
+                <button type="button" onClick={() => void recheckEmail()} disabled={checkingEmail} className="underline ml-1" style={{ color: 'var(--color-char-soft)' }}>
+                  {checkingEmail ? 'checking…' : 'check again'}
+                </button>
+              </span>
+            ))}
+        </span>
         <span style={{ color: 'var(--color-char-soft)' }}>Sent</span>
         <span style={{ color: 'var(--color-char)' }}>
           {fmt(r.submittedAt)}
@@ -463,6 +506,13 @@ function ReviewModal({
         </Field>
       )}
 
+      {pending && !emailVerified && !rejecting && (
+        <div className="rounded-[8px] px-3.5 py-2.5 mb-4 text-[12.5px]" style={{ backgroundColor: 'var(--color-clay-soft)', color: 'var(--color-char)' }}>
+          Waiting for {r.name.split(' ')[0] || 'them'} to click the link we emailed to <span className="font-medium">{r.email}</span>. You can approve once
+          it’s verified — or reject with a reason if the email looks wrong.
+        </div>
+      )}
+
       {error && (
         <div className="mb-4">
           <Badge tone="clay">{error}</Badge>
@@ -486,7 +536,7 @@ function ReviewModal({
             <GhostButton tone="danger" onClick={() => setRejecting(true)} disabled={busy}>
               Reject…
             </GhostButton>
-            <PrimaryButton onClick={() => decide('approve')} disabled={busy || !valid}>
+            <PrimaryButton onClick={() => decide('approve')} disabled={busy || !valid || !emailVerified}>
               {busy ? 'Approving…' : 'Approve'}
             </PrimaryButton>
           </>

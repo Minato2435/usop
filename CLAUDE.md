@@ -2160,3 +2160,28 @@ the server:
   `approver == 'institution'` (query filters `institutionId` + `approver`); no client writes.
 
 Deploy: `firebase deploy --only functions,firestore:rules`.
+
+### Email verification, saved sign-up drafts, forgot password, clean-up
+
+- **Admin-entered emails are trusted**: `adminCreateUser` / `adminUpdateUser` set
+  `emailVerified: true` (and `adminSyncPhones` marks older admin-made accounts verified). The
+  admin user form warns about common domain typos (`lib/emailTypos.ts` → `suggestEmailFix`) and
+  shows a "check it's right" line, since no link is sent.
+- **Self-registered emails must be verified before approval**: `submitRegistration` keeps
+  `emailVerified` only if the email is unchanged, stores it on the request, and returns it; the
+  page then calls `sendVerificationEmail()` (`auth/emailVerify.ts`, continue URL `/register`).
+  The status page's `EmailStep` (`useEmailVerification`) polls `user.reload()` every 5 s / on
+  focus, calls `syncEmailStatus` once verified (so approvers see it), auto-sends if this browser
+  never sent a link for this email, and offers Resend (60 s) + "Wrong email? Change it".
+  Approvers see "✓ verified / ⚠ email not verified" in the list; the review modal re-checks via
+  `syncEmailStatus({uid})`, and Approve is disabled until verified. `decideRegistration` refuses
+  unverified emails server-side.
+- **Draft**: the unsent registration form is saved in `localStorage` (`usop.register.draft`,
+  never the password) and restored with "Picked up where you left off · Start over"; cleared on
+  send, withdraw and sign-out.
+- **Forgot password?** (login password step): `passwordResetAllowed` → only a verified email gets
+  `sendPasswordResetEmail`; otherwise the page suggests mobile + OTP.
+- **`cleanupAbandonedSignups`** (scheduled, daily 03:30 IST): deletes logins with no profile and no
+  request older than 7 days, and pending requests (+ login) whose email is still unverified 14
+  days after they were sent. Anyone with a `users/{uid}` profile is never touched — so don't
+  create logins by hand without a profile, or they'll be removed after a week.

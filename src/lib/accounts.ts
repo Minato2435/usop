@@ -33,7 +33,11 @@ export const checkMobile = call<{ mobile: string }, { exists: boolean }>('checkM
 export const getRegistrationOptions = call<Record<string, never>, RegistrationOptions>('registrationOptions')
 
 export type RegistrationInput = Omit<AccountProfile, 'phone' | 'assignedHOD'> & { password?: string }
-export const submitRegistration = call<RegistrationInput>('submitRegistration')
+export const submitRegistration = call<RegistrationInput, { ok: true; emailVerified: boolean }>('submitRegistration')
+// Copy the login's email-verified flag onto the request (own, or — for an
+// approver — someone else's by uid).
+export const syncEmailStatus = call<{ uid?: string }, { emailVerified: boolean }>('syncEmailStatus')
+export const passwordResetAllowed = call<{ email: string }, { allowed: boolean }>('passwordResetAllowed')
 export const cancelRegistration = call<Record<string, never>>('cancelRegistration')
 export const decideRegistration = call<{
   uid: string

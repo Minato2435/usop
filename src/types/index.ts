@@ -103,6 +103,9 @@ export interface RegistrationRequest extends AccountProfile {
   decidedAt: number | null
   decidedById: string | null
   decidedByName: string | null
+  // Has the registrant clicked the email link? Kept in step with the login by
+  // the server (syncEmailStatus / submitRegistration). Missing on old requests.
+  emailVerified?: boolean
 }
 
 // One promotion (or its undo) of one student. `batchId` groups every

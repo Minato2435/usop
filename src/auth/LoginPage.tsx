@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { deleteUser, getAdditionalUserInfo, signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { deleteUser, getAdditionalUserInfo, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
-import { checkMobile } from '../lib/accounts'
+import { checkMobile, passwordResetAllowed } from '../lib/accounts'
 import { useAuth } from './AuthContext'
 import { AuthCard, ErrorLine, Field, SubmitButton, TextLink, inputCls, inputStyle } from './authUi'
 import { describeAuthError, isEmail, isValidMobile, normalizeMobile, usePhoneOtp } from './phoneOtp'
@@ -41,6 +41,8 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false)
   const [hold, setHold] = useState(false)
   const [sending, setSending] = useState(false)
+  // "Forgot password?": null = not asked, 'busy', or the message to show.
+  const [reset, setReset] = useState<null | 'busy' | { ok: boolean; text: string }>(null)
   const lastTried = useRef('')
 
   const kind = detect(identifier)
@@ -94,7 +96,29 @@ export function LoginPage() {
           : 'Enter your full email address'
         : 'Use the mobile number or email your account was made with'
 
+  // Only a verified email gets a reset link (admin-added emails count as
+  // verified), so a mistyped address never receives someone's reset.
+  async function forgotPassword() {
+    setReset('busy')
+    setError(null)
+    try {
+      const { allowed } = await passwordResetAllowed({ email })
+      if (allowed) {
+        await sendPasswordResetEmail(auth, email, { url: `${window.location.origin}/login` })
+        setReset({ ok: true, text: `We sent a password reset link to ${email}. Check your inbox (and Spam), then come back to sign in.` })
+      } else {
+        setReset({
+          ok: false,
+          text: 'We can’t send a reset link to this email — it isn’t a verified email on any account. Sign in with your mobile number and an OTP instead.',
+        })
+      }
+    } catch {
+      setReset({ ok: false, text: 'Couldn’t send the reset link. Check your connection and try again.' })
+    }
+  }
+
   function backToId() {
+    setReset(null)
     setStep('id')
     setPassword('')
     setCode('')
@@ -257,9 +281,24 @@ export function LoginPage() {
           </Field>
           <ErrorLine error={error} />
           <SubmitButton busy={busy} label="Sign in" busyLabel="Signing in…" />
-          <p className="text-[12.5px] text-center" style={{ color: 'var(--color-char-soft)' }}>
-            Forgot it? Sign in with your <TextLink onClick={backToId}>mobile number and an OTP</TextLink> instead.
-          </p>
+          {reset && reset !== 'busy' ? (
+            <p
+              className="text-[12.5px] rounded-[8px] px-3 py-2 leading-relaxed"
+              style={{ backgroundColor: reset.ok ? 'var(--color-teal-soft)' : 'var(--color-gold-soft)', color: 'var(--color-char)' }}
+            >
+              {reset.text}
+            </p>
+          ) : (
+            <p className="text-[12.5px] text-center" style={{ color: 'var(--color-char-soft)' }}>
+              Forgot it?{' '}
+              {reset === 'busy' ? (
+                <span>Sending a reset link…</span>
+              ) : (
+                <TextLink onClick={() => void forgotPassword()}>Email me a reset link</TextLink>
+              )}{' '}
+              or sign in with your <TextLink onClick={backToId}>mobile number and an OTP</TextLink>.
+            </p>
+          )}
         </form>
       )}
 

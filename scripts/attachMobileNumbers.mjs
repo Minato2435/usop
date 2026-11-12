@@ -49,6 +49,7 @@ try {
   const { data } = await sync({})
   console.log(`\nAttached now:      ${data.attached}`)
   console.log(`Already attached:  ${data.alreadyDone}`)
+  console.log(`Emails marked verified: ${data.emailsMarkedVerified ?? 0}`)
   console.log(`Couldn't attach:   ${data.problems.length}`)
   for (const p of data.problems) console.log(`  - ${p.user}  ${p.phone ? '+91 ' + p.phone : '(no number)'}  → ${p.reason}`)
   if (data.problems.length) console.log('\nFix those numbers in Users → Edit (each must be a unique 10-digit mobile), then run this again.')
